@@ -9,7 +9,7 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
            to enable."
 )]
 //! - parsing and evaluating expressions containing matrices and vectors
-//! - solving equations
+//! - solving equations (use feature high-prec-solve for a precision of 13, standard precision is 8)
 //! - exporting a LaTeX document from a collection of parsed expressions or solved equations (see 
 //! [StepType](enum@latex_export::StepType))
 //!

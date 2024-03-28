@@ -1,4 +1,4 @@
-This repo provides a number of math utilities:
+This repo/crate provides a number of math utilities:
 
 - parsing and evaluating expressions containing matrices and vectors
 - solving equations
