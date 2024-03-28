@@ -1,10 +1,10 @@
 This repo/crate provides a number of math utilities:
 
 - parsing and evaluating expressions containing matrices and vectors
-- solving equations
+- solving equations (use feature high-prec-solve for a precision of 13, standard precision is 8)
 - exporting a LaTeX document from a collection of parsed expressions or solved equations
 
-<div class="warning">This repo has not hit 1.0.0 yet, breaking changes are bound to
+<div class="warning">This repo/crate has not hit 1.0.0 yet, breaking changes are bound to
 happen!</div>
 
 Further documentation can be found on [docs.rs](https://docs.rs/math_utils_lib/latest/math_utils_lib/)
