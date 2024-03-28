@@ -16,7 +16,7 @@ Further documentation can be found on [docs.rs](https://docs.rs/math_utils_lib/l
 # Examples
 ## Evaluations:
 ```rust
-let res = quick_eval("3*3".to_string(), None)?;
+let res = quick_eval("3*3".to_string(), vec![])?;
 
 assert_eq!(res, Value::Scalar(9.));
 ```
@@ -26,7 +26,7 @@ let x = Variable {
     name: "x".to_string(),
     value: Value::Scalar(3.)
 };
-let res = quick_eval("3x".to_string(), Some(vec![x]))?;
+let res = quick_eval("3x".to_string(), vec![x])?;
 
 assert_eq!(res, Value::Scalar(9.));
 ```
@@ -36,7 +36,7 @@ let a = Variable {
     name: "A".to_string(),
     value: Value::Vector(vec![3., 5., 8.])
 };
-let res = quick_eval("3A".to_string(), Some(vec![a]))?;
+let res = quick_eval("3A".to_string(), vec![a])?;
 
 assert_eq!(res, Value::Vector(vec![9., 15., 24.]));
 ```
@@ -50,7 +50,7 @@ let b = Variable {
     name: "B".to_string(),
     value: Value::Matrix(vec![vec![2., 0., 0.], vec![0., 2., 0.], vec![0., 0., 1.]])
 };
-let res = quick_eval("B*A".to_string(), Some(vec![a, b]))?;
+let res = quick_eval("B*A".to_string(), vec![a, b])?;
 
 assert_eq!(res, Value::Vector(vec![6., 10., 8.]));
 ```
@@ -58,7 +58,7 @@ assert_eq!(res, Value::Vector(vec![6., 10., 8.]));
 ```rust
 let equation = "x^2=9".to_string();
 
-let res = quick_solve(equation, "x".to_string(), None)?;
+let res = quick_solve(equation, "x".to_string(), vec![])?;
 
 let res_rounded = res.iter().map(|x| Value::Scalar((x.get_scalar()*1000.).round()/1000.)).collect::<Vec<Value>>();
 
