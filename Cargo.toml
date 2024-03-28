@@ -1,9 +1,13 @@
 [package]
 name = "math_utils_lib"
-description = "A library providing math utilities such as a parser/evalutaor and a LaTeX export to export a history of steps to LaTeX."
+description = "A library providing math utilities such as a parser/evaluator and a LaTeX export to export a history of steps to LaTeX."
 version = "0.1.0"
 edition = "2021"
-license = "MIT"
+license-file = "LICENSE.txt"
+repository="https://github.com/Waigo01/math_utils_lib/tree/main"
+readme = "README.md"
+keywords = ["mathparsing", "parser", "eval", "math_lib", "math_utils"]
+categories = ["mathematics", "parser-implementations"]
 
 [package.metadata.docs.rs]
 # docs.rs uses a nightly compiler, so by instructing it to use our `doc-images` feature we

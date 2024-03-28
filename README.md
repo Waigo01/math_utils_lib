@@ -7,7 +7,7 @@ This repo provides a number of math utilities:
 <div class="warning">This repo has not hit 1.0.0 yet, breaking changes are bound to
 happen!</div>
 
-Further documentation can be found on [crates.io](crates.io)
+Further documentation can be found on [crates.io](http://crates.io)
 
 # Examples
 ## Evaluations:
