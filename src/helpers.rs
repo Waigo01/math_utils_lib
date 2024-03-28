@@ -1,3 +1,5 @@
+use crate::PREC;
+
 #[doc(hidden)]
 pub fn center_in_string(f: String, n: i32) -> String {
     let f_string = f.to_string();
@@ -30,17 +32,14 @@ pub fn center_in_string(f: String, n: i32) -> String {
 }
 
 #[doc(hidden)]
-pub const PREC: f64 = 10000.;
-
-#[doc(hidden)]
 pub fn round_and_format(x: f64, latex: bool) -> String {
-    if (x*PREC).round()/PREC == 0. && !latex && x != 0. {
+    if (x*10f64.powf(PREC-2.)).round()/10f64.powf(PREC-2.) == 0. && !latex && x != 0. {
         let mut scientific = format!("{:+e}", x);
         if scientific.chars().nth(0).unwrap() == '+' {
             scientific = scientific[1..].to_string();
         }
         return scientific;
-    } else if (x*PREC).round()/PREC == 0. && x != 0. {
+    } else if (x*10f64.powf(PREC-2.)).round()/10f64.powf(PREC-2.) == 0. && x != 0. {
         let mut scientific = format!("{:+e}", x);
         if scientific.chars().nth(0).unwrap() == '+' {
             scientific = scientific[1..].to_string();
@@ -49,6 +48,6 @@ pub fn round_and_format(x: f64, latex: bool) -> String {
         let right = scientific.split("e").nth(1).unwrap();
         return format!("{}\\cdot 10^{{{}}}", left, right);
     } else {
-        return ((x*PREC).round()/PREC).to_string();
+        return ((x*10f64.powf(PREC-2.)).round()/10f64.powf(PREC-2.)).to_string();
     }
 }

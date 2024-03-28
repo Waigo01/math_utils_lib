@@ -1,11 +1,11 @@
-use crate::{basetypes::{Value, Variable}, errors::{SolveError, SolveErrorCode}, parser::{eval, Binary}};
+use crate::{basetypes::{Value, Variable}, errors::{SolveError, SolveErrorCode}, parser::{eval, Binary}, PREC};
 
 fn clean_results(res: Vec<f64>) -> Vec<f64> {
     let mut new_res: Vec<f64> = vec![];
     for i in res {
         let mut found = false;
         for j in &new_res {
-            if (i*10000.).round()/10000. == (j*10000.).round()/10000. {
+            if (i*10f64.powf(PREC-2.)).round()/10f64.powf(PREC-2.) == (j*10f64.powf(PREC-2.)).round()/10f64.powf(PREC-2.) {
                 found = true;
                 break;
             }
@@ -65,7 +65,7 @@ fn calc_newton(x: &mut f64, expr: &Binary, vars: &mut Vec<Variable>, var_name: &
     vars.push(Variable {name: var_name.to_string(), value: Value::Scalar(*x)});
     let fx = eval(&expr, &vars)?.get_scalar();
     vars.remove(vars.len()-1);
-    if (fx*1000000.).round()/1000000. == 0. {
+    if (fx*10f64.powf(PREC)).round()/10f64.powf(PREC) == 0. {
         return Ok(true);
     }
     vars.push(Variable {name: var_name.to_string(), value: Value::Scalar(*x+1e-5)});
