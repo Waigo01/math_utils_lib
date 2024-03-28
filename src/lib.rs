@@ -164,7 +164,7 @@ pub fn quick_eval(mut expr: String, vars: Option<Vec<Variable>>) -> Result<Value
     Ok(eval(&b_tree, &context_vars)?)
 }
 
-/// solves a given equation towards a given variable name (solve_var). It can additionaly be
+/// solves a given equation towards a given Variable Name (solve_var). It can additionaly be
 /// provided with other variables. If you just want a root finder, have a look at
 /// [find_roots()](fn@roots::find_roots).
 ///
