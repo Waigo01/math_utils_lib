@@ -1,0 +1,308 @@
+use crate::{basetypes::{Value, Variable}, errors::{EvalError, EvalErrorCode, ParserError, ParserErrorCode}, maths};
+
+///specifies the type of operation for the [Operation] struct.
+///
+///The order of the enum also represents the reverse order of the operation priority.
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum OpType {
+    ///Index into vector using "?" ([3, 4, 5]?1 = 4)
+    Get,
+    ///Add two scalars, vectors, or matrices (a+b)
+    Add,
+    ///Subtract two scalars, vectors, or matrices (a-b)
+    Sub,
+    ///Negate a scalar, vector or matrix or expression in parentheses (-(3*4))
+    Neg,
+    ///Multiply a scalar, vector or matrix with each other (Dotproduct, Matrix multiplication,
+    ///Scalar multiplication, ...) (a*b)
+    Mult,
+    ///Divide two scalars or a vector or matrix with a scalar (a/b)
+    Div,
+    ///Calculate the cross product using "#" (V1#V2), only works with dim(V) <= 3. When dim(V) < 3
+    ///the vector gets augmented with zeros
+    Cross,
+    ///Hidden multiplication between scalar and variable or parentheses (3a, 5(3+3), (3+5)(2+6))
+    HiddenMult,
+    ///Take a scalar to the power of another scalar using "^" (a^b)
+    Pow,
+    ///Calculate the sin of a scalar (sin(a))
+    Sin,
+    ///Calculate the cos of a scalar (cos(a))
+    Cos,
+    ///Calculate the tan of a scalar (tan(a))
+    Tan,
+    ///Calculate the absolute value of a scalar or the length of a vector (abs(a))
+    Abs,
+    ///Calculate the square root of a scalar (sqrt(a))
+    Sqrt,
+    ///Calculate the natural log of a scalar (ln(a))
+    Ln,
+    ///Calculate the arcsin of a scalar (arcsin(a))
+    Arcsin,
+    ///Calculate the arccos of a scalar (arccos(a))
+    Arccos,
+    ///Calculate the arctan of a scalar (arctan(a))
+    Arctan,
+    ///Prioritise expressions in parentheses (3*(5+5))
+    Parenths
+}
+
+///used to construct a Binary Tree which is recursively evaluated by the [eval()] function.
+///
+///Binary can be a:
+///
+///- Value
+///- Variable
+///- Operation
+#[derive(Debug, Clone)]
+pub enum Binary {
+    Value(Value),
+    Variable(String),
+    Operation(Box<Operation>),
+}
+
+///used to specify an operation in a parsed string. It is used together with [Binary] to
+///construct a Binary Tree from a mathematical expression.
+#[derive(Debug, Clone)]
+pub struct Operation{
+    pub op_type: OpType,
+    pub left: Binary,
+    pub right: Binary
+}
+
+fn get_op_symbol(c: char) -> Option<OpType> {
+    match c {
+        '?' => Some(OpType::Get),
+        '+' => Some(OpType::Add),
+        '-' => Some(OpType::Sub),
+        '*' => Some(OpType::Mult),
+        '/' => Some(OpType::Div),
+        '^' => Some(OpType::Pow),
+        '#' => Some(OpType::Cross),
+        _ => None
+    }
+}
+
+fn parse_value(s: String) -> Result<Value, ParserError> {
+    if !s.contains(&"[") {
+        let val = match s.parse::<f64>() {
+            Ok(f) => f,
+            Err(_) => return Err(ParserError{code: ParserErrorCode::ParseValue, reason: format!("Could not parse value {}!", s)})
+        };
+        return Ok(Value::Scalar(val));
+    } else if s.len() > 2 {
+        if s[1..s.len()-1].contains(&"[") && s.chars().nth(1).unwrap() == '[' && s.chars().nth(s.len()-2).unwrap() == ']' {
+            let mut output_m = vec![];
+            let mut row = vec![];
+            let mut n_buffer = String::new();
+            let mut open_parenths = 0;
+            for i in s[1..s.len()-1].chars().collect::<Vec<char>>() {
+                if i == '[' {
+                    open_parenths += 1;
+                    continue;
+                }
+                if i == ']' {
+                    open_parenths -= 1;
+                    continue;
+                }
+                if open_parenths > 0 {
+                    if i == ',' {
+                        row.push(n_buffer.parse::<f64>().unwrap());
+                        n_buffer.clear();
+                    } else {
+                        n_buffer.push(i);
+                    }
+                } else if open_parenths == 0 {
+                    if i == ',' {
+                        row.push(n_buffer.parse::<f64>().unwrap());
+                        output_m.push(row.clone());
+                        n_buffer.clear();
+                        row.clear();
+                    }
+                }
+            }
+            if open_parenths != 0 {
+                return Err(ParserError{code: ParserErrorCode::MissingBracket, reason: "Could not pass vector/matrix because of missing brackets!".to_string()});
+            }
+            row.push(n_buffer.parse::<f64>().unwrap());
+            output_m.push(row);
+            return Ok(Value::Matrix(output_m));
+        } else if s.chars().nth(0).unwrap() == '[' && s.chars().nth(s.len()-1).unwrap() == ']' {
+            let mut output_v = vec![];
+            let mut n_buffer = String::new();
+            for i in s[1..s.len()].chars().collect::<Vec<char>>() {
+                if i == ',' {
+                    output_v.push(n_buffer.parse::<f64>().unwrap());
+                    n_buffer.clear();
+                } else {
+                    n_buffer.push(i);
+                }
+            }
+            output_v.push(n_buffer[0..n_buffer.len()-1].parse::<f64>().unwrap());
+            return Ok(Value::Vector(output_v));
+        } else {
+            return Err(ParserError { code: ParserErrorCode::MissingBracket, reason: "Could not pass vector/matrix because of missing brackets!".to_string()});
+        }
+    } else {
+        return Err(ParserError { code: ParserErrorCode::EmptyVec, reason: "Could not pass empty vector/matrix!".to_string()});
+    }
+}
+
+///used to construct a binary Tree from a mathematical expression.
+pub fn parse(expr: String) -> Result<Binary, ParserError> {
+    let mut expr_chars = expr.chars().collect::<Vec<char>>();
+
+    let mut parenths_open = 0;
+    let mut check_parenths = true;
+    for i in 0..expr_chars.len() {
+        if expr_chars[i] == '(' {
+            parenths_open += 1;
+        }
+        if expr_chars[i] == ')' {
+            parenths_open -= 1;
+            if parenths_open == 0 && i != expr_chars.len()-1 {
+                check_parenths = false;
+            }
+        }
+    }
+
+    if parenths_open > 0 {
+        return Err(ParserError { code: ParserErrorCode::UnmatchedOpenDelimiter, reason: "Unmatched opening delimiter!".to_string()});
+    } else if parenths_open < 0 {
+        return Err(ParserError { code: ParserErrorCode::UnmatchedCloseDelimiter, reason: "Unmatched closing delimiter!".to_string()});
+    }
+
+    if check_parenths {
+        if expr_chars[0] == '(' && expr_chars[expr_chars.len()-1] == ')' {
+            expr_chars = expr_chars[1..expr_chars.len()-1].iter().map(|c| *c).collect::<Vec<char>>();
+            return Ok(Binary::Operation(Box::new(Operation {
+                op_type: OpType::Parenths,
+                left: parse(expr_chars.iter().collect::<String>())?,
+                right: Binary::Value(Value::Scalar(0.)) 
+            })));
+        }
+    }
+
+    //is it an operation?
+    
+    let op_types = vec![OpType::Get, OpType::Add, OpType::Sub, OpType::Mult, OpType::Div, OpType::Cross, OpType::HiddenMult, OpType::Pow];
+    let mut ops_in_expr: Vec<(OpType, usize, usize, usize)> = vec![];
+    let mut last_char = '\\';
+    for i in 0..expr_chars.len() {
+        let mut is_hidden_mult = false;
+        if (last_char.is_digit(10) && (expr_chars[i].is_alphabetic() || expr_chars[i] == '\\'))||(last_char == ')' && expr_chars[i] == '(') {
+            is_hidden_mult = true;
+            if i as i32-2 > 0 && expr_chars[i-2] == '_' {
+                is_hidden_mult = false;
+            }
+        }
+        if parenths_open == 0 && is_hidden_mult {
+            ops_in_expr.push((OpType::HiddenMult, i, 0, 0));
+        }
+        if expr_chars[i] == '(' {
+            parenths_open += 1;
+        }
+        if expr_chars[i] == ')' {
+            parenths_open -= 1; 
+        }
+        let symbol = get_op_symbol(expr_chars[i]);
+        if parenths_open == 0 && i != 0 && i != expr_chars.len()-1 && symbol.is_some() {
+            ops_in_expr.push((symbol.clone().unwrap(), i, 0, 1));
+        } 
+        last_char = expr_chars[i];
+    }
+
+    for o in op_types {
+        for i in &ops_in_expr {
+            if i.0 == o {
+                let left_b = parse(expr_chars[0..(i.1-i.2)].to_vec().iter().collect::<String>())?;
+                let right_b = parse(expr_chars[(i.1+i.3)..].to_vec().iter().collect::<String>())?;
+                return Ok(Binary::Operation(Box::new(Operation {
+                    op_type: i.0.clone(),
+                    left: left_b,
+                    right: right_b
+                })));
+            }
+        }
+    } 
+
+    // is it a negative negation?
+
+    if expr_chars[0] == '-' {
+        return Ok(Binary::Operation(Box::new(Operation {
+            op_type: OpType::Neg,
+            left: parse(expr_chars[1..].to_vec().iter().collect::<String>())?,
+            right: Binary::Value(Value::Scalar(0.))
+        })))
+    }
+
+    //is it a function?
+
+    let function_look_up = vec![(OpType::Sin, "sin("), (OpType::Cos, "cos("), (OpType::Tan, "tan("), (OpType::Abs, "abs("), (OpType::Sqrt, "sqrt("), (OpType::Ln, "ln("), (OpType::Arcsin, "arcsin("), (OpType::Arccos, "arccos("), (OpType::Arctan, "arctan(")];
+    
+    for i in function_look_up {
+        if expr_chars.iter().collect::<String>().starts_with(i.1) {
+            let left_b = parse(expr_chars[i.1.len()..expr_chars.len()-1].to_vec().iter().collect::<String>())?;
+            return Ok(Binary::Operation(Box::new(Operation {
+                op_type: i.0,
+                left: left_b,
+                right: Binary::Value(Value::Scalar(0.))
+            })));
+        }
+    }
+
+    // is it a variable?
+
+    if expr_chars[0].is_alphabetic() || expr_chars[0] == '\\' {
+        return Ok(Binary::Variable(expr));
+    }
+
+    let v = parse_value(expr_chars.iter().collect())?;
+
+    return Ok(Binary::Value(v));
+}
+
+///used to evaluate a given binary tree in the context of the provided variables.
+///
+///pi and e need to be provided as variables if used.
+///
+///If you are searching for a quick and easy way to evaluate an expression, have a look at [quick_eval()](fn@crate::quick_eval()).
+pub fn eval(b: &Binary, vars: &Vec<Variable>) -> Result<Value, EvalError> {
+    match b {
+        Binary::Value(c) => return Ok(c.clone()),
+        Binary::Variable(v) => {
+            for i in vars {
+                if &i.name == v {
+                    return Ok(i.value.clone())
+                }
+            }
+
+            return Err(EvalError{code: EvalErrorCode::NoVariable, reason: format!("Could not find variable {}!", v)});
+        }
+        Binary::Operation(o) => {
+            let lv = eval(&o.left, vars)?;
+            let rv = eval(&o.right, vars)?;
+            match o.op_type {
+                OpType::Get => return Ok(maths::get(lv, rv)?),
+                OpType::Add => return Ok(maths::add(lv, rv)?),
+                OpType::Sub => return Ok(maths::sub(lv, rv)?),
+                OpType::Mult => return Ok(maths::mult(lv, rv)?),
+                OpType::Neg => return Ok(maths::neg(lv)?),
+                OpType::Div => return Ok(maths::div(lv, rv)?),
+                OpType::Cross => return Ok(maths::cross(lv, rv)?),
+                OpType::HiddenMult => return Ok(maths::mult(lv, rv)?),
+                OpType::Pow => return Ok(maths::pow(lv, rv)?),
+                OpType::Sin => return Ok(maths::sin(lv)?),
+                OpType::Cos => return Ok(maths::cos(lv)?),
+                OpType::Tan => return Ok(maths::cos(lv)?),
+                OpType::Abs => return Ok(maths::abs(lv)?),
+                OpType::Sqrt => return Ok(maths::sqrt(lv)?),
+                OpType::Ln => return Ok(maths::ln(lv)?),
+                OpType::Arcsin => return Ok(maths::arcsin(lv)?),
+                OpType::Arccos => return Ok(maths::arccos(lv)?),
+                OpType::Arctan => return Ok(maths::arctan(lv)?),
+                OpType::Parenths => return Ok(lv)
+            }
+        }
+    }
+}

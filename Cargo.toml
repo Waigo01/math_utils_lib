@@ -1,0 +1,21 @@
+[package]
+name = "math_utils_lib"
+description = "A library providing math utilities such as a parser/evalutaor and a LaTeX export to export a history of steps to LaTeX."
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+
+[package.metadata.docs.rs]
+# docs.rs uses a nightly compiler, so by instructing it to use our `doc-images` feature we
+# ensure that it will render any images that we may have in inner attribute documentation.
+features = ["doc-images"]
+
+[lib]
+doctest = false
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[dependencies]
+embed-doc-image = "0.1.4"
+
+[features]
+doc-images = []
