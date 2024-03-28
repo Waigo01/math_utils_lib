@@ -15,10 +15,10 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //!
 //! <div class="warning">Important Rules:
 //!
-//! - Vectors and matrices can be written out in an expression (e.g [3, 5, 7] or [[3, 4, 5], [3, 4,
-//! 5], [2, 6, 7]])
-//! - Variable Names can only start with an alphabetic letter or a \ (see [Variable])
-//! - See [OpType](enum@parser::OpType) for all allowed operations and functions.
+//! Vectors and matrices can be written out in an expression (e.g [3, 5, 7] or [[3, 4, 5], [3, 4,
+//! 5], [2, 6, 7]]) <br>
+//! Variable Names can only start with an alphabetic letter or a \ (see [Variable]) <br>
+//! See [OpType](enum@parser::OpType) for all allowed operations and functions.
 //!
 //! </div>
 //!

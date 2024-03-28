@@ -7,7 +7,7 @@ This repo provides a number of math utilities:
 <div class="warning">This repo has not hit 1.0.0 yet, breaking changes are bound to
 happen!</div>
 
-Further documentation can be found on [crates.io](http://crates.io)
+Further documentation can be found on [docs.rs](https://docs.rs/math_utils_lib/latest/math_utils_lib/)
 
 # Examples
 ## Evaluations:
@@ -76,4 +76,4 @@ export(vec![var_assign, step], "export".to_string(), ExportType::Png);
 
 Output (export-1.png):
 
-![LaTeX](./images/export-1.png)
+![For proper render visit github](./images/export-1.png)
