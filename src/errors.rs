@@ -61,6 +61,7 @@ pub enum ParserErrorCode {
     ParseValue,
     MissingBracket,
     EmptyVec,
+    EmptyExpr,
     UnmatchedOpenDelimiter,
     UnmatchedCloseDelimiter
 }
