@@ -8,7 +8,22 @@ pub enum MathLibError {
     EvalError(EvalError),
     SolveError(SolveError),
     QuickSolveError(QuickSolveError),
-    QuickEvalError(QuickEvalError)
+    QuickEvalError(QuickEvalError),
+    Other(String)
+}
+
+impl MathLibError {
+    ///returns the reason behind the MathLibError.
+    pub fn get_reason(&self) -> String {
+        match self {
+            MathLibError::ParserError(s) => return s.reason.clone(),
+            MathLibError::EvalError(s) => return s.reason.clone(),
+            MathLibError::SolveError(s) => return s.reason.clone(),
+            MathLibError::QuickEvalError(s) => return s.reason.clone(),
+            MathLibError::QuickSolveError(s) => return s.reason.clone(),
+            MathLibError::Other(s) => return s.to_string(),
+        }
+    }
 }
 
 impl From<ParserError> for MathLibError {
