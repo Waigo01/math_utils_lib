@@ -151,7 +151,7 @@ fn parse_value(s: String) -> Result<Value, ParserError> {
 ///used to construct a Binary Tree from a mathematical expression.
 pub fn parse(expr: String) -> Result<Binary, ParserError> {
     if expr.is_empty() {
-        return Err(ParserError { code: ParserErrorCode::EmptyExpr, reason: "Emptry expression!".to_string() });
+        return Err(ParserError { code: ParserErrorCode::EmptyExpr, reason: "Empty expression!".to_string() });
     }
     let mut expr_chars = expr.chars().collect::<Vec<char>>();
 
