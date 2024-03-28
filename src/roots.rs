@@ -1,16 +1,11 @@
-use crate::{basetypes::{Value, Variable}, errors::{SolveError, SolveErrorCode}, parser::{eval, Binary}};
-
-#[cfg(feature = "high-prec-solve")]
-const PREC: f64 = 1e13;
-#[cfg(not(feature = "high-prec-solve"))]
-const PREC: f64 = 1e8;
+use crate::{basetypes::{Value, Variable}, errors::{SolveError, SolveErrorCode}, parser::{eval, Binary}, PREC};
 
 fn clean_results(res: Vec<f64>) -> Vec<f64> {
     let mut new_res: Vec<f64> = vec![];
     for i in res {
         let mut found = false;
         for j in &new_res {
-            if (i*1e5).round()/1e5 == (j*1e5).round()/1e5 {
+            if (i*10f64.powf(PREC-2.)).round()/10f64.powf(PREC-2.) == (j*10f64.powf(PREC-2.)).round()/10f64.powf(PREC-2.) {
                 found = true;
                 break;
             }
@@ -70,7 +65,7 @@ fn calc_newton(x: &mut f64, expr: &Binary, vars: &mut Vec<Variable>, var_name: &
     vars.push(Variable {name: var_name.to_string(), value: Value::Scalar(*x)});
     let fx = eval(&expr, &vars)?.get_scalar();
     vars.remove(vars.len()-1);
-    if (fx*PREC).round()/PREC == 0. {
+    if (fx*10f64.powf(PREC)).round()/10f64.powf(PREC) == 0. {
         return Ok(true);
     }
     vars.push(Variable {name: var_name.to_string(), value: Value::Scalar(*x+1e-5)});

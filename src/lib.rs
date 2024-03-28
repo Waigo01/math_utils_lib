@@ -13,6 +13,11 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //! - exporting a LaTeX document from a collection of parsed expressions or solved equations (see 
 //! [StepType](enum@latex_export::StepType))
 //!
+//! Precision ([PREC]):
+//!
+//! Use feature high-prec for a precision of 13, standard precision is 8. The precision is used to
+//! solve equations at the set precision. The actual output precision for printing is the defined precision - 2.
+//!
 //! <div class="warning">Important Rules:
 //!
 //! Vectors and matrices can be written out in an expression (e.g [3, 5, 7] or [[3, 4, 5], [3, 4,
@@ -30,7 +35,7 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //! [MathLibError])
 //! ## Evaluations:
 //! ```
-//! let res = quick_eval("3*3".to_string(), None)?;
+//! let res = quick_eval("3*3".to_string(), vec![])?;
 //!
 //! assert_eq!(res, Value::Scalar(9.));
 //! ```
@@ -40,7 +45,7 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //!     name: "x".to_string(),
 //!     value: Value::Scalar(3.)
 //! };
-//! let res = quick_eval("3x".to_string(), Some(vec![x]))?;
+//! let res = quick_eval("3x".to_string(), vec![x])?;
 //!
 //! assert_eq!(res, Value::Scalar(9.));
 //! ```
@@ -50,7 +55,7 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //!     name: "A".to_string(),
 //!     value: Value::Vector(vec![3., 5., 8.])
 //! };
-//! let res = quick_eval("3A".to_string(), Some(vec![a]))?;
+//! let res = quick_eval("3A".to_string(), vec![a])?;
 //!
 //! assert_eq!(res, Value::Vector(vec![9., 15., 24.]));
 //! ```
@@ -64,7 +69,7 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //!     name: "B".to_string(),
 //!     value: Value::Matrix(vec![vec![2., 0., 0.], vec![0., 2., 0.], vec![0., 0., 1.]])
 //! };
-//! let res = quick_eval("B*A".to_string(), Some(vec![a, b]))?;
+//! let res = quick_eval("B*A".to_string(), vec![a, b])?;
 //!
 //! assert_eq!(res, Value::Vector(vec![6., 10., 8.]));
 //! ```
@@ -72,7 +77,7 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //! ```
 //! let equation = "x^2=9".to_string();
 //!
-//! let res = quick_solve(equation, "x".to_string(), None)?;
+//! let res = quick_solve(equation, "x".to_string(), vec![])?;
 //!
 //! let res_rounded = res.iter().map(|x| Value::Scalar((x.get_scalar()*1000.).round()/1000.)).collect::<Vec<Value>>();
 //!
@@ -118,12 +123,20 @@ pub use parser::{parse, eval};
 pub use roots::find_roots;
 pub use errors::MathLibError;
 
+///defines the precision used by the equation solver and the printing precision, which is PREC-2.
+#[cfg(feature = "high-prec")]
+pub const PREC: f64 = 13.;
+
+///defines the precision used by the equation solver and the printing precision, which is PREC-2.
+#[cfg(not(feature = "high-prec"))]
+pub const PREC: f64 = 8.;
+
 /// evaluates a given expression using the given variables (e and pi are provided by
-/// the function). If you just want the Binary Tree, have look at [parse()].
+/// the function). If you just want the Binary Tree, have a look at [parse()].
 ///
 /// # Examples
 /// ```
-/// let res = quick_eval("3*3".to_string(), None)?;
+/// let res = quick_eval("3*3".to_string(), vec![])?;
 ///
 /// assert_eq!(res, Value::Scalar(9.));
 /// ```
@@ -133,11 +146,11 @@ pub use errors::MathLibError;
 ///     name: "x".to_string(),
 ///     value: Value::Scalar(3.)
 /// };
-/// let res = quick_eval("3x".to_string(), Some(vec![x]))?;
+/// let res = quick_eval("3x".to_string(), vec![x])?;
 ///
 /// assert_eq!(res, Value::Scalar(9.));
 /// ```
-pub fn quick_eval(mut expr: String, vars: Option<Vec<Variable>>) -> Result<Value, QuickEvalError> {
+pub fn quick_eval(mut expr: String, vars: Vec<Variable>) -> Result<Value, QuickEvalError> {
     let mut context_vars = vec![
         Variable {
             name: "e".to_string(),
@@ -148,12 +161,11 @@ pub fn quick_eval(mut expr: String, vars: Option<Vec<Variable>>) -> Result<Value
             value: Value::Scalar(std::f64::consts::PI)
         }
     ];
-    if vars.is_some() {
-        let unwraped_vars = vars.unwrap();
-        if unwraped_vars.iter().filter(|x| x.name == "e".to_string() || x.name == "pi".to_string()).collect::<Vec<&Variable>>().len() > 0 {
+    if !vars.is_empty() {
+        if vars.iter().filter(|x| x.name == "e".to_string() || x.name == "pi".to_string()).collect::<Vec<&Variable>>().len() > 0 {
             return Err(QuickEvalError{ code: errors::QuickEvalErrorCode::DuplicateVars, reason: "Can't specify e and pi twice.".to_string()});
         }
-        for i in unwraped_vars {
+        for i in vars {
             context_vars.push(i);
         }
     }
@@ -172,13 +184,13 @@ pub fn quick_eval(mut expr: String, vars: Option<Vec<Variable>>) -> Result<Value
 /// ```
 /// let equation = "x^2=9".to_string();
 ///
-/// let res = quick_solve(equation, "x".to_string(), None)?;
+/// let res = quick_solve(equation, "x".to_string(), vec![])?;
 ///
 /// let res_rounded = res.iter().map(|x| Value::Scalar((x.get_scalar()*1000.).round()/1000.)).collect::<Vec<Value>>();
 ///
 /// assert_eq!(res_rounded, vec![Value::Scalar(3.), Value::Scalar(-3.)]);
 /// ```
-pub fn quick_solve(mut expr: String, solve_var: String, vars: Option<Vec<Variable>>) -> Result<Vec<Value>, QuickSolveError> {
+pub fn quick_solve(mut expr: String, solve_var: String, vars: Vec<Variable>) -> Result<Vec<Value>, QuickSolveError> {
     let mut context_vars = vec![
         Variable {
             name: "e".to_string(),
@@ -189,12 +201,11 @@ pub fn quick_solve(mut expr: String, solve_var: String, vars: Option<Vec<Variabl
             value: Value::Scalar(std::f64::consts::PI)
         }
     ];
-    if vars.is_some() {
-        let unwraped_vars = vars.unwrap();
-        if unwraped_vars.iter().filter(|x| x.name == "e".to_string() || x.name == "pi".to_string()).collect::<Vec<&Variable>>().len() > 0 {
+    if !vars.is_empty() {
+        if vars.iter().filter(|x| x.name == "e".to_string() || x.name == "pi".to_string()).collect::<Vec<&Variable>>().len() > 0 {
             return Err(QuickSolveError{ code: errors::QuickSolveErrorCode::DuplicateVars, reason: "Can't specify e and pi twice.".to_string()});
         }
-        for i in unwraped_vars {
+        for i in vars {
             context_vars.push(i);
         }
     }

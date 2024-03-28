@@ -1,8 +1,12 @@
 This repo/crate provides a number of math utilities:
 
 - parsing and evaluating expressions containing matrices and vectors
-- solving equations (use feature high-prec-solve for a precision of 13, standard precision is 8)
+- solving equations
 - exporting a LaTeX document from a collection of parsed expressions or solved equations
+
+Precision:
+
+Use feature high-prec for a precision of 13, standard precision is 8. The precision is used to solve equations. The actual output precision for printing is the defined precision - 2.
 
 <div class="warning">This repo/crate has not hit 1.0.0 yet, breaking changes are bound to
 happen!</div>

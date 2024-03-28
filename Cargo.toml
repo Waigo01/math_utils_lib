@@ -25,4 +25,4 @@ embed-doc-image = "0.1.4"
 [features]
 default = []
 doc-images = []
-high-prec-solve = []
+high-prec = []
