@@ -2,7 +2,7 @@ use std::fmt::{self, Display};
 
 ///provides an enum with the corresponding From implementations in order to use as convenient return
 ///error type for this library.
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum MathLibError {
     ParserError(ParserError),
     EvalError(EvalError),
@@ -16,11 +16,11 @@ impl MathLibError {
     ///returns the reason behind the MathLibError.
     pub fn get_reason(&self) -> String {
         match self {
-            MathLibError::ParserError(s) => return s.reason.clone(),
-            MathLibError::EvalError(s) => return s.reason.clone(),
-            MathLibError::SolveError(s) => return s.reason.clone(),
-            MathLibError::QuickEvalError(s) => return s.reason.clone(),
-            MathLibError::QuickSolveError(s) => return s.reason.clone(),
+            MathLibError::ParserError(s) => return s.get_reason(),
+            MathLibError::EvalError(s) => return s.get_reason(),
+            MathLibError::SolveError(s) => return s.get_reason(),
+            MathLibError::QuickEvalError(s) => return s.get_reason(),
+            MathLibError::QuickSolveError(s) => return s.get_reason(),
             MathLibError::Other(s) => return s.to_string(),
         }
     }
@@ -56,137 +56,163 @@ impl From<QuickEvalError> for MathLibError {
     }
 }
 
-#[derive(Debug)]
-pub enum ParserErrorCode {
-    ParseValue,
+#[derive(Debug, PartialEq)]
+pub enum ParserError {
+    ParseValue(String),
     MissingBracket,
     EmptyVec,
+    NotRectMatrix,
     EmptyExpr,
     UnmatchedOpenDelimiter,
     UnmatchedCloseDelimiter
 }
 
-#[derive(Debug)]
-pub struct ParserError{
-    pub code: ParserErrorCode,
-    pub reason: String
+impl ParserError {
+    pub fn get_reason(&self) -> String {
+        match self {
+            ParserError::ParseValue(s) => return format!("Could not parse value {}!", s),
+            ParserError::MissingBracket => return "Could not parse vector/matrix because of missing brackets!".to_string(),
+            ParserError::EmptyVec => return "Could not parse vector/matrix because it is (partially) empty!".to_string(),
+            ParserError::NotRectMatrix => return "Could not parse matrix because it is not rectangular!".to_string(),
+            ParserError::EmptyExpr => return "Could not parse empty expression!".to_string(),
+            ParserError::UnmatchedOpenDelimiter => return "Unmatched opening delimiter!".to_string(),
+            ParserError::UnmatchedCloseDelimiter => return "Unmatched closing delimiter!".to_string()
+        }
+    } 
 }
 
 impl Display for ParserError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.reason)
+        write!(f, "{}", self.get_reason())
     }
 }
 
-#[derive(Debug)]
-pub enum EvalErrorCode {
-    NoVariable,
-    MathError
+#[derive(Debug, PartialEq)]
+pub enum EvalError {
+    NoVariable(String),
+    MathError(String)
 }
 
-#[derive(Debug)]
-pub struct EvalError{
-    pub code: EvalErrorCode,
-    pub reason: String
+impl EvalError {
+    pub fn get_reason(&self) -> String {
+        match self {
+            EvalError::NoVariable(s) => return format!("Could not find variable {}", s),
+            EvalError::MathError(s) => return s.to_string()
+        }
+    }
 }
 
 impl Display for EvalError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.reason)
+        write!(f, "{}", self.get_reason())
     }
 }
 
 impl From<String> for EvalError {
     fn from(value: String) -> Self {
-        EvalError { code: EvalErrorCode::MathError, reason: value }
+        EvalError::MathError(value)
     }
 }
 
-#[derive(Debug)]
-pub enum SolveErrorCode {
+#[derive(Debug, PartialEq)]
+pub enum SolveError {
     VectorInEq,
     MatrixInEq,
     NothingToDo,
-    EvalError(EvalErrorCode)
+    EvalError(EvalError)
 }
 
-#[derive(Debug)]
-pub struct SolveError {
-    pub code: SolveErrorCode,
-    pub reason: String
+impl SolveError {
+    pub fn get_reason(&self) -> String {
+        match self {
+            SolveError::VectorInEq => return "Can't have vectors in equations!".to_string(),
+            SolveError::MatrixInEq => return "Can't have matrices in equations!".to_string(),
+            SolveError::NothingToDo => return "Nothing to do!".to_string(),
+            SolveError::EvalError(e) => return e.get_reason()
+        }
+    }
 }
 
 impl Display for SolveError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.reason)
+        write!(f, "{}", self.get_reason())
     }
 }
 
 impl From<EvalError> for SolveError {
     fn from(value: EvalError) -> Self {
-        SolveError{code: SolveErrorCode::EvalError(value.code), reason: value.reason}
+        SolveError::EvalError(value)
     }
 }
 
-#[derive(Debug)]
-pub enum QuickEvalErrorCode {
+#[derive(Debug, PartialEq)]
+pub enum QuickEvalError {
     DuplicateVars,
-    ParserError(ParserErrorCode),
-    EvalError(EvalErrorCode)
+    ParserError(ParserError),
+    EvalError(EvalError)
 }
 
-#[derive(Debug)]
-pub struct QuickEvalError {
-    pub code: QuickEvalErrorCode,
-    pub reason: String
+impl QuickEvalError {
+    pub fn get_reason(&self) -> String {
+        match self {
+            QuickEvalError::DuplicateVars => return "Can't specify e and pi twice!".to_string(),
+            QuickEvalError::EvalError(e) => return e.get_reason(),
+            QuickEvalError::ParserError(e) => return e.get_reason()
+        }
+    }
 }
 
 impl Display for QuickEvalError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.reason)
+        write!(f, "{}", self.get_reason())
     }
 }
 
 impl From<EvalError> for QuickEvalError {
     fn from(value: EvalError) -> Self {
-        QuickEvalError { code: QuickEvalErrorCode::EvalError(value.code), reason: value.reason }
+        QuickEvalError::EvalError(value)
     }
 }
 
 impl From<ParserError> for QuickEvalError {
     fn from(value: ParserError) -> Self {
-        QuickEvalError { code: QuickEvalErrorCode::ParserError(value.code), reason: value.reason }
+        QuickEvalError::ParserError(value)
     }
 }
 
-#[derive(Debug)]
-pub enum QuickSolveErrorCode {
+#[derive(Debug, PartialEq)]
+pub enum QuickSolveError {
     DuplicateVars,
     NoEq,
-    ParserError(ParserErrorCode),
-    SolveError(SolveErrorCode)
+    ParserError(ParserError),
+    SolveError(SolveError)
 }
 
-#[derive(Debug)]
-pub struct QuickSolveError {
-    pub code: QuickSolveErrorCode,
-    pub reason: String
+impl QuickSolveError {
+    pub fn get_reason(&self) -> String {
+        match self {
+            QuickSolveError::DuplicateVars => return "Can't specify e and pi twice!".to_string(),
+            QuickSolveError::NoEq => return "No \"=\" in equation!".to_string(),
+            QuickSolveError::ParserError(e) => return e.get_reason(),
+            QuickSolveError::SolveError(e) => return e.get_reason()
+        }
+    }
 }
 
 impl Display for QuickSolveError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.reason)
+        write!(f, "{}", self.get_reason())
     }
 }
 
 impl From<SolveError> for QuickSolveError {
     fn from(value: SolveError) -> Self {
-        QuickSolveError { code: QuickSolveErrorCode::SolveError(value.code), reason: value.reason }
+        QuickSolveError::SolveError(value)
     }
 }
 
 impl From<ParserError> for QuickSolveError {
     fn from(value: ParserError) -> Self {
-        QuickSolveError { code: QuickSolveErrorCode::ParserError(value.code), reason: value.reason }
+        QuickSolveError::ParserError(value)
     }
 }

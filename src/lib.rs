@@ -9,9 +9,9 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
            to enable."
 )]
 //! - parsing and evaluating expressions containing matrices and vectors
-//! - solving equations (use feature high-prec-solve for a precision of 13, standard precision is 8)
+//! - solving equations
 //! - exporting a LaTeX document from a collection of parsed expressions or solved equations (see 
-//! [StepType](enum@latex_export::StepType))
+//! [StepType](enum@latex_export::StepType) and [export()])
 //!
 //! Precision ([PREC]):
 //!
@@ -163,7 +163,7 @@ pub fn quick_eval(mut expr: String, vars: Vec<Variable>) -> Result<Value, QuickE
     ];
     if !vars.is_empty() {
         if vars.iter().filter(|x| x.name == "e".to_string() || x.name == "pi".to_string()).collect::<Vec<&Variable>>().len() > 0 {
-            return Err(QuickEvalError{ code: errors::QuickEvalErrorCode::DuplicateVars, reason: "Can't specify e and pi twice.".to_string()});
+            return Err(QuickEvalError::DuplicateVars);
         }
         for i in vars {
             context_vars.push(i);
@@ -203,7 +203,7 @@ pub fn quick_solve(mut expr: String, solve_var: String, vars: Vec<Variable>) -> 
     ];
     if !vars.is_empty() {
         if vars.iter().filter(|x| x.name == "e".to_string() || x.name == "pi".to_string()).collect::<Vec<&Variable>>().len() > 0 {
-            return Err(QuickSolveError{ code: errors::QuickSolveErrorCode::DuplicateVars, reason: "Can't specify e and pi twice.".to_string()});
+            return Err(QuickSolveError::DuplicateVars);
         }
         for i in vars {
             context_vars.push(i);
@@ -212,7 +212,7 @@ pub fn quick_solve(mut expr: String, solve_var: String, vars: Vec<Variable>) -> 
     expr = expr.trim().split(" ").filter(|s| !s.is_empty()).collect();
 
     if !expr.contains("=") {
-        return Err(QuickSolveError { code: errors::QuickSolveErrorCode::NoEq, reason: "No = in equation!".to_string() });
+        return Err(QuickSolveError::NoEq);
     }
 
     let left = expr.split("=").nth(0).unwrap().to_string();
