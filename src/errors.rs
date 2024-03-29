@@ -96,7 +96,7 @@ pub enum EvalError {
 impl EvalError {
     pub fn get_reason(&self) -> String {
         match self {
-            EvalError::NoVariable(s) => return format!("Could not find variable {}", s),
+            EvalError::NoVariable(s) => return format!("Could not find variable {}!", s),
             EvalError::MathError(s) => return s.to_string()
         }
     }

@@ -1,3 +1,6 @@
+[![crates.io](https://img.shields.io/badge/crates.io-orange?style=for-the-badge&logo=rust)](https://crates.io/crates/math_utils_lib)
+[![docs.rs](https://img.shields.io/badge/docs.rs-gray?style=for-the-badge&logo=docs.rs)](https://docs.rs/math_utils_lib/latest/math_utils_lib/)
+
 This repo/crate provides a number of math utilities:
 
 - parsing and evaluating expressions containing matrices and vectors
