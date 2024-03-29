@@ -11,10 +11,7 @@ Precision:
 
 Use feature high-prec for a precision of 13, standard precision is 8. The precision is used to solve equations. The actual output precision for printing is the defined precision - 2.
 
-<div class="warning">This repo/crate has not hit 1.0.0 yet, breaking changes are bound to
-happen!</div>
-
-Further documentation can be found on [docs.rs](https://docs.rs/math_utils_lib/latest/math_utils_lib/)
+:warning: This repo/crate has not hit 1.0.0 yet, breaking changes are bound to happen!
 
 # Examples
 ## Evaluations:
