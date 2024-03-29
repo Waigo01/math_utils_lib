@@ -130,6 +130,29 @@ fn medium_eval12() {
 }
 
 #[test]
+fn medium_eval13() -> Result<(), MathLibError> {
+    let vars = vec![Variable {
+        name: "A_{3*6}".to_string(),
+        value: Value::Scalar(3.)
+    }];
+
+    let res = quick_eval("A_{3*6}*3".to_string(), vars)?;
+
+    assert_eq!(res, Value::Scalar(9.));
+
+    Ok(())
+}
+
+#[test]
+fn medium_eval14() -> Result<(), MathLibError> {
+    let res = quick_eval("[[1, 0, 0], [0, 6, 0]]*[3, 4, 5]".to_string(), vec![])?;
+
+    assert_eq!(res, Value:: Vector(vec![3., 24.]));
+
+    Ok(())
+}
+
+#[test]
 fn hard_eval1() -> Result<(), MathLibError> {
     let x = Variable {
         name: "x".to_string(),

@@ -41,8 +41,8 @@ pub fn vvmult(a: Vec<f64>, b: Vec<f64>) -> Result<Value, String> {
 
 #[doc(hidden)]
 pub fn mvmult(a: Vec<Vec<f64>>, b: Vec<f64>) -> Result<Value, String> {
-    if a.len() != b.len() {
-        return Err("Vector and matrix have different dimensions!".to_string());
+    if a[0].len() != b.len() {
+        return Err("Vector and matrix have incompatible dimensions!".to_string());
     }
     let mut output_v = vec![];
     for i in 0..a.len() {
@@ -57,8 +57,8 @@ pub fn mvmult(a: Vec<Vec<f64>>, b: Vec<f64>) -> Result<Value, String> {
 
 #[doc(hidden)]
 pub fn mmmult(a: Vec<Vec<f64>>, b: Vec<Vec<f64>>) -> Result<Value, String> {
-    if a.len() != b[0].len() {
-        return Err("Matrices have different dimensions".to_string());
+    if a[0].len() != b.len() {
+        return Err("Matrices have incompatible dimensions".to_string());
     }
     let mut output_m = vec![];
     for i in 0..a.len() {

@@ -231,6 +231,7 @@ pub fn parse(expr: String) -> Result<Binary, ParserError> {
     let mut ops_in_expr: Vec<(OpType, usize, usize, usize)> = vec![];
     let mut last_char = '\\';
     let mut brackets_open = 0;
+    let mut curly_brackets_open = 0;
     for i in 0..expr_chars.len() {
         let mut is_hidden_mult = false;
         if (last_char.is_digit(10) && (expr_chars[i].is_alphabetic() || expr_chars[i] == '\\'))||(last_char == ')' && expr_chars[i] == '(') {
@@ -259,8 +260,16 @@ pub fn parse(expr: String) -> Result<Binary, ParserError> {
             brackets_open -= 1;
             continue;
         }
+        if expr_chars[i] == '{' {
+            curly_brackets_open += 1;
+            continue;
+        }
+        if expr_chars[i] == '}' {
+            curly_brackets_open -= 1;
+            continue;
+        }
         let symbol = get_op_symbol(expr_chars[i]);
-        if parenths_open == 0 && brackets_open == 0 && i != 0 && i != expr_chars.len()-1 && symbol.is_some() {
+        if parenths_open == 0 && brackets_open == 0 && curly_brackets_open == 0 && i != 0 && i != expr_chars.len()-1 && symbol.is_some() {
             ops_in_expr.push((symbol.clone().unwrap(), i, 0, 1));
         } 
     }
