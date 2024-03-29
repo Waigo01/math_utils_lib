@@ -1,4 +1,4 @@
-use crate::{basetypes::{Value, Variable}, errors::{SolveError, SolveErrorCode}, parser::{eval, Binary}, PREC};
+use crate::{basetypes::{Value, Variable}, errors::SolveError, parser::{eval, Binary}, PREC};
 
 fn clean_results(res: Vec<f64>) -> Vec<f64> {
     let mut new_res: Vec<f64> = vec![];
@@ -27,15 +27,15 @@ fn clean_results(res: Vec<f64>) -> Vec<f64> {
 ///provided variables and a Variable Name in terms of which is to be solved.
 pub fn find_roots(expr: Binary, mut vars: Vec<Variable>, var_name: &str) -> Result<Vec<Value>, SolveError> {
     match expr {
-        Binary::Value(_) => {return Err(SolveError { code: SolveErrorCode::NothingToDo, reason: "Nothing to do!".to_string() });},
-        Binary::Variable(_) => {return Err(SolveError { code: SolveErrorCode::NothingToDo, reason: "Nothing to do!".to_string() });},
+        Binary::Value(_) => return Err(SolveError::NothingToDo),
+        Binary::Variable(_) => return Err(SolveError::NothingToDo),
         Binary::Operation(_) => {}
     }
     vars.push(Variable { name: var_name.to_string(), value: Value::Scalar(0.) });
     match eval(&expr, &vars)? {
         Value::Scalar(_) => {},
-        Value::Vector(_) => {return Err(SolveError { code: SolveErrorCode::VectorInEq, reason: "Can't have vectors in equations".to_string() });},
-        Value::Matrix(_) => {return Err(SolveError { code: SolveErrorCode::MatrixInEq, reason: "Can't have matrices in equations!".to_string() });}
+        Value::Vector(_) => return Err(SolveError::VectorInEq),
+        Value::Matrix(_) => return Err(SolveError::MatrixInEq)
     }
     vars.remove(vars.len()-1);
 

@@ -1,7 +1,7 @@
 [package]
 name = "math_utils_lib"
-description = "A library providing math utilities such as a parser/evaluator and a LaTeX export to export a history of steps to LaTeX."
-version = "0.1.5"
+description = "A library providing math utilities such as a parser/evaluator and a LaTeX export to export a history of parsed expressions and solved equations to LaTeX."
+version = "0.1.6"
 edition = "2021"
 license-file = "LICENSE.txt"
 documentation = "https://docs.rs/math_utils_lib/latest/math_utils_lib/"

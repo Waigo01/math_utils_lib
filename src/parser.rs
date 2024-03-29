@@ -1,4 +1,4 @@
-use crate::{basetypes::{Value, Variable}, errors::{EvalError, EvalErrorCode, ParserError, ParserErrorCode}, maths};
+use crate::{basetypes::{Value, Variable}, errors::{EvalError, ParserError}, maths};
 
 ///specifies the type of operation for the [Operation] struct.
 ///
@@ -87,13 +87,14 @@ fn parse_value(s: String) -> Result<Value, ParserError> {
     if !s.contains(&"[") {
         let val = match s.parse::<f64>() {
             Ok(f) => f,
-            Err(_) => return Err(ParserError{code: ParserErrorCode::ParseValue, reason: format!("Could not parse value {}!", s)})
+            Err(_) => return Err(ParserError::ParseValue(s))
         };
         return Ok(Value::Scalar(val));
     } else if s.len() > 2 {
         if s[1..s.len()-1].contains(&"[") && s.chars().nth(1).unwrap() == '[' && s.chars().nth(s.len()-2).unwrap() == ']' {
             let mut output_m = vec![];
             let mut row = vec![];
+            let mut row_size = None;
             let mut n_buffer = String::new();
             let mut open_parenths = 0;
             for i in s[1..s.len()-1].chars().collect::<Vec<char>>() {
@@ -107,14 +108,30 @@ fn parse_value(s: String) -> Result<Value, ParserError> {
                 }
                 if open_parenths > 0 {
                     if i == ',' {
-                        row.push(n_buffer.parse::<f64>().unwrap());
+                        if n_buffer.is_empty() {
+                            return Err(ParserError::EmptyVec)
+                        }
+                        row.push(match n_buffer.parse::<f64>() {
+                            Ok(t) => t,
+                            Err(_) => return Err(ParserError::ParseValue(s))
+                        });
                         n_buffer.clear();
                     } else {
                         n_buffer.push(i);
                     }
                 } else if open_parenths == 0 {
                     if i == ',' {
-                        row.push(n_buffer.parse::<f64>().unwrap());
+                        if n_buffer.is_empty() {
+                            return Err(ParserError::EmptyVec)
+                        }
+                        row.push(match n_buffer.parse::<f64>() {
+                            Ok(t) => t,
+                            Err(_) => return Err(ParserError::ParseValue(s))
+                        });
+                        if row_size.is_some() && row.len() != row_size.unwrap() {
+                            return Err(ParserError::NotRectMatrix)
+                        }
+                        row_size = Some(row.len());
                         output_m.push(row.clone());
                         n_buffer.clear();
                         row.clear();
@@ -122,9 +139,18 @@ fn parse_value(s: String) -> Result<Value, ParserError> {
                 }
             }
             if open_parenths != 0 {
-                return Err(ParserError{code: ParserErrorCode::MissingBracket, reason: "Could not pass vector/matrix because of missing brackets!".to_string()});
+                return Err(ParserError::MissingBracket)
             }
-            row.push(n_buffer.parse::<f64>().unwrap());
+            if n_buffer.is_empty() {
+                return Err(ParserError::EmptyVec)
+            }
+            row.push(match n_buffer.parse::<f64>() {
+                Ok(t) => t,
+                Err(_) => return Err(ParserError::ParseValue(s))
+            });
+            if row_size.is_some() && row.len() != row_size.unwrap() {
+                return Err(ParserError::NotRectMatrix)
+            }
             output_m.push(row);
             return Ok(Value::Matrix(output_m));
         } else if s.chars().nth(0).unwrap() == '[' && s.chars().nth(s.len()-1).unwrap() == ']' {
@@ -132,26 +158,38 @@ fn parse_value(s: String) -> Result<Value, ParserError> {
             let mut n_buffer = String::new();
             for i in s[1..s.len()].chars().collect::<Vec<char>>() {
                 if i == ',' {
-                    output_v.push(n_buffer.parse::<f64>().unwrap());
+                    if n_buffer.is_empty() {
+                        return Err(ParserError::EmptyVec)
+                    }
+                    output_v.push(match n_buffer.parse::<f64>() {
+                        Ok(t) => t,
+                        Err(_) => return Err(ParserError::ParseValue(s))
+                    });
                     n_buffer.clear();
                 } else {
                     n_buffer.push(i);
                 }
             }
-            output_v.push(n_buffer[0..n_buffer.len()-1].parse::<f64>().unwrap());
+            if n_buffer.is_empty() {
+                return Err(ParserError::EmptyVec);
+            }
+            output_v.push(match n_buffer[0..n_buffer.len()-1].parse::<f64>() {
+                Ok(t) => t,
+                Err(_) => return Err(ParserError::ParseValue(s))
+            });
             return Ok(Value::Vector(output_v));
         } else {
-            return Err(ParserError { code: ParserErrorCode::MissingBracket, reason: "Could not pass vector/matrix because of missing brackets!".to_string()});
+            return Err(ParserError::MissingBracket)
         }
     } else {
-        return Err(ParserError { code: ParserErrorCode::EmptyVec, reason: "Could not pass empty vector/matrix!".to_string()});
+        return Err(ParserError::EmptyVec);
     }
 }
 
 ///used to construct a Binary Tree from a mathematical expression.
 pub fn parse(expr: String) -> Result<Binary, ParserError> {
     if expr.is_empty() {
-        return Err(ParserError { code: ParserErrorCode::EmptyExpr, reason: "Empty expression!".to_string() });
+        return Err(ParserError::EmptyExpr);
     }
     let mut expr_chars = expr.chars().collect::<Vec<char>>();
 
@@ -170,9 +208,9 @@ pub fn parse(expr: String) -> Result<Binary, ParserError> {
     }
 
     if parenths_open > 0 {
-        return Err(ParserError { code: ParserErrorCode::UnmatchedOpenDelimiter, reason: "Unmatched opening delimiter!".to_string()});
+        return Err(ParserError::UnmatchedOpenDelimiter);
     } else if parenths_open < 0 {
-        return Err(ParserError { code: ParserErrorCode::UnmatchedCloseDelimiter, reason: "Unmatched closing delimiter!".to_string()});
+        return Err(ParserError::UnmatchedCloseDelimiter);
     }
 
     if check_parenths {
@@ -280,7 +318,7 @@ pub fn eval(b: &Binary, vars: &Vec<Variable>) -> Result<Value, EvalError> {
                 }
             }
 
-            return Err(EvalError{code: EvalErrorCode::NoVariable, reason: format!("Could not find variable {}!", v)});
+            return Err(EvalError::NoVariable(v.to_string()));
         }
         Binary::Operation(o) => {
             let lv = eval(&o.left, vars)?;

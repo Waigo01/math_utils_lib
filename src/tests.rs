@@ -1,6 +1,6 @@
 use std::fs;
 
-use crate::{errors::MathLibError, eval, export, parse, parser::Binary, quick_eval, quick_solve, ExportType, StepType, Value, Variable};
+use crate::{errors::{MathLibError, ParserError, QuickEvalError}, eval, export, parse, parser::Binary, quick_eval, quick_solve, ExportType, StepType, Value, Variable};
 
 #[test]
 fn easy_eval1() -> Result<(), MathLibError> {
@@ -76,6 +76,41 @@ fn medium_eval5() -> Result<(), MathLibError> {
     assert_eq!(res, Value::Scalar(9.));
 
     Ok(())
+}
+
+#[test]
+fn medium_eval6() {
+    let res = quick_eval("[[3, 0, 5], [2, 4, 5], [1, 2]]".to_string(), vec![]);
+
+    assert_eq!(res.unwrap_err(), QuickEvalError::ParserError(ParserError::NotRectMatrix))
+}
+
+#[test]
+fn medium_eval7() {
+    let res = quick_eval("[[], [], []]".to_string(), vec![]);
+
+    assert_eq!(res.unwrap_err(), QuickEvalError::ParserError(ParserError::EmptyVec))
+}
+
+#[test]
+fn medium_eval8() {
+    let res = quick_eval("".to_string(), vec![]);
+
+    assert_eq!(res.unwrap_err(), QuickEvalError::ParserError(ParserError::EmptyExpr))
+}
+
+#[test]
+fn medium_eval9() {
+    let res = quick_eval("[[3, 0,], [2, 4, 5], [1, 2]]".to_string(), vec![]);
+
+    assert_eq!(res.unwrap_err(), QuickEvalError::ParserError(ParserError::EmptyVec))
+}
+
+#[test]
+fn medium_eval10() {
+    let res = quick_eval("[[3, 0, 5], [2, 4], [1, 2,]]".to_string(), vec![]);
+
+    assert_eq!(res.unwrap_err(), QuickEvalError::ParserError(ParserError::NotRectMatrix))
 }
 
 #[test]
