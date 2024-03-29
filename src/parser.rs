@@ -91,7 +91,7 @@ fn parse_value(s: String) -> Result<Value, ParserError> {
         };
         return Ok(Value::Scalar(val));
     } else if s.len() > 2 {
-        if s[1..s.len()-1].contains(&"[") && s.chars().nth(1).unwrap() == '[' && s.chars().nth(s.len()-2).unwrap() == ']' {
+        if s.len() > 4 && s[1..s.len()-1].contains(&"[") && s.chars().nth(1).unwrap() == '[' && s.chars().nth(s.len()-2).unwrap() == ']' {
             let mut output_m = vec![];
             let mut row = vec![];
             let mut row_size = None;
@@ -224,11 +224,13 @@ pub fn parse(expr: String) -> Result<Binary, ParserError> {
         }
     }
 
+
     //is it an operation?
     
     let op_types = vec![OpType::Get, OpType::Add, OpType::Sub, OpType::Mult, OpType::Div, OpType::Cross, OpType::HiddenMult, OpType::Pow];
     let mut ops_in_expr: Vec<(OpType, usize, usize, usize)> = vec![];
     let mut last_char = '\\';
+    let mut brackets_open = 0;
     for i in 0..expr_chars.len() {
         let mut is_hidden_mult = false;
         if (last_char.is_digit(10) && (expr_chars[i].is_alphabetic() || expr_chars[i] == '\\'))||(last_char == ')' && expr_chars[i] == '(') {
@@ -240,17 +242,27 @@ pub fn parse(expr: String) -> Result<Binary, ParserError> {
         if parenths_open == 0 && is_hidden_mult {
             ops_in_expr.push((OpType::HiddenMult, i, 0, 0));
         }
+        last_char = expr_chars[i];
         if expr_chars[i] == '(' {
             parenths_open += 1;
+            continue;
         }
         if expr_chars[i] == ')' {
-            parenths_open -= 1; 
+            parenths_open -= 1;
+            continue;
+        }
+        if expr_chars[i] == '[' {
+            brackets_open += 1;
+            continue;
+        }
+        if expr_chars[i] == ']' {
+            brackets_open -= 1;
+            continue;
         }
         let symbol = get_op_symbol(expr_chars[i]);
-        if parenths_open == 0 && i != 0 && i != expr_chars.len()-1 && symbol.is_some() {
+        if parenths_open == 0 && brackets_open == 0 && i != 0 && i != expr_chars.len()-1 && symbol.is_some() {
             ops_in_expr.push((symbol.clone().unwrap(), i, 0, 1));
         } 
-        last_char = expr_chars[i];
     }
 
     for o in op_types {
@@ -265,9 +277,9 @@ pub fn parse(expr: String) -> Result<Binary, ParserError> {
                 })));
             }
         }
-    } 
+    }
 
-    // is it a negative negation?
+    // is it a negation?
 
     if expr_chars[0] == '-' {
         return Ok(Binary::Operation(Box::new(Operation {
