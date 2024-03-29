@@ -114,6 +114,22 @@ fn medium_eval10() {
 }
 
 #[test]
+fn medium_eval11() -> Result<(), MathLibError> {
+    let res = quick_eval("[-3 ,-5, -2]".to_string(), vec![])?;
+
+    assert_eq!(res, Value::Vector(vec![-3., -5., -2.]));
+
+    Ok(())
+}
+
+#[test]
+fn medium_eval12() {
+    let res = quick_eval("[3, 3*3, -5]".to_string(), vec![]);
+
+    assert_eq!(res.unwrap_err(), QuickEvalError::ParserError(ParserError::ParseValue("[3,3*3,-5]".to_string())))
+}
+
+#[test]
 fn hard_eval1() -> Result<(), MathLibError> {
     let x = Variable {
         name: "x".to_string(),
