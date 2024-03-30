@@ -147,7 +147,25 @@ fn medium_eval13() -> Result<(), MathLibError> {
 fn medium_eval14() -> Result<(), MathLibError> {
     let res = quick_eval("[[1, 0, 0], [0, 6, 0]]*[3, 4, 5]".to_string(), vec![])?;
 
-    assert_eq!(res, Value:: Vector(vec![3., 24.]));
+    assert_eq!(res, Value::Vector(vec![3., 24.]));
+
+    Ok(())
+}
+
+#[test]
+fn medium_eval15() -> Result<(), MathLibError> {
+    let res = quick_eval("3(6+2)".to_string(), vec![])?;
+
+    assert_eq!(res, Value::Scalar(24.));
+
+    Ok(())
+}
+
+#[test]
+fn medium_eval16() -> Result<(), MathLibError> {
+    let res = quick_eval("3[4, 5, 6]".to_string(), vec![])?;
+
+    assert_eq!(res, Value::Vector(vec![12., 15., 18.]));
 
     Ok(())
 }
