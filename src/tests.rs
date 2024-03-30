@@ -147,7 +147,25 @@ fn medium_eval13() -> Result<(), MathLibError> {
 fn medium_eval14() -> Result<(), MathLibError> {
     let res = quick_eval("[[1, 0, 0], [0, 6, 0]]*[3, 4, 5]".to_string(), vec![])?;
 
-    assert_eq!(res, Value:: Vector(vec![3., 24.]));
+    assert_eq!(res, Value::Vector(vec![3., 24.]));
+
+    Ok(())
+}
+
+#[test]
+fn medium_eval15() -> Result<(), MathLibError> {
+    let res = quick_eval("3(6+2)".to_string(), vec![])?;
+
+    assert_eq!(res, Value::Scalar(24.));
+
+    Ok(())
+}
+
+#[test]
+fn medium_eval16() -> Result<(), MathLibError> {
+    let res = quick_eval("3[4, 5, 6]".to_string(), vec![])?;
+
+    assert_eq!(res, Value::Vector(vec![12., 15., 18.]));
 
     Ok(())
 }
@@ -206,8 +224,6 @@ fn hard_solve1() -> Result<(), MathLibError> {
     let res = quick_solve(equation, "x".to_string(), vec![])?;
 
     let res_rounded = res.iter().map(|x| Value::Scalar((x.get_scalar()*1000.).round()/1000.)).collect::<Vec<Value>>();
-
-    println!("{:.?}", res_rounded);
 
     assert_eq!(res_rounded.contains(&Value::Scalar(-0.656)), true);
 

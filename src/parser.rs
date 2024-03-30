@@ -234,7 +234,7 @@ pub fn parse(expr: String) -> Result<Binary, ParserError> {
     let mut curly_brackets_open = 0;
     for i in 0..expr_chars.len() {
         let mut is_hidden_mult = false;
-        if (last_char.is_digit(10) && (expr_chars[i].is_alphabetic() || expr_chars[i] == '\\'))||(last_char == ')' && expr_chars[i] == '(') {
+        if (last_char.is_digit(10) && (expr_chars[i].is_alphabetic() || expr_chars[i] == '\\' || expr_chars[i] == '(' || expr_chars[i] == '['))||(last_char == ')' && expr_chars[i] == '(') {
             is_hidden_mult = true;
             if i as i32-2 > 0 && expr_chars[i-2] == '_' {
                 is_hidden_mult = false;
