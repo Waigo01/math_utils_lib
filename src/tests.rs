@@ -207,8 +207,6 @@ fn hard_solve1() -> Result<(), MathLibError> {
 
     let res_rounded = res.iter().map(|x| Value::Scalar((x.get_scalar()*1000.).round()/1000.)).collect::<Vec<Value>>();
 
-    println!("{:.?}", res_rounded);
-
     assert_eq!(res_rounded.contains(&Value::Scalar(-0.656)), true);
 
     Ok(())

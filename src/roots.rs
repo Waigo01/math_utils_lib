@@ -68,9 +68,9 @@ fn calc_newton(x: &mut f64, expr: &Binary, vars: &mut Vec<Variable>, var_name: &
     if (fx*10f64.powf(PREC)).round()/10f64.powf(PREC) == 0. {
         return Ok(true);
     }
-    vars.push(Variable {name: var_name.to_string(), value: Value::Scalar(*x+1e-5)});
+    vars.push(Variable {name: var_name.to_string(), value: Value::Scalar(*x+1e-7)});
     let fxh = eval(&expr, &vars)?.get_scalar();
-    *x = *x - (fx/((fxh-fx)/1e-5));
+    *x = *x - (fx/((fxh-fx)/1e-7));
     vars.remove(vars.len()-1);
     return Ok(false);
 }
