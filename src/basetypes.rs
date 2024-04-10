@@ -1,6 +1,4 @@
-use std::usize;
-
-use crate::helpers::{center_in_string, round_and_format};
+use crate::{helpers::{center_in_string, round_and_format}, parser::Binary};
 
 #[doc(hidden)]
 const VAR_SYMBOLS: [(&str, &str); 48] = [("\\alpha", "𝛼"), ("\\Alpha", "𝛢"), ("\\beta", "𝛽"), ("\\Beta", "𝛣"), ("\\gamma", "𝛾"), ("\\Gamma", "𝚪"),
@@ -22,16 +20,20 @@ const VAR_SYMBOLS: [(&str, &str); 48] = [("\\alpha", "𝛼"), ("\\Alpha", "𝛢"
 ///
 ///```
 ///let context: Vec<Variable> = vec![
-///     Variable{
-///         name: "pi".to_string(),
-///         value: Value::Scalar(3.14159)
-///     },
+///     Variable::new("pi".to_string(), Value::Scalar(3.14159)),
 ///];
 ///```
 #[derive(Debug, Clone)]
 pub struct Variable {
     pub name: String,
-    pub value: Value
+    pub value: Binary
+}
+
+impl Variable {
+    /// a simple function to create a new [Variable] from a Value.
+    pub fn new(name: String, value: Value) -> Variable {
+        Variable { name, value: Binary::from_value(value) }
+    } 
 }
 
 ///specifies a Value that can be a Matrix, Vector or a Scalar.
@@ -49,14 +51,79 @@ pub enum Value {
 }
 
 impl Value {
-    ///returns the scalar if the Value is a scalar and 0 if it is a matrix or a
-    ///vector (used in [find_roots()](fn@crate::roots::find_roots)).
-    pub fn get_scalar(&self) -> f64 {
+    ///returns the scalar if the Value is a scalar and None if it is a matrix or a
+    ///vector.
+    pub fn get_scalar(&self) -> Option<f64> {
         match self {
-            Value::Scalar(a) => return *a,
-            Value::Matrix(_) => return 0.,
-            Value::Vector(_) => return 0.
+            Value::Scalar(a) => return Some(*a),
+            Value::Matrix(_) => return None,
+            Value::Vector(_) => return None
         }
+    }
+    ///returns the vector if the Value is a vector and None if it is a matrix or a
+    ///scalar.
+    pub fn get_vector(&self) -> Option<Vec<f64>> {
+        match self {
+            Value::Vector(a) => return Some(a.to_vec()),
+            Value::Matrix(_) => return None,
+            Value::Scalar(_) => return None
+        }
+    }
+    ///returns the matrix if the Value is a matrix and None if it is a scalar or a
+    ///vector (used in [find_roots()](fn@crate::roots::find_roots)).
+    pub fn get_matrix(&self) -> Option<Vec<Vec<f64>>> {
+        match self {
+            Value::Matrix(a) => return Some(a.to_vec()),
+            Value::Scalar(_) => return None,
+            Value::Vector(_) => return None
+        }
+    }
+    /// rounds the value
+    pub fn round(&self, prec: f64) -> Value {
+        match self {
+            Value::Scalar(a) => return Value::Scalar((a*10f64.powf(prec)).round()/10f64.powf(prec)),
+            Value::Vector(v) => {
+                let mut new_vec = vec![];
+                for i in v {
+                    new_vec.push((i*10f64.powf(prec)).round()/10f64.powf(prec));
+                }
+                return Value::Vector(new_vec);
+            },
+            Value::Matrix(m) => {
+                let mut new_matrix = vec![];
+                for i in m {
+                    let mut row = vec![];
+                    for j in i {
+                        row.push((j*10f64.powf(prec)).round()/10f64.powf(prec));
+                    }
+                    new_matrix.push(row);
+                }
+                return Value::Matrix(new_matrix);
+            }
+        }
+    }
+    /// checks if any part of the value is infinite or NaN.
+    pub fn is_inf_or_nan(&self) -> bool {
+        match self {
+            Value::Scalar(s) => {if s.is_infinite() || s.is_nan() {return true}},
+            Value::Vector(v) => {
+                for i in v {
+                    if i.is_infinite() || i.is_nan() {
+                        return true;
+                    }
+                }
+            },
+            Value::Matrix(m) => {
+                for i in m {
+                    for j in i {
+                        if j.is_infinite() || j.is_nan() {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        return false;
     }
     ///provides a crude method to convert a Value to a string, using square brackets
     ///for matrices and vectors.

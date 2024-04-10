@@ -64,7 +64,8 @@ pub enum ParserError {
     NotRectMatrix,
     EmptyExpr,
     UnmatchedOpenDelimiter,
-    UnmatchedCloseDelimiter
+    UnmatchedCloseDelimiter,
+    WrongNumberOfArgs(String)
 }
 
 impl ParserError {
@@ -76,7 +77,8 @@ impl ParserError {
             ParserError::NotRectMatrix => return "Could not parse matrix because it is not rectangular!".to_string(),
             ParserError::EmptyExpr => return "Could not parse empty expression!".to_string(),
             ParserError::UnmatchedOpenDelimiter => return "Unmatched opening delimiter!".to_string(),
-            ParserError::UnmatchedCloseDelimiter => return "Unmatched closing delimiter!".to_string()
+            ParserError::UnmatchedCloseDelimiter => return "Unmatched closing delimiter!".to_string(),
+            ParserError::WrongNumberOfArgs(s) => return format!("Wrong number of arguments for {} operation!", s)
         }
     } 
 }

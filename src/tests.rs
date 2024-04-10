@@ -12,10 +12,7 @@ fn easy_eval1() -> Result<(), MathLibError> {
 
 #[test]
 fn medium_eval1() -> Result<(), MathLibError> {
-    let x = Variable {
-        name: "x".to_string(),
-        value: Value::Scalar(3.)
-    };
+    let x = Variable::new("x".to_string(), Value::Scalar(3.));
     let res = quick_eval("3x".to_string(), vec![x])?;
 
     assert_eq!(res, Value::Scalar(9.));
@@ -24,10 +21,7 @@ fn medium_eval1() -> Result<(), MathLibError> {
 
 #[test]
 fn medium_eval2() -> Result<(), MathLibError> {
-    let a = Variable {
-        name: "A".to_string(),
-        value: Value::Vector(vec![3., 5., 8.])
-    };
+    let a = Variable::new("A".to_string(), Value::Vector(vec![3., 5., 8.]));
     let res = quick_eval("3A".to_string(), vec![a])?;
 
     assert_eq!(res, Value::Vector(vec![9., 15., 24.]));
@@ -37,14 +31,8 @@ fn medium_eval2() -> Result<(), MathLibError> {
 
 #[test]
 fn medium_eval3() -> Result<(), MathLibError> {
-    let a = Variable {
-        name: "A".to_string(),
-        value: Value::Vector(vec![3., 5., 8.])
-    };
-    let b = Variable {
-        name: "B".to_string(),
-        value: Value::Matrix(vec![vec![2., 0., 0.], vec![0., 2., 0.], vec![0., 0., 1.]])
-    };
+    let a = Variable::new("A".to_string(), Value::Vector(vec![3., 5., 8.]));
+    let b = Variable::new("B".to_string(), Value::Matrix(vec![vec![2., 0., 0.], vec![0., 2., 0.], vec![0., 0., 1.]]));
     let res = quick_eval("B*A".to_string(), vec![a, b])?;
 
     assert_eq!(res, Value::Vector(vec![6., 10., 8.]));
@@ -54,14 +42,8 @@ fn medium_eval3() -> Result<(), MathLibError> {
 
 #[test]
 fn medium_eval4() -> Result<(), MathLibError> {
-    let a = Variable {
-        name: "A".to_string(),
-        value: Value::Matrix(vec![vec![3., 5., 7.], vec![4., 8., 2.], vec![1., 9., 2.]])
-    };
-    let b = Variable {
-        name: "B".to_string(),
-        value: Value::Matrix(vec![vec![7., 9., 10.], vec![1., 55., 8.], vec![22., 9., 2.]])
-    };
+    let a = Variable::new("A".to_string(), Value::Matrix(vec![vec![3., 5., 7.], vec![4., 8., 2.], vec![1., 9., 2.]]));
+    let b = Variable::new("B".to_string(), Value::Matrix(vec![vec![7., 9., 10.], vec![1., 55., 8.], vec![22., 9., 2.]]));
     let res = quick_eval("A*B".to_string(), vec![a, b])?;
 
     assert_eq!(res, Value::Matrix(vec![vec![180., 365., 84.], vec![80., 494., 108.], vec![60., 522., 86.]]));
@@ -131,10 +113,7 @@ fn medium_eval12() {
 
 #[test]
 fn medium_eval13() -> Result<(), MathLibError> {
-    let vars = vec![Variable {
-        name: "A_{3*6}".to_string(),
-        value: Value::Scalar(3.)
-    }];
+    let vars = vec![Variable::new("A_{3*6}".to_string(), Value::Scalar(3.))];
 
     let res = quick_eval("A_{3*6}*3".to_string(), vars)?;
 
@@ -171,19 +150,28 @@ fn medium_eval16() -> Result<(), MathLibError> {
 }
 
 #[test]
+fn calculus_eval1() -> Result<(), MathLibError> {
+    let res = quick_eval("D(x^2, x, 3)".to_string(), vec![])?;
+
+    assert_eq!(res.round(6.), Value::Scalar(6.));
+
+    Ok(())
+}
+
+#[test]
+fn calculus_eval2() -> Result<(), MathLibError> {
+    let res = quick_eval("I(x^2, x, 0, 5)".to_string(), vec![])?;
+
+    assert_eq!(res.round(4.), Value::Scalar(41.6667));
+
+    Ok(())
+}
+
+#[test]
 fn hard_eval1() -> Result<(), MathLibError> {
-    let x = Variable {
-        name: "x".to_string(),
-        value: Value::Scalar(3.)
-    };
-    let a = Variable {
-        name: "A".to_string(),
-        value: Value::Vector(vec![3., 2., 1.])
-    };
-    let b = Variable {
-        name: "B".to_string(),
-        value: Value::Matrix(vec![vec![2., 3., 4.], vec![5., 1., 7.], vec![2., 3., 6.]])
-    };
+    let x = Variable::new("x".to_string(), Value::Scalar(3.));
+    let a = Variable::new("A".to_string(), Value::Vector(vec![3., 2., 1.]));
+    let b = Variable::new("B".to_string(), Value::Matrix(vec![vec![2., 3., 4.], vec![5., 1., 7.], vec![2., 3., 6.]]));
     let res = quick_eval("x*B*A?1".to_string(), vec![x, a, b])?;
 
     assert_eq!(res, Value::Scalar(72.));
@@ -197,7 +185,7 @@ fn easy_solve1() -> Result<(), MathLibError> {
 
     let res = quick_solve(equation, "x".to_string(), vec![])?;
     
-    let res_rounded = res.iter().map(|x| Value::Scalar((x.get_scalar()*1000.).round()/1000.)).collect::<Vec<Value>>();
+    let res_rounded = res.iter().map(|x| x.round(3.)).collect::<Vec<Value>>();
 
     assert_eq!(res_rounded, vec![Value::Scalar(-3.), Value::Scalar(3.)]);
 
@@ -210,9 +198,39 @@ fn medium_solve1() -> Result<(), MathLibError> {
 
     let res = quick_solve(equation, "x".to_string(), vec![])?;
     
-    let res_rounded = res.iter().map(|x| Value::Scalar((x.get_scalar()*1000.).round()/1000.)).collect::<Vec<Value>>();
+    let res_rounded = res.iter().map(|x| x.round(3.)).collect::<Vec<Value>>();
 
     assert_eq!(res_rounded, vec![Value::Scalar(-1.), Value::Scalar(((1./3.) as f64*1000.).round()/1000.)]);
+
+    Ok(())
+}
+
+#[test]
+fn medium_solve2() -> Result<(), MathLibError> {
+    let equation = "3x^2+2x-1".to_string();
+
+    let parsed = parse(equation)?;
+
+    let vars = vec![Variable {name: "k".to_string(), value: parsed}];
+
+    let res = quick_solve("k=0".to_string(), "x".to_string(), vars)?;
+    
+    let res_rounded = res.iter().map(|x| x.round(3.)).collect::<Vec<Value>>();
+
+    assert_eq!(res_rounded, vec![Value::Scalar(-1.), Value::Scalar(((1./3.) as f64*1000.).round()/1000.)]);
+
+    Ok(())
+}
+
+#[test]
+fn calculus_solve1() -> Result<(), MathLibError> {
+    let equation = "D(3x^2+2x-1, x, k)=0".to_string();
+
+    let res = quick_solve(equation, "k".to_string(), vec![])?;
+
+    let res_rounded = res.iter().map(|x| x.round(3.)).collect::<Vec<Value>>();
+
+    assert_eq!(res_rounded, vec![Value::Scalar(-(((1./3.) as f64*1000.).round()/1000.))]);
 
     Ok(())
 }
@@ -223,9 +241,20 @@ fn hard_solve1() -> Result<(), MathLibError> {
 
     let res = quick_solve(equation, "x".to_string(), vec![])?;
 
-    let res_rounded = res.iter().map(|x| Value::Scalar((x.get_scalar()*1000.).round()/1000.)).collect::<Vec<Value>>();
+    let res_rounded = res.iter().map(|x| x.round(3.)).collect::<Vec<Value>>();
 
     assert_eq!(res_rounded.contains(&Value::Scalar(-0.656)), true);
+
+    Ok(())
+}
+
+#[test]
+fn hard_solve2() -> Result<(), MathLibError> {
+    let res = quick_solve("x*[3, 4, 5]=[6, 8, 10]".to_string(), "x".to_string(), vec![])?;
+
+    let res_rounded = res.iter().map(|x| x.round(3.)).collect::<Vec<Value>>();
+
+    assert_eq!(res_rounded.contains(&Value::Scalar(2.)), true);
 
     Ok(())
 }
@@ -234,12 +263,9 @@ fn hard_solve1() -> Result<(), MathLibError> {
 fn hard_latex1() -> Result<(), MathLibError> {
     let expression = "((25x^3-96x^2+512x+384)/(x^4+2x^3+90x^2-128x+1664)^(1.5))/(-sqrt(1-((32-x+x^2)/(((x-1)^2+25)(x^2+64)))^2))".to_string();
     let parsed = parse(expression)?;
-    let vars = vec![Variable {
-        name: "x".to_string(),
-        value: Value::Scalar(-0.655639)
-    }];
+    let vars = vec![Variable::new("x".to_string(), Value::Scalar(-0.655639))];
     let result = eval(&parsed, &vars)?;
-    let var_assign = StepType::Calc((Binary::Value(Value::Scalar(-0.655639)), Value::Scalar(-0.655639), Some("x".to_string())));
+    let var_assign = StepType::Calc((Binary::from_value(Value::Scalar(-0.655639)), Value::Scalar(-0.655639), Some("x".to_string())));
     let step = StepType::Calc((parsed, result, None));
 
     export(vec![var_assign, step], "export".to_string(), ExportType::Png);

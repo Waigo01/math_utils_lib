@@ -22,34 +22,22 @@ assert_eq!(res, Value::Scalar(9.));
 ```
 
 ```rust
-let x = Variable {
-    name: "x".to_string(),
-    value: Value::Scalar(3.)
-};
+let x = Variable::new("x".to_string(), Value::Scalar(3.));
 let res = quick_eval("3x".to_string(), vec![x])?;
 
 assert_eq!(res, Value::Scalar(9.));
 ```
 
 ```rust
-let a = Variable {
-    name: "A".to_string(),
-    value: Value::Vector(vec![3., 5., 8.])
-};
+let a = Variable::new("A".to_string(), Value::Vector(vec![3., 5., 8.]));
 let res = quick_eval("3A".to_string(), vec![a])?;
 
 assert_eq!(res, Value::Vector(vec![9., 15., 24.]));
 ```
 
 ```rust
-let a = Variable {
-    name: "A".to_string(),
-    value: Value::Vector(vec![3., 5., 8.])
-};
-let b = Variable {
-    name: "B".to_string(),
-    value: Value::Matrix(vec![vec![2., 0., 0.], vec![0., 2., 0.], vec![0., 0., 1.]])
-};
+let a = Variable::new("A".to_string(), Value::Vector(vec![3., 5., 8.]));
+let b = Variable::new("B".to_string(), Value::Matrix(vec![vec![2., 0., 0.], vec![0., 2., 0.], vec![0., 0., 1.]]));
 let res = quick_eval("B*A".to_string(), vec![a, b])?;
 
 assert_eq!(res, Value::Vector(vec![6., 10., 8.]));
@@ -68,10 +56,7 @@ assert_eq!(res_rounded, vec![Value::Scalar(3.), Value::Scalar(-3.)]);
 ```rust
 let expression = "((25x^3-96x^2+512x+384)/(x^4+2x^3+90x^2-128x+1664)^(1.5))/(-sqrt(1-((32-x+x^2)/(((x-1)^2+25)(x^2+64)))^2))".to_string();
 let parsed = parse(expression)?;
-let vars = vec![Variable {
-    name: "x".to_string(),
-    value: Value::Scalar(-0.655639)
-}];
+let vars = vec![Variable::new("x".to_string(), Value::Scalar(-0.655639))];
 let result = eval(&parsed, &vars)?;
 let var_assign = StepType::Calc((Binary::Value(Value::Scalar(-0.655639)), Value::Scalar(-0.655639), Some("x".to_string())));
 let step = StepType::Calc((parsed, result, None));

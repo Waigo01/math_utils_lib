@@ -1,4 +1,4 @@
-use crate::{basetypes::Value, parser::{Binary, OpType}};
+use crate::{basetypes::Value, parser::{AdvancedOperation, Binary, Operation, SimpleOpType}};
 use std::{fs, process, usize};
 
 ///provides a way of saving a step. A step can either be a: 
@@ -29,29 +29,48 @@ fn latex_recurse(b: &Binary) -> Result<String, String> {
             return Ok(v.to_string())
         },
         Binary::Operation(o) => {
-            let lv = latex_recurse(&o.left)?;
-            let rv = latex_recurse(&o.right)?; 
-            match o.op_type {
-                OpType::Get => return Ok(format!("{}_{{{}}}", lv, rv)),
-                OpType::Add => return Ok(format!("{}+{}", lv, rv)),
-                OpType::Sub => return Ok(format!("{}-{}", lv, rv)),
-                OpType::Mult => return Ok(format!("{}\\cdot {}", lv, rv)),
-                OpType::Neg => return Ok(format!("-{}", lv)),
-                OpType::Div => return Ok(format!("\\frac{{{}}}{{{}}}", lv, rv)),
-                OpType::HiddenMult => return Ok(format!("{}{}", lv, rv)),
-                OpType::Pow => return Ok(format!("{}^{{{}}}", lv, rv)),
-                OpType::Cross => return Ok(format!("{}\\times {}", lv, rv)),
-                OpType::Abs => return Ok(format!("|{}|", lv)),
-                OpType::Sin => return Ok(format!("\\sin{{({})}}", lv)),
-                OpType::Cos => return Ok(format!("\\cos{{({})}}", lv)),
-                OpType::Tan => return Ok(format!("\\tan{{({})}}", lv)),
-                OpType::Sqrt => return Ok(format!("\\sqrt{{{}}}", lv)),
-                OpType::Ln => return Ok(format!("\\ln{{({})}}", lv)),
-                OpType::Arcsin => return Ok(format!("\\arcsin{{({})}}", lv)),
-                OpType::Arccos => return Ok(format!("\\arccos{{({})}}", lv)),
-                OpType::Arctan => return Ok(format!("\\arctan{{({})}}", lv)),
-                OpType::Parenths => return Ok(format!("\\left({}\\right)", lv))
-            }
+            match &**o  {
+                Operation::SimpleOperation {op_type, left, right} => {
+                    let lv = latex_recurse(&left)?;
+                    let rv = latex_recurse(&right)?; 
+                    match op_type {
+                        SimpleOpType::Get => return Ok(format!("{}_{{{}}}", lv, rv)),
+                        SimpleOpType::Add => return Ok(format!("{}+{}", lv, rv)),
+                        SimpleOpType::Sub => return Ok(format!("{}-{}", lv, rv)),
+                        SimpleOpType::Mult => return Ok(format!("{}\\cdot {}", lv, rv)),
+                        SimpleOpType::Neg => return Ok(format!("-{}", lv)),
+                        SimpleOpType::Div => return Ok(format!("\\frac{{{}}}{{{}}}", lv, rv)),
+                        SimpleOpType::HiddenMult => return Ok(format!("{}{}", lv, rv)),
+                        SimpleOpType::Pow => return Ok(format!("{}^{{{}}}", lv, rv)),
+                        SimpleOpType::Cross => return Ok(format!("{}\\times {}", lv, rv)),
+                        SimpleOpType::Abs => return Ok(format!("|{}|", lv)),
+                        SimpleOpType::Sin => return Ok(format!("\\sin{{({})}}", lv)),
+                        SimpleOpType::Cos => return Ok(format!("\\cos{{({})}}", lv)),
+                        SimpleOpType::Tan => return Ok(format!("\\tan{{({})}}", lv)),
+                        SimpleOpType::Sqrt => return Ok(format!("\\sqrt{{{}}}", lv)),
+                        SimpleOpType::Ln => return Ok(format!("\\ln{{({})}}", lv)),
+                        SimpleOpType::Arcsin => return Ok(format!("\\arcsin{{({})}}", lv)),
+                        SimpleOpType::Arccos => return Ok(format!("\\arccos{{({})}}", lv)),
+                        SimpleOpType::Arctan => return Ok(format!("\\arctan{{({})}}", lv)),
+                        SimpleOpType::Parenths => return Ok(format!("\\left({}\\right)", lv)),
+                    }
+                },
+                Operation::AdvancedOperation(a) => {
+                    match a {
+                        AdvancedOperation::Integral {expr, in_terms_of, lower_bound, upper_bound} => {
+                            let eexpr = latex_recurse(&expr)?;
+                            let elower_b = latex_recurse(&lower_bound)?;
+                            let eupper_b = latex_recurse(&upper_bound)?;
+                            return Ok(format!("\\int_{{{}}}^{{{}}}\\left({} d{}\\right)", eexpr, elower_b, eupper_b, in_terms_of));
+                        },
+                        AdvancedOperation::Derivative {expr, in_terms_of, at} => {
+                            let eexpr = latex_recurse(&expr)?;
+                            let eat = latex_recurse(&at)?;
+                            return Ok(format!("\\frac{{\\partial}}{{\\partial{}}}\\left({}_{{at {} = {}}}\\right)", in_terms_of, eexpr, in_terms_of, eat));
+                        }
+                    }
+                }
+            } 
         }
     }
 }
