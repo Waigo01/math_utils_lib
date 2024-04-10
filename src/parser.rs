@@ -7,9 +7,7 @@ use crate::{basetypes::{Value, Variable}, errors::{EvalError, ParserError}, math
 ///
 ///The order of the enum also represents the reverse order of the operation priority.
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub enum SimpleOpType {
-    ///Index into vector using "?" ([3, 4, 5]?1 = 4)
-    Get,
+pub enum SimpleOpType { 
     ///Add two scalars, vectors, or matrices (a+b)
     Add,
     ///Subtract two scalars, vectors, or matrices (a-b)
@@ -28,6 +26,8 @@ pub enum SimpleOpType {
     HiddenMult,
     ///Take a scalar to the power of another scalar using "^" (a^b)
     Pow,
+    ///Index into vector using "?" ([3, 4, 5]?1 = 4)
+    Get,
     ///Calculate the sin of a scalar (sin(a))
     Sin,
     ///Calculate the cos of a scalar (cos(a))
@@ -274,7 +274,7 @@ pub fn parse(expr: String) -> Result<Binary, ParserError> {
 
     //is it an operation?
     
-    let op_types = vec![SimpleOpType::Get, SimpleOpType::Add, SimpleOpType::Sub, SimpleOpType::Mult, SimpleOpType::Div, SimpleOpType::Cross, SimpleOpType::HiddenMult, SimpleOpType::Pow];
+    let op_types = vec![SimpleOpType::Add, SimpleOpType::Sub, SimpleOpType::Mult, SimpleOpType::Div, SimpleOpType::Cross, SimpleOpType::HiddenMult, SimpleOpType::Pow, SimpleOpType::Get];
     let mut ops_in_expr: Vec<(SimpleOpType, usize, usize, usize)> = vec![];
     let mut last_char = '\\';
     let mut brackets_open = 0;
