@@ -1,4 +1,4 @@
-use crate::{helpers::{center_in_string, round_and_format}, parser::Binary};
+use crate::helpers::{center_in_string, round_and_format};
 
 #[doc(hidden)]
 const VAR_SYMBOLS: [(&str, &str); 48] = [("\\alpha", "𝛼"), ("\\Alpha", "𝛢"), ("\\beta", "𝛽"), ("\\Beta", "𝛣"), ("\\gamma", "𝛾"), ("\\Gamma", "𝚪"),
@@ -26,13 +26,13 @@ const VAR_SYMBOLS: [(&str, &str); 48] = [("\\alpha", "𝛼"), ("\\Alpha", "𝛢"
 #[derive(Debug, Clone)]
 pub struct Variable {
     pub name: String,
-    pub value: Binary
+    pub value: Value
 }
 
 impl Variable {
-    /// a simple function to create a new [Variable] from a Value.
+    /// a simple function to create a new [Variable].
     pub fn new(name: String, value: Value) -> Variable {
-        Variable { name, value: Binary::from_value(value) }
+        Variable { name, value}
     } 
 }
 

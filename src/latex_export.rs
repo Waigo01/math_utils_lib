@@ -15,7 +15,7 @@ use std::{fs, process, usize};
 ///```
 #[derive(Debug, Clone)]
 pub enum StepType {
-    Eval((Binary, Binary, Option<String>)),
+    Calc((Binary, Value, Option<String>)),
     Equ((Binary, Binary, Vec<Value>, Option<String>))
 }
 
@@ -93,7 +93,7 @@ pub fn export(history: Vec<StepType>, file_name: String, export_type: ExportType
     let mut j = 0;
     for s in history {
         match s {
-            StepType::Eval(i) => {
+            StepType::Calc(i) => {
                 let mut aligner = "&";
                 if i.2.is_some() {
                     output_string += &format!("{} &= ", i.2.unwrap());
@@ -103,10 +103,8 @@ pub fn export(history: Vec<StepType>, file_name: String, export_type: ExportType
                     Ok(s) => s,
                     Err(_) => return
                 };
-                let res = match latex_recurse(&i.1) {
-                    Ok(s) => s,
-                    Err(_) => return
-                };
+                let res = i.1.latex_print();
+
                 if expression != res {
                     output_string += &format!("{} {}= {} \\tag{{{}}}\\label{{eq:{}}} \\\\ \\\\ \n", expression, aligner, res, j+1, j+1);
                 } else {

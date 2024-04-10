@@ -85,63 +85,7 @@ impl Binary {
     }
     pub fn from_operation(val: Operation) -> Binary {
         return Binary::Operation(Box::new(val));
-    }
-    /// used to print a binary together with [Value::pretty_print()].
-    pub fn pretty_print(&self) -> Result<String, String> {
-        match self {
-            Binary::Value(b) => return Ok(b.pretty_print(None)),
-            Binary::Variable(v) => {
-                if v == "pi" {
-                    return Ok("\\pi".to_string());
-                }
-                return Ok(v.to_string())
-            },
-            Binary::Operation(o) => {
-                match &**o  {
-                    Operation::SimpleOperation {op_type, left, right} => {
-                        let lv = left.pretty_print()?;
-                        let rv = right.pretty_print()?; 
-                        match op_type {
-                            SimpleOpType::Get => return Ok(format!("{}?{}", lv, rv)),
-                            SimpleOpType::Add => return Ok(format!("{}+{}", lv, rv)),
-                            SimpleOpType::Sub => return Ok(format!("{}-{}", lv, rv)),
-                            SimpleOpType::Mult => return Ok(format!("{}*{}", lv, rv)),
-                            SimpleOpType::Neg => return Ok(format!("-{}", lv)),
-                            SimpleOpType::Div => return Ok(format!("{}/{}", lv, rv)),
-                            SimpleOpType::HiddenMult => return Ok(format!("{}{}", lv, rv)),
-                            SimpleOpType::Pow => return Ok(format!("{}^{}", lv, rv)),
-                            SimpleOpType::Cross => return Ok(format!("{}x{}", lv, rv)),
-                            SimpleOpType::Abs => return Ok(format!("|{}|", lv)),
-                            SimpleOpType::Sin => return Ok(format!("sin({})", lv)),
-                            SimpleOpType::Cos => return Ok(format!("cos({})", lv)),
-                            SimpleOpType::Tan => return Ok(format!("tan({})", lv)),
-                            SimpleOpType::Sqrt => return Ok(format!("sqrt({})", lv)),
-                            SimpleOpType::Ln => return Ok(format!("ln({})", lv)),
-                            SimpleOpType::Arcsin => return Ok(format!("arcsin({})", lv)),
-                            SimpleOpType::Arccos => return Ok(format!("arccos({})", lv)),
-                            SimpleOpType::Arctan => return Ok(format!("arctan({})", lv)),
-                            SimpleOpType::Parenths => return Ok(format!("({})", lv)),
-                        }
-                    },
-                    Operation::AdvancedOperation(a) => {
-                        match a {
-                            AdvancedOperation::Integral {expr, in_terms_of, lower_bound, upper_bound} => {
-                                let eexpr = expr.pretty_print()?;
-                                let elower_b = lower_bound.pretty_print()?;
-                                let eupper_b = upper_bound.pretty_print()?;
-                                return Ok(format!("I({}, {}, {}, {})", eexpr, in_terms_of, elower_b, eupper_b));
-                            },
-                            AdvancedOperation::Derivative {expr, in_terms_of, at} => {
-                                let eexpr = expr.pretty_print()?;
-                                let eat = at.pretty_print()?;
-                                return Ok(format!("D({}, {}, {})", eexpr, in_terms_of, eat));
-                            }
-                        }
-                    }
-                } 
-            }
-        }
-    }
+    } 
 }
 
 ///used to specify an operation in a parsed string. It is used together with [Binary] to
@@ -476,7 +420,7 @@ pub fn eval(b: &Binary, vars: &Vec<Variable>) -> Result<Value, EvalError> {
         Binary::Variable(v) => {
             for i in vars {
                 if &i.name == v {
-                    return eval(&i.value, vars);
+                    return Ok(i.value.clone());
                 }
             }
 
@@ -523,22 +467,6 @@ pub fn eval(b: &Binary, vars: &Vec<Variable>) -> Result<Value, EvalError> {
                     }
                 }
             } 
-        }
-    }
-}
-
-/// used to evaluate a binary, just like [eval()]. This function however returns the given binary,
-/// if there is a variable in the binary that could not be found in the given context.
-///
-/// This is useful, if you want to use the ability to save expressions in variables.
-pub fn eval_ignore_no_var(b: &Binary, vars: &Vec<Variable>) -> Result<Binary, EvalError> {
-    match eval(b, vars) {
-        Ok(v) => return Ok(Binary::from_value(v)),
-        Err(e) => {
-            match e {
-                EvalError::MathError(s) => {return Err(EvalError::MathError(s))},
-                EvalError::NoVariable(_) => {return Ok(b.clone())}
-            }
         }
     }
 }

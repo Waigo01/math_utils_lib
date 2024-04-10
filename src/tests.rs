@@ -206,23 +206,6 @@ fn medium_solve1() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn medium_solve2() -> Result<(), MathLibError> {
-    let equation = "3x^2+2x-1".to_string();
-
-    let parsed = parse(equation)?;
-
-    let vars = vec![Variable {name: "k".to_string(), value: parsed}];
-
-    let res = quick_solve("k=0".to_string(), "x".to_string(), vars)?;
-    
-    let res_rounded = res.iter().map(|x| x.round(3.)).collect::<Vec<Value>>();
-
-    assert_eq!(res_rounded, vec![Value::Scalar(-1.), Value::Scalar(((1./3.) as f64*1000.).round()/1000.)]);
-
-    Ok(())
-}
-
-#[test]
 fn calculus_solve1() -> Result<(), MathLibError> {
     let equation = "D(3x^2+2x-1, x, k)=0".to_string();
 
@@ -265,8 +248,8 @@ fn hard_latex1() -> Result<(), MathLibError> {
     let parsed = parse(expression)?;
     let vars = vec![Variable::new("x".to_string(), Value::Scalar(-0.655639))];
     let result = eval(&parsed, &vars)?;
-    let var_assign = StepType::Eval((Binary::from_value(Value::Scalar(-0.655639)), Binary::from_value(Value::Scalar(-0.655639)), Some("x".to_string())));
-    let step = StepType::Eval((parsed, Binary::from_value(result), None));
+    let var_assign = StepType::Calc((Binary::from_value(Value::Scalar(-0.655639)), Value::Scalar(-0.655639), Some("x".to_string())));
+    let step = StepType::Calc((parsed, result, None));
 
     export(vec![var_assign, step], "export".to_string(), ExportType::Png);
 
