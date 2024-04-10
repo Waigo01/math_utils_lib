@@ -172,7 +172,7 @@ fn hard_eval1() -> Result<(), MathLibError> {
     let x = Variable::new("x".to_string(), Value::Scalar(3.));
     let a = Variable::new("A".to_string(), Value::Vector(vec![3., 2., 1.]));
     let b = Variable::new("B".to_string(), Value::Matrix(vec![vec![2., 3., 4.], vec![5., 1., 7.], vec![2., 3., 6.]]));
-    let res = quick_eval("x*B*A?1".to_string(), vec![x, a, b])?;
+    let res = quick_eval("(x*B*A)?1".to_string(), vec![x, a, b])?;
 
     assert_eq!(res, Value::Scalar(72.));
 

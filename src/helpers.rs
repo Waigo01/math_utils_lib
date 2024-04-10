@@ -33,13 +33,13 @@ pub fn center_in_string(f: String, n: i32) -> String {
 
 #[doc(hidden)]
 pub fn round_and_format(x: f64, latex: bool) -> String {
-    if (x*10f64.powf(PREC-4.)).round()/10f64.powf(PREC-4.) == 0. && !latex && x != 0. {
+    if (x*10f64.powf(PREC-2.)).round()/10f64.powf(PREC-2.) == 0. && !latex && x != 0. {
         let mut scientific = format!("{:+e}", x);
         if scientific.chars().nth(0).unwrap() == '+' {
             scientific = scientific[1..].to_string();
         }
         return scientific;
-    } else if (x*10f64.powf(PREC-4.)).round()/10f64.powf(PREC-4.) == 0. && x != 0. {
+    } else if (x*10f64.powf(PREC-2.)).round()/10f64.powf(PREC-2.) == 0. && x != 0. {
         let mut scientific = format!("{:+e}", x);
         if scientific.chars().nth(0).unwrap() == '+' {
             scientific = scientific[1..].to_string();
