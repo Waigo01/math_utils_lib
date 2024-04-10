@@ -265,8 +265,8 @@ fn hard_latex1() -> Result<(), MathLibError> {
     let parsed = parse(expression)?;
     let vars = vec![Variable::new("x".to_string(), Value::Scalar(-0.655639))];
     let result = eval(&parsed, &vars)?;
-    let var_assign = StepType::Calc((Binary::from_value(Value::Scalar(-0.655639)), Value::Scalar(-0.655639), Some("x".to_string())));
-    let step = StepType::Calc((parsed, result, None));
+    let var_assign = StepType::Eval((Binary::from_value(Value::Scalar(-0.655639)), Binary::from_value(Value::Scalar(-0.655639)), Some("x".to_string())));
+    let step = StepType::Eval((parsed, Binary::from_value(result), None));
 
     export(vec![var_assign, step], "export".to_string(), ExportType::Png);
 
