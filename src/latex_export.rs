@@ -61,12 +61,12 @@ fn latex_recurse(b: &Binary) -> Result<String, String> {
                             let eexpr = latex_recurse(&expr)?;
                             let elower_b = latex_recurse(&lower_bound)?;
                             let eupper_b = latex_recurse(&upper_bound)?;
-                            return Ok(format!("\\int_{{{}}}^{{{}}}\\left({} d{}\\right)", elower_b, eupper_b, eexpr, in_terms_of));
+                            return Ok(format!("\\int_{{{}}}^{{{}}}{} d{}", elower_b, eupper_b, eexpr, in_terms_of));
                         },
                         AdvancedOperation::Derivative {expr, in_terms_of, at} => {
                             let eexpr = latex_recurse(&expr)?;
                             let eat = latex_recurse(&at)?;
-                            return Ok(format!("\\frac{{\\partial}}{{\\partial {}}}\\left({}_{{at {} = {}}}\\right)", in_terms_of, eexpr, in_terms_of, eat));
+                            return Ok(format!("\\frac{{\\partial}}{{\\partial {}}}\\left({}\\right)_{{\\text{{at }}{} = {}}}", in_terms_of, eexpr, in_terms_of, eat));
                         }
                     }
                 }
