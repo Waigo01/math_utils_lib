@@ -2,6 +2,9 @@ use crate::{errors::EvalError, eval, parser::{Binary, Operation, SimpleOpType}, 
 
 use super::{add, mult};
 
+/// calculates the integral of an expression in terms of a variable with a lower and a upper bound.
+///
+/// Only scalars are supported as lower and upper bounds.
 pub fn calculate_integral(expr: &Binary, in_terms_of: String, lower_bound: Value, upper_bound: Value, vars: &Vec<Variable>) -> Result<Value, EvalError> {
     let mut mut_vars = vars.to_owned();
     for i in 0..mut_vars.len() {
@@ -34,7 +37,13 @@ pub fn calculate_integral(expr: &Binary, in_terms_of: String, lower_bound: Value
         _ => {return Err(EvalError::MathError("Only scalar bounds are allowed!".to_string()))}
     }
 }
-
+/// calculates the derivative of an expression in terms of a variable at a certain value.
+///
+/// Only scalars and vectors are supported as values.
+///
+/// The function also takes an optional fx value, which is the value f(x). This can be used in
+/// order to increase performance by not having to calculate f(x) twice for an application such as
+/// newtons method.
 pub fn calculate_derivative(expr: &Binary, in_terms_of: String, at: Value, mut fx: Option<Value>, vars: &Vec<Variable>) -> Result<Value, EvalError> {
     let mut mut_vars = vars.to_owned();
     for i in 0..mut_vars.len() {
@@ -86,6 +95,6 @@ pub fn calculate_derivative(expr: &Binary, in_terms_of: String, at: Value, mut f
             });
             return Ok(eval(&h, vars)?);
         } 
-        _ => {return Err(EvalError::MathError("Only scalar and vector positions are allowed!".to_string()))}
+        _ => {return Err(EvalError::MathError("Only scalar and vector values are allowed!".to_string()))}
     }
 }

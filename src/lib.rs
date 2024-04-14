@@ -23,7 +23,7 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //! Vectors and matrices can be written out in an expression (e.g [3, 5, 7] or [[3, 4, 5], [3, 4,
 //! 5], [2, 6, 7]]) <br>
 //! Variable Names can only start with an alphabetic letter or a \ (see [Variable]) <br>
-//! See [SimpleOpType](enum@parser::SimpleOpType) for all allowed operations and functions.
+//! See [SimpleOpType](enum@parser::SimpleOpType) and [AdvancedOpType](enum@parser::AdvancedOpType) for all allowed operations and functions.
 //!
 //! </div>
 //!

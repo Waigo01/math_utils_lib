@@ -1,6 +1,6 @@
 use crate::{basetypes::{Value, Variable}, errors::{EvalError, ParserError}, maths};
 
-///specifies the type of operation for the [SimpleOperation] struct.
+///specifies the type of operation for the [SimpleOperation](Operation::SimpleOperation) struct.
 ///
 ///This enum only contains simple mathematical operations with a left and right side or a maximum
 ///of two arguments. For more advanced operations, see [AdvancedOpType].
