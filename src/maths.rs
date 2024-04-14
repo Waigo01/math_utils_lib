@@ -3,6 +3,7 @@ use crate::basetypes::Value;
 pub mod add_sub;
 pub mod mult_div;
 pub mod cross_pow;
+pub mod calculus;
 
 #[doc(hidden)]
 pub fn add(lv: Value, rv: Value) -> Result<Value, String> {
@@ -64,12 +65,12 @@ pub fn div(lv: Value, rv: Value) -> Result<Value, String> {
         (Value::Scalar(a), Value::Scalar(b)) => return mult_div::ssdiv(a, b),
         (Value::Vector(a), Value::Scalar(b)) => return mult_div::vsdiv(a, b),
         (Value::Matrix(a), Value::Scalar(b)) => return mult_div::msdiv(a, b),
+        (Value::Vector(a), Value::Vector(b)) => return mult_div::vvdiv(a, b),
         (Value::Scalar(_), Value::Vector(_)) => return Err("Can't divide scalar by vector!".to_string()),
         (Value::Scalar(_), Value::Matrix(_)) => return Err("Can't divide scalar by matrix!".to_string()),
         (Value::Matrix(_), Value::Vector(_)) => return Err("Can't divide matrix by vector!".to_string()),
         (Value::Vector(_), Value::Matrix(_)) => return Err("Can't divide vector by matrix!".to_string()),
         (Value::Matrix(_), Value::Matrix(_)) => return Err("Can't divide matrix by matrix!".to_string()),
-        (Value::Vector(_), Value::Vector(_)) => return Err("Can't divide vector by vector!".to_string())
     }
 }
 

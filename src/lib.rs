@@ -23,7 +23,7 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //! Vectors and matrices can be written out in an expression (e.g [3, 5, 7] or [[3, 4, 5], [3, 4,
 //! 5], [2, 6, 7]]) <br>
 //! Variable Names can only start with an alphabetic letter or a \ (see [Variable]) <br>
-//! See [OpType](enum@parser::OpType) for all allowed operations and functions.
+//! See [SimpleOpType](enum@parser::SimpleOpType) and [AdvancedOpType](enum@parser::AdvancedOpType) for all allowed operations and functions.
 //!
 //! </div>
 //!
@@ -41,34 +41,23 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //! ```
 //!
 //! ```
-//! let x = Variable {
-//!     name: "x".to_string(),
-//!     value: Value::Scalar(3.)
-//! };
+//! let x = Variable::new("x".to_string(), Value::Scalar(3.));
 //! let res = quick_eval("3x".to_string(), vec![x])?;
 //!
 //! assert_eq!(res, Value::Scalar(9.));
 //! ```
 //!
 //! ```
-//! let a = Variable {
-//!     name: "A".to_string(),
-//!     value: Value::Vector(vec![3., 5., 8.])
-//! };
+//! let a = Variable::new("A".to_string(), Value::Vector(vec![3., 5., 8.]));
 //! let res = quick_eval("3A".to_string(), vec![a])?;
 //!
 //! assert_eq!(res, Value::Vector(vec![9., 15., 24.]));
 //! ```
 //!
 //! ```
-//! let a = Variable {
-//!     name: "A".to_string(),
-//!     value: Value::Vector(vec![3., 5., 8.])
-//! };
-//! let b = Variable {
-//!     name: "B".to_string(),
-//!     value: Value::Matrix(vec![vec![2., 0., 0.], vec![0., 2., 0.], vec![0., 0., 1.]])
-//! };
+//! let a = Variable::new("A".to_string(), Value::Vector(vec![3., 5., 8.]));
+//! let b = Variable::new("B".to_string(), Value::Matrix(vec![vec![2., 0., 0.], vec![0., 2., 0.],
+//! vec![0., 0., 1.]]));
 //! let res = quick_eval("B*A".to_string(), vec![a, b])?;
 //!
 //! assert_eq!(res, Value::Vector(vec![6., 10., 8.]));
@@ -87,10 +76,7 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //! ```
 //! let expression = "((25x^3-96x^2+512x+384)/(x^4+2x^3+90x^2-128x+1664)^(1.5))/(-sqrt(1-((32-x+x^2)/(((x-1)^2+25)(x^2+64)))^2))".to_string();
 //! let parsed = parse(expression)?;
-//! let vars = vec![Variable {
-//!     name: "x".to_string(),
-//!     value: Value::Scalar(-0.655639)
-//! }];
+//! let vars = vec![Variable::new("x".to_string(), Value::Scalar(-0.655639))];
 //! let result = eval(&parsed, &vars)?;
 //! let var_assign = StepType::Calc((Binary::Value(Value::Scalar(-0.655639)), Value::Scalar(-0.655639), Some("x".to_string())));
 //! let step = StepType::Calc((parsed, result, None));
@@ -102,7 +88,7 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //! ![LaTeX][latex-export]
 
 use errors::{QuickEvalError, QuickSolveError};
-use parser::{Binary, OpType, Operation};
+use parser::{Binary, SimpleOpType, Operation};
 
 #[doc(hidden)]
 pub mod maths;
@@ -142,24 +128,15 @@ pub const PREC: f64 = 8.;
 /// ```
 ///
 /// ```
-/// let x = Variable {
-///     name: "x".to_string(),
-///     value: Value::Scalar(3.)
-/// };
+/// let x = Variable::new("x".to_string(), Value::Scalar(3.));
 /// let res = quick_eval("3x".to_string(), vec![x])?;
 ///
 /// assert_eq!(res, Value::Scalar(9.));
 /// ```
 pub fn quick_eval(mut expr: String, vars: Vec<Variable>) -> Result<Value, QuickEvalError> {
     let mut context_vars = vec![
-        Variable {
-            name: "e".to_string(),
-            value: Value::Scalar(std::f64::consts::E)
-        },
-        Variable {
-            name: "pi".to_string(),
-            value: Value::Scalar(std::f64::consts::PI)
-        }
+        Variable::new("e".to_string(), Value::Scalar(std::f64::consts::E)),
+        Variable::new("pi".to_string(), Value::Scalar(std::f64::consts::PI))
     ];
     if !vars.is_empty() {
         if vars.iter().filter(|x| x.name == "e".to_string() || x.name == "pi".to_string()).collect::<Vec<&Variable>>().len() > 0 {
@@ -192,14 +169,8 @@ pub fn quick_eval(mut expr: String, vars: Vec<Variable>) -> Result<Value, QuickE
 /// ```
 pub fn quick_solve(mut expr: String, solve_var: String, vars: Vec<Variable>) -> Result<Vec<Value>, QuickSolveError> {
     let mut context_vars = vec![
-        Variable {
-            name: "e".to_string(),
-            value: Value::Scalar(std::f64::consts::E)
-        },
-        Variable {
-            name: "pi".to_string(),
-            value: Value::Scalar(std::f64::consts::PI)
-        }
+        Variable::new("e".to_string(), Value::Scalar(std::f64::consts::E)),
+        Variable::new("pi".to_string(), Value::Scalar(std::f64::consts::PI))
     ];
     if !vars.is_empty() {
         if vars.iter().filter(|x| x.name == "e".to_string() || x.name == "pi".to_string()).collect::<Vec<&Variable>>().len() > 0 {
@@ -228,11 +199,11 @@ pub fn quick_solve(mut expr: String, solve_var: String, vars: Vec<Variable>) -> 
         right_b = parse(left)?;
     }
 
-    let root_b = Binary::Operation(Box::new(Operation {
-        op_type: OpType::Sub,
+    let root_b = Binary::from_operation(Operation::SimpleOperation {
+        op_type: SimpleOpType::Sub,
         left: left_b.clone(),
         right: right_b.clone()
-    }));
+    });
 
-    Ok(find_roots(root_b, context_vars, &solve_var)?)
+    Ok(find_roots(root_b, context_vars, solve_var)?)
 }
