@@ -28,7 +28,6 @@ pub fn calculate_integral(expr: &Binary, in_terms_of: String, lower_bound: Value
                 sum = add(sum, eval(expr, &mut_vars)?)?;
                 mut_vars.remove(mut_vars.len()-1);
                 b += dx;
-                //println!("{:.?}", sum);
             }
             return Ok(mult(sum, Value::Scalar(dx))?);
         }
