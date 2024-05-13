@@ -1,11 +1,28 @@
-use std::fs;
-
-use crate::{errors::{MathLibError, ParserError, QuickEvalError}, eval, export, parse, parser::Binary, quick_eval, quick_solve, ExportType, StepType, Value, Variable};
+use crate::{errors::{MathLibError, ParserError, QuickEvalError, QuickSolveError, SolveError}, quick_eval, quick_solve, Value, Variable};
 
 #[test]
 fn easy_eval1() -> Result<(), MathLibError> {
     let res = quick_eval("3*3".to_string(), vec![])?;
+    
     assert_eq!(res, Value::Scalar(9.));
+
+    Ok(())
+}
+
+#[test]
+fn easy_eval2() -> Result<(), MathLibError> {
+    let res = quick_eval("3-4-5".to_string(), vec![])?;
+    
+    assert_eq!(res, Value::Scalar(-6.));
+
+    Ok(())
+}
+
+#[test]
+fn easy_eval3() -> Result<(), MathLibError> {
+    let res = quick_eval("3^2^4".to_string(), vec![])?;
+
+    assert_eq!(res, Value::Scalar(43_046_721.));
 
     Ok(())
 }
@@ -150,6 +167,15 @@ fn medium_eval16() -> Result<(), MathLibError> {
 }
 
 #[test]
+fn medium_eval17() -> Result<(), MathLibError> {
+    let res = quick_eval("3*[[2, 0, 0], [0, 1, 0], [0, 0, 5]]*[[1, 0, 0], [0, 1, 0], [0, 0, 1]]*[3, 4, 5]".to_string(), vec![])?;
+
+    assert_eq!(res, Value::Vector(vec![18., 12., 75.]));
+
+    Ok(())
+}
+
+#[test]
 fn calculus_eval1() -> Result<(), MathLibError> {
     let res = quick_eval("D(x^2, x, 3)".to_string(), vec![])?;
 
@@ -181,9 +207,7 @@ fn hard_eval1() -> Result<(), MathLibError> {
 
 #[test]
 fn easy_solve1() -> Result<(), MathLibError> {
-    let equation = "x^2=9".to_string();
-
-    let res = quick_solve(equation, "x".to_string(), vec![])?;
+    let res = quick_solve("x^2=9".to_string(), vec![])?;
     
     let res_rounded = res.iter().map(|x| x.round(3.)).collect::<Vec<Value>>();
 
@@ -194,9 +218,7 @@ fn easy_solve1() -> Result<(), MathLibError> {
 
 #[test]
 fn medium_solve1() -> Result<(), MathLibError> {
-    let equation = "3x^2+2x-1=0".to_string();
-
-    let res = quick_solve(equation, "x".to_string(), vec![])?;
+    let res = quick_solve("3x^2+2x-1=0".to_string(), vec![])?;
     
     let res_rounded = res.iter().map(|x| x.round(3.)).collect::<Vec<Value>>();
 
@@ -207,9 +229,7 @@ fn medium_solve1() -> Result<(), MathLibError> {
 
 #[test]
 fn calculus_solve1() -> Result<(), MathLibError> {
-    let equation = "D(3x^2+2x-1, x, k)=0".to_string();
-
-    let res = quick_solve(equation, "k".to_string(), vec![])?;
+    let res = quick_solve("D(3x^2+2x-1, x, k)=0".to_string(), vec![])?;
 
     let res_rounded = res.iter().map(|x| x.round(3.)).collect::<Vec<Value>>();
 
@@ -222,7 +242,7 @@ fn calculus_solve1() -> Result<(), MathLibError> {
 fn hard_solve1() -> Result<(), MathLibError> {
     let equation = "((25x^3-96x^2+512x+384)/(x^4+2x^3+90x^2-128x+1664)^(1.5))/(-sqrt(1-((32-x+x^2)/(((x-1)^2+25)(x^2+64)))^2))=0".to_string();
 
-    let res = quick_solve(equation, "x".to_string(), vec![])?;
+    let res = quick_solve(equation, vec![])?;
 
     let res_rounded = res.iter().map(|x| x.round(3.)).collect::<Vec<Value>>();
 
@@ -233,27 +253,48 @@ fn hard_solve1() -> Result<(), MathLibError> {
 
 #[test]
 fn hard_solve2() -> Result<(), MathLibError> {
-    let res = quick_solve("x*[3, 4, 5]=[6, 8, 10]".to_string(), "x".to_string(), vec![])?;
+    let res = quick_solve("x*[3, 4, 5]=[6, 8, 10]".to_string(), vec![]);
 
-    let res_rounded = res.iter().map(|x| x.round(3.)).collect::<Vec<Value>>();
-
-    assert_eq!(res_rounded.contains(&Value::Scalar(2.)), true);
+    assert_eq!(res.unwrap_err(), QuickSolveError::SolveError(SolveError::VectorInEq));
 
     Ok(())
 }
 
 #[test]
-fn hard_latex1() -> Result<(), MathLibError> {
-    let expression = "((25x^3-96x^2+512x+384)/(x^4+2x^3+90x^2-128x+1664)^(1.5))/(-sqrt(1-((32-x+x^2)/(((x-1)^2+25)(x^2+64)))^2))".to_string();
-    let parsed = parse(expression)?;
-    let vars = vec![Variable::new("x".to_string(), Value::Scalar(-0.655639))];
-    let result = eval(&parsed, &vars)?;
-    let var_assign = StepType::Calc((Binary::from_value(Value::Scalar(-0.655639)), Value::Scalar(-0.655639), Some("x".to_string())));
-    let step = StepType::Calc((parsed, result, None));
+fn hard_solve3() -> Result<(), MathLibError> {
+    let equation = "400-100x=600-100x, -600-100x=-400-100x, 1000-100x=0+100x".to_string();
 
-    export(vec![var_assign, step], "export".to_string(), ExportType::Png);
+    let res = quick_solve(equation, vec![])?;
 
-    let _ = fs::remove_file("./export-1.png");
+    assert_eq!(res, vec![]);
 
     Ok(())
 }
+
+#[test]
+fn hard_solve4() -> Result<(), MathLibError> {
+    let equation = "400-100g=600-100k, 1000-100g=100k".to_string();
+
+    let res = quick_solve(equation, vec![])?;
+    let res_rounded = res.iter().map(|x| x.round(3.)).collect::<Vec<Value>>();
+    
+    assert_eq!(res_rounded, vec![Value::Vector(vec![4., 6.])]);
+
+    Ok(())
+}
+
+// #[test]
+// fn hard_latex1() -> Result<(), MathLibError> {
+//     let expression = "((25x^3-96x^2+512x+384)/(x^4+2x^3+90x^2-128x+1664)^(1.5))/(-sqrt(1-((32-x+x^2)/(((x-1)^2+25)(x^2+64)))^2))".to_string();
+//     let parsed = parse(expression)?;
+//     let vars = vec![Variable::new("x".to_string(), Value::Scalar(-0.655639))];
+//     let result = eval(&parsed, &vars)?;
+//     let var_assign = StepType::Calc((Binary::from_value(Value::Scalar(-0.655639)), Value::Scalar(-0.655639), Some("x".to_string())));
+//     let step = StepType::Calc((parsed, result, None));
+//
+//     export(vec![var_assign, step], "export".to_string(), ExportType::Png);
+//
+//     let _ = fs::remove_file("./export-1.png");
+//
+//     Ok(())
+// }

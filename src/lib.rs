@@ -106,8 +106,8 @@ mod tests;
 pub use basetypes::{Value, Variable};
 pub use latex_export::{export, ExportType, StepType};
 pub use parser::{parse, eval};
-pub use roots::find_roots;
 pub use errors::MathLibError;
+use roots::RootFinder;
 
 ///defines the precision used by the equation solver and the printing precision, which is PREC-2.
 #[cfg(feature = "high-prec")]
@@ -167,7 +167,7 @@ pub fn quick_eval(mut expr: String, vars: Vec<Variable>) -> Result<Value, QuickE
 ///
 /// assert_eq!(res_rounded, vec![Value::Scalar(3.), Value::Scalar(-3.)]);
 /// ```
-pub fn quick_solve(mut expr: String, solve_var: String, vars: Vec<Variable>) -> Result<Vec<Value>, QuickSolveError> {
+pub fn quick_solve(mut expr: String, vars: Vec<Variable>) -> Result<Vec<Value>, QuickSolveError> {
     let mut context_vars = vec![
         Variable::new("e".to_string(), Value::Scalar(std::f64::consts::E)),
         Variable::new("pi".to_string(), Value::Scalar(std::f64::consts::PI))
@@ -176,34 +176,63 @@ pub fn quick_solve(mut expr: String, solve_var: String, vars: Vec<Variable>) -> 
         if vars.iter().filter(|x| x.name == "e".to_string() || x.name == "pi".to_string()).collect::<Vec<&Variable>>().len() > 0 {
             return Err(QuickSolveError::DuplicateVars);
         }
-        for i in vars {
-            context_vars.push(i);
+        for i in &vars {
+            context_vars.push(i.clone());
         }
     }
     expr = expr.trim().split(" ").filter(|s| !s.is_empty()).collect();
 
-    if !expr.contains("=") {
-        return Err(QuickSolveError::NoEq);
+    let mut equations = vec![];
+    let mut parenths_open = 0;
+    let mut buffer = String::new();
+
+    for i in expr.chars() {
+        if parenths_open == 0 && i == ',' {
+            equations.push(buffer.clone());
+            buffer.clear();
+        } else {
+            buffer.push(i);
+        }
+
+        if i == '(' || i == '[' || i == '{' {
+            parenths_open += 1;
+        } else if i == ')' || i == ']' || i == '}' {
+            parenths_open -= 1;
+        }
+    }
+    equations.push(buffer);
+
+    let mut parsed_equations = vec![];
+
+    for i in equations {
+        if !expr.contains("=") {
+            return Err(QuickSolveError::NoEq);
+        }
+
+        let left = i.split("=").nth(0).unwrap().to_string();
+        let right = i.split("=").nth(1).unwrap().to_string();
+
+        let left_b;
+        let right_b;
+        if left.len() >= right.len() {
+            left_b = parse(left)?;
+            right_b = parse(right)?;
+        } else {
+            left_b = parse(right)?;
+            right_b = parse(left)?;
+        }
+
+        let root_b = Binary::from_operation(Operation::SimpleOperation {
+            op_type: SimpleOpType::Sub,
+            left: left_b.clone(),
+            right: right_b.clone()
+        });
+
+        parsed_equations.push(root_b);
     }
 
-    let left = expr.split("=").nth(0).unwrap().to_string();
-    let right = expr.split("=").nth(1).unwrap().to_string();
+    let root_finder = RootFinder::new(parsed_equations, vars)?;
+    let roots = root_finder.find_roots()?;
 
-    let left_b;
-    let right_b;
-    if left.len() >= right.len() {
-        left_b = parse(left)?;
-        right_b = parse(right)?;
-    } else {
-        left_b = parse(right)?;
-        right_b = parse(left)?;
-    }
-
-    let root_b = Binary::from_operation(Operation::SimpleOperation {
-        op_type: SimpleOpType::Sub,
-        left: left_b.clone(),
-        right: right_b.clone()
-    });
-
-    Ok(find_roots(root_b, context_vars, solve_var)?)
+    Ok(roots)
 }

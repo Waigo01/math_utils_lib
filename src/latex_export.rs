@@ -67,7 +67,7 @@ fn latex_recurse(b: &Binary) -> Result<String, String> {
                             let eexpr = latex_recurse(&expr)?;
                             let eat = latex_recurse(&at)?;
                             return Ok(format!("\\frac{{\\partial}}{{\\partial {}}}\\left({}\\right)_{{\\text{{at }}{} = {}}}", in_terms_of, eexpr, in_terms_of, eat));
-                        }
+                        } 
                     }
                 }
             } 

@@ -65,6 +65,8 @@ pub enum ParserError {
     EmptyExpr,
     UnmatchedOpenDelimiter,
     UnmatchedCloseDelimiter,
+    EquationWithoutEqual,
+    TooManyEquals,
     WrongNumberOfArgs(String)
 }
 
@@ -78,6 +80,8 @@ impl ParserError {
             ParserError::EmptyExpr => return "Could not parse empty expression!".to_string(),
             ParserError::UnmatchedOpenDelimiter => return "Unmatched opening delimiter!".to_string(),
             ParserError::UnmatchedCloseDelimiter => return "Unmatched closing delimiter!".to_string(),
+            ParserError::EquationWithoutEqual => return "Must have = in equation!".to_string(),
+            ParserError::TooManyEquals => return "Too many = in equation. If you want to specify a system of equations please seperate each equation with a ','.".to_string(),
             ParserError::WrongNumberOfArgs(s) => return format!("Wrong number of arguments for {} operation!", s)
         }
     } 
@@ -92,14 +96,16 @@ impl Display for ParserError {
 #[derive(Debug, PartialEq)]
 pub enum EvalError {
     NoVariable(String),
-    MathError(String)
+    MathError(String),
+    SolveError(Box<SolveError>)
 }
 
 impl EvalError {
     pub fn get_reason(&self) -> String {
         match self {
             EvalError::NoVariable(s) => return format!("Could not find variable {}!", s),
-            EvalError::MathError(s) => return s.to_string()
+            EvalError::MathError(s) => return s.to_string(),
+            EvalError::SolveError(s) => return s.get_reason()
         }
     }
 }
@@ -116,11 +122,19 @@ impl From<String> for EvalError {
     }
 }
 
+impl From<SolveError> for EvalError {
+    fn from(value: SolveError) -> Self {
+        EvalError::SolveError(Box::new(value))
+    }
+}
+
 #[derive(Debug, PartialEq)]
 pub enum SolveError {
     VectorInEq,
     MatrixInEq,
     NothingToDo,
+    UnderdeterminedSystem,
+    InfiniteSolutions,
     EvalError(EvalError)
 }
 
@@ -130,6 +144,8 @@ impl SolveError {
             SolveError::VectorInEq => return "Can't have vectors in equations!".to_string(),
             SolveError::MatrixInEq => return "Can't have matrices in equations!".to_string(),
             SolveError::NothingToDo => return "Nothing to do!".to_string(),
+            SolveError::InfiniteSolutions => return "System has infinite solutions!".to_string(),
+            SolveError::UnderdeterminedSystem => return "Underdetermined system of equations!".to_string(),
             SolveError::EvalError(e) => return e.get_reason()
         }
     }
@@ -144,6 +160,12 @@ impl Display for SolveError {
 impl From<EvalError> for SolveError {
     fn from(value: EvalError) -> Self {
         SolveError::EvalError(value)
+    }
+}
+
+impl From<String> for SolveError {
+    fn from(value: String) -> Self {
+        SolveError::EvalError(EvalError::MathError(value))
     }
 }
 
