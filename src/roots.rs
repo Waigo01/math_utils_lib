@@ -137,37 +137,7 @@ pub fn gauss_algorithm(mut v: Vec<Vec<f64>>) -> Result<Value, SolveError> {
     return Ok(Value::Vector(result_vec));
 }
 
-fn newton(search_expres: &Vec<Binary>, check_expres: &Vec<Binary> , x: &Vec<(String, f64)>, vars: &mut Vec<Variable>) -> Result<(bool, Vec<(String, f64)>), SolveError> {
-    let mut fx = vec![];
-    for i in x {
-        vars.push(Variable::new(i.0.clone(), Value::Scalar(i.1)));
-    }
-    for i in search_expres {
-        fx.push(eval(i, vars)?.get_scalar().unwrap());
-    }
-    for _ in x {
-        vars.remove(vars.len()-1);
-    }
-
-    if -10f64.powf(-PREC) < abs(Value::Vector(fx.clone()))?.get_scalar().unwrap() && abs(Value::Vector(fx.clone()))?.get_scalar().unwrap() < 10f64.powf(-PREC) {
-        let mut check_results = vec![];
-        for i in x {
-            vars.push(Variable::new(i.0.to_string(), Value::Scalar(i.1)));
-        }
-        for i in check_expres {
-            check_results.push(eval(i, vars)?.get_scalar().unwrap());
-        }
-        for _ in x {
-            vars.remove(vars.len()-1);
-        }
-        if check_results.is_empty() {
-            return Ok((true, x.to_vec()));
-        }
-        if -10f64.powf(-PREC) < abs(Value::Vector(check_results.clone()))?.get_scalar().unwrap() && abs(Value::Vector(check_results))?.get_scalar().unwrap() < 10f64.powf(-PREC) {
-            return Ok((true, x.to_vec()));
-        } 
-    }
-
+fn jacobi_and_gauss(search_expres: &Vec<Binary>, x: &Vec<Variable>, vars: &mut Vec<Variable>, fx: Vec<f64>) -> Result<Vec<Variable>, SolveError> {
     let mut jacobi: Vec<Vec<f64>> = vec![];
 
     for i in 0..search_expres.len() {
@@ -176,11 +146,11 @@ fn newton(search_expres: &Vec<Binary>, check_expres: &Vec<Binary> , x: &Vec<(Str
             let mut added_vars = 0;
             for k in 0..x.len() {
                 if j != k {
-                    vars.push(Variable::new(x[k].0.clone(), Value::Scalar(x[k].1)));
+                    vars.push(x[k].clone());
                     added_vars += 1;
                 }
             }
-            row.push(calculate_derivative(&search_expres[i], x[j].0.clone(), Value::Scalar(x[j].1), Some(Value::Scalar(fx[i])), vars)?.get_scalar().unwrap());
+            row.push(calculate_derivative(&search_expres[i], x[j].name.clone(), x[j].value.clone(), Some(Value::Scalar(fx[i])), vars)?.get_scalar().unwrap());
             for _ in 0..added_vars {
                 vars.remove(vars.len()-1);
             }
@@ -200,10 +170,46 @@ fn newton(search_expres: &Vec<Binary>, check_expres: &Vec<Binary> , x: &Vec<(Str
     let mut x_new = vec![];
 
     for i in 0..x.len() {
-        x_new.push((x[i].0.to_string(), x_new_minus_x.get_vector().unwrap()[i] + x[i].1));
+        x_new.push(Variable::new(x[i].name.clone(), Value::Scalar(x_new_minus_x.get_vector().unwrap()[i] + x[i].value.get_scalar().unwrap())));
     }
 
-    Ok((false, x_new))
+    return Ok(x_new);
+}
+
+fn newton(search_expres: &Vec<Binary>, check_expres: &Vec<Binary> , x: &Vec<Variable>, vars: &mut Vec<Variable>) -> Result<(bool, Vec<Variable>), SolveError> {
+    let mut fx = vec![];
+    for i in x {
+        vars.push(i.clone());
+    }
+    for i in search_expres {
+        fx.push(eval(i, vars)?.get_scalar().unwrap());
+    }
+    for _ in x {
+        vars.remove(vars.len()-1);
+    }
+
+    if -10f64.powf(-PREC) < abs(Value::Vector(fx.clone()))?.get_scalar().unwrap() && abs(Value::Vector(fx.clone()))?.get_scalar().unwrap() < 10f64.powf(-PREC) {
+        let mut check_results = vec![];
+        for i in x {
+            vars.push(i.clone());
+        }
+        for i in check_expres {
+            check_results.push(eval(i, vars)?.get_scalar().unwrap());
+        }
+        for _ in x {
+            vars.remove(vars.len()-1);
+        }
+        if check_results.is_empty() {
+            return Ok((true, x.to_vec()));
+        }
+        if -10f64.powf(-PREC) < abs(Value::Vector(check_results.clone()))?.get_scalar().unwrap() && abs(Value::Vector(check_results))?.get_scalar().unwrap() < 10f64.powf(-PREC) {
+            return Ok((true, x.to_vec()));
+        } 
+    }
+
+    let new_x = jacobi_and_gauss(search_expres, x, vars, fx)?;
+
+    Ok((false, new_x))
 }
 
 #[derive(Debug)]
@@ -263,7 +269,7 @@ impl RootFinder {
         match initial_res {
             Value::Scalar(_) => {},
             Value::Vector(_) => return Err(SolveError::VectorInEq),
-            Value::Matrix(_) => return Err(SolveError::VectorInEq)
+            Value::Matrix(_) => return Err(SolveError::MatrixInEq)
         }
 
         return Ok(RootFinder { search_expres: expressions[0..search_vars_names.len()].to_vec(), check_expres: vec![], vars, search_vars_names });
@@ -275,25 +281,31 @@ impl RootFinder {
         for j in -1000..1000 {
             let mut x = vec![];
             for k in &self.search_vars_names {
-                x.push((k.to_string(), j as f64));
+                x.push(Variable::new(k.to_string(), Value::Scalar(j as f64)));
             }
 
-            for _ in 0..1000 {
+            'solve_loop: for _ in 0..1000 {
                 let newton_result = newton(&self.search_expres, &self.check_expres, &x, &mut local_vars)?;
 
                 if newton_result.0 {
                     let mut result_vec = vec![];
                     for i in newton_result.1 {
-                        result_vec.push(i.1);
+                        result_vec.push(i.value.get_scalar().unwrap());
                     }
                     if result_vec.len() == 1 {
-                        results.push(Value::Scalar(result_vec[0]));
+                        results.push(Value::Scalar(result_vec[0].clone()));
                     } else {
                         results.push(Value::Vector(result_vec));
                     }
                     break;
                 } else {
                     x = newton_result.1;
+                }
+
+                for i in &x {
+                    if i.value.get_scalar().unwrap().is_nan() || i.value.get_scalar().unwrap().is_infinite() {
+                        break 'solve_loop;
+                    }
                 }
             }
         }
