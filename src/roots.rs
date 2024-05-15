@@ -1,4 +1,4 @@
-use crate::{basetypes::{Value, Variable}, errors::SolveError, maths::{abs, calculus::calculate_derivative}, parser::{eval, AdvancedOperation, Binary, Operation}, PREC};
+use crate::{basetypes::{Value, Variable}, errors::{NewtonError, SolveError}, maths::{abs, calculus::calculate_derivative}, parser::{eval, AdvancedOperation, Binary, Operation}, PREC};
 
 fn clean_results(res: Vec<Value>) -> Vec<Value> {
     if res.len() == 0 {
@@ -78,9 +78,9 @@ fn find_vars_in_expr(b: &Binary, mut ov: Vec<String>) -> Vec<String> {
     }
 }
 
-pub fn gauss_algorithm(mut v: Vec<Vec<f64>>) -> Result<Value, SolveError> {
+pub fn gauss_algorithm(mut v: Vec<Vec<f64>>) -> Result<Value, NewtonError> {
     if v.len()+1 != v[0].len() {
-        return Err(SolveError::UnderdeterminedSystem);
+        return Err(NewtonError::UnderdeterminedSystem);
     }
 
     for i in 0..v.len() - 1 {
@@ -94,7 +94,7 @@ pub fn gauss_algorithm(mut v: Vec<Vec<f64>>) -> Result<Value, SolveError> {
                 }
             }
             if zero_line {
-                return Err(SolveError::InfiniteSolutions);
+                return Err(NewtonError::InfiniteSolutions);
             }
         }
     } 
@@ -121,7 +121,7 @@ pub fn gauss_algorithm(mut v: Vec<Vec<f64>>) -> Result<Value, SolveError> {
                 }
             }
             if zero_line {
-                return Err(SolveError::InfiniteSolutions);
+                return Err(NewtonError::InfiniteSolutions);
             }
         }
     } 
@@ -137,7 +137,7 @@ pub fn gauss_algorithm(mut v: Vec<Vec<f64>>) -> Result<Value, SolveError> {
     return Ok(Value::Vector(result_vec));
 }
 
-fn jacobi_and_gauss(search_expres: &Vec<Binary>, x: &Vec<Variable>, vars: &mut Vec<Variable>, fx: Vec<f64>) -> Result<Vec<Variable>, SolveError> {
+fn jacobi_and_gauss(search_expres: &Vec<Binary>, x: &Vec<Variable>, vars: &mut Vec<Variable>, fx: Vec<f64>) -> Result<Vec<Variable>, NewtonError> {
     let mut jacobi: Vec<Vec<f64>> = vec![];
 
     for i in 0..search_expres.len() {
@@ -176,7 +176,12 @@ fn jacobi_and_gauss(search_expres: &Vec<Binary>, x: &Vec<Variable>, vars: &mut V
     return Ok(x_new);
 }
 
-fn newton(search_expres: &Vec<Binary>, check_expres: &Vec<Binary> , x: &Vec<Variable>, vars: &mut Vec<Variable>) -> Result<(bool, Vec<Variable>), SolveError> {
+enum NewtonReturn {
+    NextX(Vec<Variable>),
+    FinishedX(Vec<Variable>) 
+}
+
+fn newton(search_expres: &Vec<Binary>, check_expres: &Vec<Binary> , x: &Vec<Variable>, vars: &mut Vec<Variable>) -> Result<NewtonReturn, NewtonError> {
     let mut fx = vec![];
     for i in x {
         vars.push(i.clone());
@@ -189,7 +194,7 @@ fn newton(search_expres: &Vec<Binary>, check_expres: &Vec<Binary> , x: &Vec<Vari
     }
 
     if -10f64.powf(-PREC) < abs(Value::Vector(fx.clone()))?.get_scalar().unwrap() && abs(Value::Vector(fx.clone()))?.get_scalar().unwrap() < 10f64.powf(-PREC) {
-        let mut check_results = vec![];
+        let mut check_results = vec![]; 
         for i in x {
             vars.push(i.clone());
         }
@@ -200,22 +205,43 @@ fn newton(search_expres: &Vec<Binary>, check_expres: &Vec<Binary> , x: &Vec<Vari
             vars.remove(vars.len()-1);
         }
         if check_results.is_empty() {
-            return Ok((true, x.to_vec()));
+            return Ok(NewtonReturn::FinishedX(x.to_vec()));
         }
         if -10f64.powf(-PREC) < abs(Value::Vector(check_results.clone()))?.get_scalar().unwrap() && abs(Value::Vector(check_results))?.get_scalar().unwrap() < 10f64.powf(-PREC) {
-            return Ok((true, x.to_vec()));
+            return Ok(NewtonReturn::FinishedX(x.to_vec()));
+        } else {
+            return Err(NewtonError::ExpressionCheckFailed);
         } 
     }
 
     let new_x = jacobi_and_gauss(search_expres, x, vars, fx)?;
 
-    Ok((false, new_x))
+    for i in &new_x {
+        if i.value.get_scalar().unwrap().is_nan() || i.value.get_scalar().unwrap().is_infinite() {
+            return Err(NewtonError::NaNOrInf);
+        }
+    }
+
+    return Ok(NewtonReturn::NextX(new_x));
+}
+
+fn generate_combinations(arr: Vec<usize>, len: usize, prev_arr: Vec<usize>) -> Vec<Vec<usize>> {
+    if prev_arr.len() == len {
+        return vec![prev_arr];
+    }
+    let mut combs = vec![];
+    for (i, val) in arr.iter().enumerate() {
+        let mut prev_arr_extended = prev_arr.clone();
+        prev_arr_extended.push(*val);
+        combs.append(&mut generate_combinations(arr[i+1..].to_vec(), len, prev_arr_extended));
+    }
+    return combs;
 }
 
 #[derive(Debug)]
 pub struct RootFinder {
-    search_expres: Vec<Binary>,
-    check_expres: Vec<Binary>,
+    expressions: Vec<Binary>,
+    combinations: Vec<Vec<usize>>,
     vars: Vec<Variable>,
     search_vars_names: Vec<String>
 }
@@ -234,26 +260,34 @@ impl RootFinder {
             }
         }
 
-        let vars_in_expr = find_vars_in_expr(&expressions[0], vec![]);
-
         let mut search_vars_names = vec![];
 
-        let mut var_names = vec![];
+        for i in &expressions {
+            let vars_in_expr = find_vars_in_expr(i, vec![]);
 
-        for var in &vars {
-            var_names.push(var.name.clone());
-        }
+            let mut current_search_vars_names = vec![];
 
-        for var in vars_in_expr {
-            if !var_names.contains(&var) {
-                if !search_vars_names.contains(&var) {
-                    search_vars_names.push(var);
+            let mut var_names = vec![];
+
+            for var in &vars {
+                var_names.push(var.name.clone());
+            }
+
+            for var in vars_in_expr {
+                if !var_names.contains(&var) {
+                    if !current_search_vars_names.contains(&var) {
+                        current_search_vars_names.push(var);
+                    }
                 }
+            }
+
+            if current_search_vars_names.len() > search_vars_names.len() {
+                search_vars_names = current_search_vars_names;
             }
         }
 
         if search_vars_names.len() > expressions.len() {
-            return Err(SolveError::UnderdeterminedSystem);
+            return Err(NewtonError::UnderdeterminedSystem.into());
         }
 
         for i in &search_vars_names {
@@ -272,46 +306,74 @@ impl RootFinder {
             Value::Matrix(_) => return Err(SolveError::MatrixInEq)
         }
 
-        return Ok(RootFinder { search_expres: expressions[0..search_vars_names.len()].to_vec(), check_expres: vec![], vars, search_vars_names });
+        let combs;
+
+        if search_vars_names.len() < expressions.len() {
+            combs = generate_combinations((0..expressions.len()).collect::<Vec<usize>>(), search_vars_names.len(), vec![]);
+        } else {
+            combs = vec![(0..expressions.len()).collect::<Vec<usize>>()];
+        }
+
+        return Ok(RootFinder { expressions, combinations: combs, vars, search_vars_names });
     }
 
     pub fn find_roots(&self) -> Result<Vec<Value>, SolveError> {
-        let mut local_vars = self.vars.clone();
-        let mut results = vec![];
-        for j in -1000..1000 {
-            let mut x = vec![];
-            for k in &self.search_vars_names {
-                x.push(Variable::new(k.to_string(), Value::Scalar(j as f64)));
+        for i in &self.combinations {
+            let mut search_expres = vec![];
+            let mut check_expres = self.expressions.clone();
+            let mut removed = 0;
+            for j in i {
+                search_expres.push(check_expres.remove(*j-removed));
+                removed += 1;
+            } 
+            let mut local_vars = self.vars.clone();
+            let mut results = vec![];
+            'solve_loop_0: for j in -1000..1000 {
+                let mut x = vec![];
+                for k in &self.search_vars_names {
+                    x.push(Variable::new(k.to_string(), Value::Scalar(j as f64)));
+                }
+
+                'solve_loop_1: for _ in 0..1000 {
+                    let newton_result = newton(&search_expres, &check_expres, &x, &mut local_vars);
+
+                    match newton_result {
+                        Ok(o) => {
+                            match o {
+                                NewtonReturn::NextX(next_x) => x = next_x,
+                                NewtonReturn::FinishedX(fin_x) => {
+                                    let mut result_vec = vec![];
+                                    for i in fin_x {
+                                        result_vec.push(i.value.get_scalar().unwrap());
+                                    }
+                                    if result_vec.len() == 1 {
+                                        results.push(Value::Scalar(result_vec[0].clone()));
+                                    } else {
+                                        results.push(Value::Vector(result_vec));
+                                    }
+                                    break 'solve_loop_1;
+                                },
+                            }
+                        },
+                        Err(e) => {
+                            match e {
+                                NewtonError::InfiniteSolutions => break 'solve_loop_0,
+                                NewtonError::NaNOrInf => break 'solve_loop_1,
+                                NewtonError::ExpressionCheckFailed => break 'solve_loop_1,
+                                _ => return Err(e.into())
+                            }
+                        }
+                    }
+                }
             }
 
-            'solve_loop: for _ in 0..1000 {
-                let newton_result = newton(&self.search_expres, &self.check_expres, &x, &mut local_vars)?;
+            let cleaned_results = clean_results(results);
 
-                if newton_result.0 {
-                    let mut result_vec = vec![];
-                    for i in newton_result.1 {
-                        result_vec.push(i.value.get_scalar().unwrap());
-                    }
-                    if result_vec.len() == 1 {
-                        results.push(Value::Scalar(result_vec[0].clone()));
-                    } else {
-                        results.push(Value::Vector(result_vec));
-                    }
-                    break;
-                } else {
-                    x = newton_result.1;
-                }
-
-                for i in &x {
-                    if i.value.get_scalar().unwrap().is_nan() || i.value.get_scalar().unwrap().is_infinite() {
-                        break 'solve_loop;
-                    }
-                }
+            if !cleaned_results.is_empty() {
+                return Ok(cleaned_results);
             }
         }
 
-        let cleaned_results = clean_results(results);
-
-        return Ok(cleaned_results);
+        return Ok(vec![]);
     }
 }

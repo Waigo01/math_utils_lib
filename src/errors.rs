@@ -132,10 +132,9 @@ impl From<SolveError> for EvalError {
 pub enum SolveError {
     VectorInEq,
     MatrixInEq,
-    NothingToDo,
-    UnderdeterminedSystem,
-    InfiniteSolutions,
-    EvalError(EvalError)
+    NothingToDo, 
+    EvalError(EvalError),
+    NewtonError(NewtonError)
 }
 
 impl SolveError {
@@ -144,9 +143,8 @@ impl SolveError {
             SolveError::VectorInEq => return "Can't have vectors in equations!".to_string(),
             SolveError::MatrixInEq => return "Can't have matrices in equations!".to_string(),
             SolveError::NothingToDo => return "Nothing to do!".to_string(),
-            SolveError::InfiniteSolutions => return "System has infinite solutions!".to_string(),
-            SolveError::UnderdeterminedSystem => return "Underdetermined system of equations!".to_string(),
-            SolveError::EvalError(e) => return e.get_reason()
+            SolveError::EvalError(e) => return e.get_reason(),
+            SolveError::NewtonError(e) => return e.get_reason()
         }
     }
 }
@@ -166,6 +164,51 @@ impl From<EvalError> for SolveError {
 impl From<String> for SolveError {
     fn from(value: String) -> Self {
         SolveError::EvalError(EvalError::MathError(value))
+    }
+}
+
+impl From<NewtonError> for SolveError {
+    fn from(value: NewtonError) -> Self {
+        SolveError::NewtonError(value)
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub enum NewtonError {
+    UnderdeterminedSystem,
+    InfiniteSolutions,
+    NaNOrInf,
+    ExpressionCheckFailed,
+    EvalError(EvalError)
+}
+
+impl NewtonError {
+    pub fn get_reason(&self) -> String {
+        match self {
+            NewtonError::UnderdeterminedSystem => return "Underdetermined System!".to_string(),
+            NewtonError::InfiniteSolutions => return "Infinite Solutions!".to_string(),
+            NewtonError::NaNOrInf => return "NaN or Inf".to_string(),
+            NewtonError::ExpressionCheckFailed => return "Expression Check Failed".to_string(),
+            NewtonError::EvalError(e) => return e.get_reason()
+        }
+    }
+}
+
+impl Display for NewtonError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.get_reason())
+    }
+}
+
+impl From<EvalError> for NewtonError {
+    fn from(value: EvalError) -> Self {
+        NewtonError::EvalError(value)
+    }
+}
+
+impl From<String> for NewtonError {
+    fn from(value: String) -> Self {
+        NewtonError::EvalError(EvalError::MathError(value))
     }
 }
 
