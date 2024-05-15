@@ -23,7 +23,7 @@ pub fn calculate_integral(expr: &Binary, in_terms_of: String, lower_bound: Value
                 ub = lb;
                 lb = temp;
             }
-            let dx = (ub-lb)/10f64.powf(PREC-2.);
+            let dx = (ub-lb)/10f64.powi(PREC-2);
             let mut sum = Value::Scalar(0.);
             let mut b = lb;
             while b < ub {
@@ -59,7 +59,7 @@ pub fn calculate_derivative(expr: &Binary, in_terms_of: String, at: Value, mut f
                 fx = Some(eval(expr, &mut_vars)?);
                 mut_vars.remove(mut_vars.len()-1);
             }
-            mut_vars.push(Variable::new(in_terms_of.clone(), Value::Scalar(s+10f64.powf(-(PREC)))));
+            mut_vars.push(Variable::new(in_terms_of.clone(), Value::Scalar(s+10f64.powi(-(PREC)))));
             let fxh = &eval(expr, &mut_vars)?;
             let h = Binary::from_operation(Operation::SimpleOperation {
                 op_type: SimpleOpType::Div,
@@ -68,7 +68,7 @@ pub fn calculate_derivative(expr: &Binary, in_terms_of: String, at: Value, mut f
                     left: Binary::Value(fxh.clone()),
                     right: Binary::Value(fx.clone().unwrap().clone())
                 }),
-                right: Binary::Value(Value::Scalar(10f64.powf(-(PREC))))
+                right: Binary::Value(Value::Scalar(10f64.powi(-(PREC))))
             });
             return Ok(eval(&h, &mut_vars)?);
         } 

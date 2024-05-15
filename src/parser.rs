@@ -1,4 +1,4 @@
-use crate::{basetypes::{Value, Variable}, errors::{EvalError, ParserError}, maths, roots};
+use crate::{basetypes::{Value, Variable}, errors::{EvalError, ParserError}, maths};
 
 ///specifies the type of operation for the [SimpleOperation](Operation::SimpleOperation) struct.
 ///

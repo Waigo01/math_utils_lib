@@ -111,11 +111,11 @@ pub use errors::MathLibError;
 
 ///defines the precision used by the equation solver and the printing precision, which is PREC-2.
 #[cfg(feature = "high-prec")]
-pub const PREC: f64 = 13.;
+pub const PREC: i32 = 13;
 
 ///defines the precision used by the equation solver and the printing precision, which is PREC-2.
 #[cfg(not(feature = "high-prec"))]
-pub const PREC: f64 = 8.;
+pub const PREC: i32 = 8;
 
 /// evaluates a given expression using the given variables (e and pi are provided by
 /// the function). If you just want the Binary Tree, have a look at [parse()].

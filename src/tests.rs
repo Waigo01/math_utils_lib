@@ -179,7 +179,7 @@ fn medium_eval17() -> Result<(), MathLibError> {
 fn calculus_eval1() -> Result<(), MathLibError> {
     let res = quick_eval("D(x^2, x, 3)".to_string(), vec![])?;
 
-    assert_eq!(res.round(6.), Value::Scalar(6.));
+    assert_eq!(res.round(6), Value::Scalar(6.));
 
     Ok(())
 }
@@ -188,7 +188,7 @@ fn calculus_eval1() -> Result<(), MathLibError> {
 fn calculus_eval2() -> Result<(), MathLibError> {
     let res = quick_eval("I(x^2, x, 0, 5)".to_string(), vec![])?;
 
-    assert_eq!(res.round(4.), Value::Scalar(41.6667));
+    assert_eq!(res.round(4), Value::Scalar(41.6667));
 
     Ok(())
 }
@@ -209,7 +209,7 @@ fn hard_eval1() -> Result<(), MathLibError> {
 fn easy_solve1() -> Result<(), MathLibError> {
     let res = quick_solve("x^2=9".to_string(), vec![])?;
     
-    let res_rounded = res.iter().map(|x| x.round(3.)).collect::<Vec<Value>>();
+    let res_rounded = res.iter().map(|x| x.round(3)).collect::<Vec<Value>>();
 
     assert_eq!(res_rounded, vec![Value::Scalar(-3.), Value::Scalar(3.)]);
 
@@ -220,7 +220,7 @@ fn easy_solve1() -> Result<(), MathLibError> {
 fn medium_solve1() -> Result<(), MathLibError> {
     let res = quick_solve("3x^2+2x-1=0".to_string(), vec![])?;
     
-    let res_rounded = res.iter().map(|x| x.round(3.)).collect::<Vec<Value>>();
+    let res_rounded = res.iter().map(|x| x.round(3)).collect::<Vec<Value>>();
 
     assert_eq!(res_rounded, vec![Value::Scalar(-1.), Value::Scalar(((1./3.) as f64*1000.).round()/1000.)]);
 
@@ -232,7 +232,7 @@ fn medium_solve2() -> Result<(), MathLibError> {
     let equation = "2x+5y+2z=-38, 3x-2y+4z=17, -6x+y-7z=-12".to_string();
 
     let res = quick_solve(equation, vec![])?;
-    let res_rounded = res.iter().map(|x| x.round(3.)).collect::<Vec<Value>>();
+    let res_rounded = res.iter().map(|x| x.round(3)).collect::<Vec<Value>>();
 
     assert_eq!(res_rounded, vec![Value::Vector(vec![3., -8., -2.])]);
 
@@ -244,7 +244,7 @@ fn medium_solve3() -> Result<(), MathLibError> {
     let equation = "3x-9z=33, 7x-4y-z=-15, 4x+6y+5z=-6".to_string();
 
     let res = quick_solve(equation, vec![])?;
-    let res_rounded = res.iter().map(|x| x.round(3.)).collect::<Vec<Value>>();
+    let res_rounded = res.iter().map(|x| x.round(3)).collect::<Vec<Value>>();
 
     assert_eq!(res_rounded, vec![Value::Vector(vec![-1., 3., -4.])]);
 
@@ -255,7 +255,7 @@ fn medium_solve3() -> Result<(), MathLibError> {
 fn calculus_solve1() -> Result<(), MathLibError> {
     let res = quick_solve("D(3x^2+2x-1, x, k)=0".to_string(), vec![])?;
 
-    let res_rounded = res.iter().map(|x| x.round(3.)).collect::<Vec<Value>>();
+    let res_rounded = res.iter().map(|x| x.round(3)).collect::<Vec<Value>>();
 
     assert_eq!(res_rounded, vec![Value::Scalar(-(((1./3.) as f64*1000.).round()/1000.))]);
 
@@ -268,7 +268,7 @@ fn hard_solve1() -> Result<(), MathLibError> {
 
     let res = quick_solve(equation, vec![])?;
 
-    let res_rounded = res.iter().map(|x| x.round(3.)).collect::<Vec<Value>>();
+    let res_rounded = res.iter().map(|x| x.round(3)).collect::<Vec<Value>>();
 
     assert_eq!(res_rounded.contains(&Value::Scalar(-0.656)), true);
 
@@ -300,7 +300,7 @@ fn hard_solve4() -> Result<(), MathLibError> {
     let equation = "400-100g=600-100k, -600-100g=-400-100k, 1000-100g=100k, 0=0".to_string();
 
     let res = quick_solve(equation, vec![])?;
-    let res_rounded = res.iter().map(|x| x.round(3.)).collect::<Vec<Value>>();
+    let res_rounded = res.iter().map(|x| x.round(3)).collect::<Vec<Value>>();
     
     assert_eq!(res_rounded, vec![Value::Vector(vec![4., 6.])]);
 
@@ -312,7 +312,7 @@ fn hard_solve5() -> Result<(), MathLibError> {
     let equation = "y=x^2+6x-8, y=4x+7".to_string();
 
     let res = quick_solve(equation, vec![])?;
-    let res_rounded = res.iter().map(|x| x.round(3.)).collect::<Vec<Value>>();
+    let res_rounded = res.iter().map(|x| x.round(3)).collect::<Vec<Value>>();
 
     assert_eq!(res_rounded, vec![Value::Vector(vec![-5., -13.]), Value::Vector(vec![3., 19.])]);
 
@@ -324,9 +324,9 @@ fn hard_solve6() -> Result<(), MathLibError> {
     let equation = "y=1-3x, x^2/4+y^2=1".to_string();
 
     let res = quick_solve(equation, vec![])?;
-    let res_rounded = res.iter().map(|x| x.round(3.)).collect::<Vec<Value>>();
+    let res_rounded = res.iter().map(|x| x.round(3)).collect::<Vec<Value>>();
 
-    assert_eq!(res_rounded, vec![Value::Vector(vec![24./37., -35./37.]).round(3.), Value::Vector(vec![0., 1.])]);
+    assert_eq!(res_rounded, vec![Value::Vector(vec![24./37., -35./37.]).round(3), Value::Vector(vec![0., 1.])]);
 
     Ok(())
 }

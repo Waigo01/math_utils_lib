@@ -8,7 +8,7 @@ fn clean_results(res: Vec<Value>) -> Vec<Value> {
     for i in &res {
         let mut found = false;
         for j in &new_res {
-            if i.round(PREC-2.) == j.round(PREC-2.) {
+            if i.round(PREC-2) == j.round(PREC-2) {
                 found = true;
                 break;
             }
@@ -193,7 +193,7 @@ fn newton(search_expres: &Vec<Binary>, check_expres: &Vec<Binary> , x: &Vec<Vari
         vars.remove(vars.len()-1);
     }
 
-    if -10f64.powf(-PREC) < abs(Value::Vector(fx.clone()))?.get_scalar().unwrap() && abs(Value::Vector(fx.clone()))?.get_scalar().unwrap() < 10f64.powf(-PREC) {
+    if -10f64.powi(-PREC) < abs(Value::Vector(fx.clone()))?.get_scalar().unwrap() && abs(Value::Vector(fx.clone()))?.get_scalar().unwrap() < 10f64.powi(-PREC) {
         let mut check_results = vec![]; 
         for i in x {
             vars.push(i.clone());
@@ -207,7 +207,7 @@ fn newton(search_expres: &Vec<Binary>, check_expres: &Vec<Binary> , x: &Vec<Vari
         if check_results.is_empty() {
             return Ok(NewtonReturn::FinishedX(x.to_vec()));
         }
-        if -10f64.powf(-PREC) < abs(Value::Vector(check_results.clone()))?.get_scalar().unwrap() && abs(Value::Vector(check_results))?.get_scalar().unwrap() < 10f64.powf(-PREC) {
+        if -10f64.powi(-PREC) < abs(Value::Vector(check_results.clone()))?.get_scalar().unwrap() && abs(Value::Vector(check_results))?.get_scalar().unwrap() < 10f64.powi(-PREC) {
             return Ok(NewtonReturn::FinishedX(x.to_vec()));
         } else {
             return Err(NewtonError::ExpressionCheckFailed);
@@ -265,24 +265,22 @@ impl RootFinder {
         for i in &expressions {
             let vars_in_expr = find_vars_in_expr(i, vec![]);
 
-            let mut current_search_vars_names = vec![];
-
             let mut var_names = vec![];
 
             for var in &vars {
                 var_names.push(var.name.clone());
             }
 
-            for var in vars_in_expr {
+            for (i, var) in vars_in_expr.iter().enumerate() {
                 if !var_names.contains(&var) {
-                    if !current_search_vars_names.contains(&var) {
-                        current_search_vars_names.push(var);
+                    if !search_vars_names.contains(var) {
+                        if i > var.len() {
+                            search_vars_names.push(var.to_string());
+                        } else {
+                            search_vars_names.insert(i, var.to_string());
+                        }
                     }
                 }
-            }
-
-            if current_search_vars_names.len() > search_vars_names.len() {
-                search_vars_names = current_search_vars_names;
             }
         }
 
