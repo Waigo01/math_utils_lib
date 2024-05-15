@@ -330,19 +330,3 @@ fn hard_solve6() -> Result<(), MathLibError> {
 
     Ok(())
 }
-
-// #[test]
-// fn hard_latex1() -> Result<(), MathLibError> {
-//     let expression = "((25x^3-96x^2+512x+384)/(x^4+2x^3+90x^2-128x+1664)^(1.5))/(-sqrt(1-((32-x+x^2)/(((x-1)^2+25)(x^2+64)))^2))".to_string();
-//     let parsed = parse(expression)?;
-//     let vars = vec![Variable::new("x".to_string(), Value::Scalar(-0.655639))];
-//     let result = eval(&parsed, &vars)?;
-//     let var_assign = StepType::Calc((Binary::from_value(Value::Scalar(-0.655639)), Value::Scalar(-0.655639), Some("x".to_string())));
-//     let step = StepType::Calc((parsed, result, None));
-//
-//     export(vec![var_assign, step], "export".to_string(), ExportType::Png);
-//
-//     let _ = fs::remove_file("./export-1.png");
-//
-//     Ok(())
-// }

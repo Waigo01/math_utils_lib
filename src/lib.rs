@@ -88,17 +88,17 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //! ![LaTeX][latex-export]
 
 use errors::{QuickEvalError, QuickSolveError};
-use parser::{Binary, SimpleOpType, Operation};
 
 #[doc(hidden)]
 pub mod maths;
-pub mod basetypes;
 #[doc(hidden)]
 pub mod helpers;
+pub mod basetypes;
 pub mod latex_export;
 pub mod parser;
 pub mod errors;
 pub mod roots;
+pub mod solver;
 
 #[cfg(test)]
 mod tests;
@@ -106,8 +106,8 @@ mod tests;
 pub use basetypes::{Value, Variable};
 pub use latex_export::{export, ExportType, StepType};
 pub use parser::{parse, eval};
+pub use solver::solve;
 pub use errors::MathLibError;
-use roots::RootFinder;
 
 ///defines the precision used by the equation solver and the printing precision, which is PREC-2.
 #[cfg(feature = "high-prec")]
@@ -222,17 +222,10 @@ pub fn quick_solve(mut expr: String, vars: Vec<Variable>) -> Result<Vec<Value>, 
             right_b = parse(left)?;
         }
 
-        let root_b = Binary::from_operation(Operation::SimpleOperation {
-            op_type: SimpleOpType::Sub,
-            left: left_b.clone(),
-            right: right_b.clone()
-        });
-
-        parsed_equations.push(root_b);
+        parsed_equations.push((left_b, right_b));
     }
 
-    let root_finder = RootFinder::new(parsed_equations, vars)?;
-    let roots = root_finder.find_roots()?;
+    let roots = solve(parsed_equations, vars)?;
 
     Ok(roots)
 }

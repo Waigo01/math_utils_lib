@@ -16,7 +16,7 @@ use std::{fs, process, usize};
 #[derive(Debug, Clone)]
 pub enum StepType {
     Calc((Binary, Value, Option<String>)),
-    Equ((Binary, Binary, Vec<Value>, Option<String>))
+    Equ((Vec<(Binary, Binary)>, Vec<Value>, Option<String>))
 }
 
 fn latex_recurse(b: &Binary) -> Result<String, String> {
@@ -112,28 +112,35 @@ pub fn export(history: Vec<StepType>, file_name: String, export_type: ExportType
                 }
             }, 
             StepType::Equ(e) => {
-                let left = match latex_recurse(&e.0) {
-                    Ok(s) => s,
-                    Err(_) => return
-                };
-                let right = match latex_recurse(&e.1) {
-                    Ok(s) => s,
-                    Err(_) => return
-                };
-                output_string += &format!("{} &= {} \\\\\n", left, right);
-                if e.2.len() == 0 {
+                let mut recursed_eq = vec![];
+                for i in &e.0 {
+                    let left = match latex_recurse(&i.0) {
+                        Ok(s) => s,
+                        Err(_) => return
+                    };
+                    let right = match latex_recurse(&i.1) {
+                        Ok(s) => s,
+                        Err(_) => return
+                    };
+
+                    recursed_eq.push((left, right));
+                }
+                for i in recursed_eq {
+                    output_string += &format!("{} &= {} \\\\ \n", i.0, i.1);
+                }
+                if e.1.len() == 0 {
                     output_string += &format!("&\\text{{No solutions found!}} \\tag{{{}}}\\label{{eq:{}}} \\\\ \\\\ \n", j+1, j+1);
                 }
-                for i in 0..e.2.len() {
-                    if e.3.is_some() {
-                        output_string += &format!("{}_{{{}}} &= {}", e.3.clone().unwrap(), i, e.2[i].latex_print());
+                for i in 0..e.1.len() {
+                    if e.2.is_some() {
+                        output_string += &format!("{}_{{{}}} &= {}", e.2.clone().unwrap(), i, e.1[i].latex_print());
                     } else {
-                        output_string += &format!("x_{{{}}} &= {}", i, e.2[i].latex_print());
+                        output_string += &format!("x_{{{}}} &= {}", i, e.1[i].latex_print());
                     }
-                    if i == (e.2.len() as f32/2.).floor() as usize {
+                    if i == (e.1.len() as f32/2.).floor() as usize {
                         output_string += &format!(" \\tag{{{}}}\\label{{eq:{}}} ", j+1, j+1);
                     }
-                    if i == e.2.len()-1{
+                    if i == e.1.len()-1{
                         output_string += "\\\\ \\\\ \n";
                     } else {
                         output_string += "\\\\ \n";
