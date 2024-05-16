@@ -140,7 +140,7 @@ pub enum SolveError {
 impl SolveError {
     pub fn get_reason(&self) -> String {
         match self {
-            SolveError::VectorInEq => return "Can't have vectors in equations!".to_string(),
+            SolveError::VectorInEq => return "Can't have vectors in equations! Please convert your equation into a system of equations!".to_string(),
             SolveError::MatrixInEq => return "Can't have matrices in equations!".to_string(),
             SolveError::NothingToDo => return "Nothing to do!".to_string(),
             SolveError::EvalError(e) => return e.get_reason(),
@@ -185,10 +185,10 @@ pub enum NewtonError {
 impl NewtonError {
     pub fn get_reason(&self) -> String {
         match self {
-            NewtonError::UnderdeterminedSystem => return "Underdetermined System!".to_string(),
+            NewtonError::UnderdeterminedSystem => return "Underdetermined system of equations!".to_string(),
             NewtonError::InfiniteSolutions => return "Infinite Solutions!".to_string(),
             NewtonError::NaNOrInf => return "NaN or Inf".to_string(),
-            NewtonError::ExpressionCheckFailed => return "Expression Check Failed".to_string(),
+            NewtonError::ExpressionCheckFailed => return "Expression Check Failed!".to_string(),
             NewtonError::EvalError(e) => return e.get_reason()
         }
     }

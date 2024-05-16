@@ -70,7 +70,7 @@ impl Value {
         }
     }
     ///returns the matrix if the Value is a matrix and None if it is a scalar or a
-    ///vector (used in [find_roots()](fn@crate::roots::find_roots)).
+    ///vector.
     pub fn get_matrix(&self) -> Option<Vec<Vec<f64>>> {
         match self {
             Value::Matrix(a) => return Some(a.to_vec()),

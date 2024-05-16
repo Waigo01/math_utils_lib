@@ -78,7 +78,7 @@ fn find_vars_in_expr(b: &Binary, mut ov: Vec<String>) -> Vec<String> {
     }
 }
 
-pub fn gauss_algorithm(mut v: Vec<Vec<f64>>) -> Result<Value, NewtonError> {
+fn gauss_algorithm(mut v: Vec<Vec<f64>>) -> Result<Value, NewtonError> {
     if v.len()+1 != v[0].len() {
         return Err(NewtonError::UnderdeterminedSystem);
     }
@@ -217,7 +217,7 @@ fn newton(search_expres: &Vec<Binary>, check_expres: &Vec<Binary> , x: &Vec<Vari
     let new_x = jacobi_and_gauss(search_expres, x, vars, fx)?;
 
     for i in &new_x {
-        if i.value.get_scalar().unwrap().is_nan() || i.value.get_scalar().unwrap().is_infinite() {
+        if i.value.is_inf_or_nan() {
             return Err(NewtonError::NaNOrInf);
         }
     }
@@ -238,6 +238,7 @@ fn generate_combinations(arr: Vec<usize>, len: usize, prev_arr: Vec<usize>) -> V
     return combs;
 }
 
+/// defines a root finder to find the roots of an expression/multiple expressions (system of equations).
 #[derive(Debug)]
 pub struct RootFinder {
     expressions: Vec<Binary>,
@@ -247,6 +248,9 @@ pub struct RootFinder {
 }
 
 impl RootFinder {
+    /// creates a new [RootFinder](struct@crate::roots::RootFinder) using a vec of expressions which represents
+    /// the functions that you want the roots to be found of. Multiple expressions act as a system
+    /// of equations. Additionally you have to pass the global variables.
     pub fn new(expressions: Vec<Binary>, mut vars: Vec<Variable>) -> Result<RootFinder, SolveError> {
         if expressions.len() == 0 {
             return Err(SolveError::NothingToDo);
@@ -314,7 +318,12 @@ impl RootFinder {
 
         return Ok(RootFinder { expressions, combinations: combs, vars, search_vars_names });
     }
-
+    /// starts the root finding process. It will always search for roots in terms of variables that
+    /// have not yet been defined in the global variables passed in
+    /// [new()](fn@crate::roots::RootFinder::new()).
+    /// 
+    /// In the case of a system of equations results will be represented as a vector with the order
+    /// being that of the variables in the expressions.
     pub fn find_roots(&self) -> Result<Vec<Value>, SolveError> {
         for i in &self.combinations {
             let mut search_expres = vec![];
