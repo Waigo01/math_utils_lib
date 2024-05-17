@@ -129,6 +129,7 @@ pub fn export(history: Vec<StepType>, file_name: String, export_type: ExportType
                 for i in recursed_eq {
                     output_string += &format!("{} &= {} \\\\ \n", i.0, i.1);
                 }
+                output_string += "\\\\ \n";
                 if e.1.len() == 0 {
                     output_string += &format!("&\\text{{No solutions found!}} \\tag{{{}}}\\label{{eq:{}}} \\\\ \\\\ \n", j+1, j+1);
                 }
