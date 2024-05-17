@@ -251,6 +251,9 @@ impl RootFinder {
     /// creates a new [RootFinder](struct@crate::roots::RootFinder) using a vec of expressions which represents
     /// the functions that you want the roots to be found of. Multiple expressions act as a system
     /// of equations. Additionally you have to pass the global variables.
+    ///
+    /// If you want a simpler way of solving equations and systems of equations, have a look at
+    /// [solve()](fn@crate::solver::solve) and [quick_solve()](fn@crate::quick_solve).
     pub fn new(expressions: Vec<Binary>, mut vars: Vec<Variable>) -> Result<RootFinder, SolveError> {
         if expressions.len() == 0 {
             return Err(SolveError::NothingToDo);
@@ -320,7 +323,7 @@ impl RootFinder {
     }
     /// starts the root finding process. It will always search for roots in terms of variables that
     /// have not yet been defined in the global variables passed in
-    /// [new()](fn@crate::roots::RootFinder::new()).
+    /// [new()](fn@crate::roots::RootFinder::new).
     /// 
     /// In the case of a system of equations results will be represented as a vector with the order
     /// being that of the variables in the expressions.

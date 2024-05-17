@@ -78,7 +78,7 @@ impl Value {
             Value::Vector(_) => return None
         }
     }
-    /// rounds the value
+    /// rounds the value.
     pub fn round(&self, prec: i32) -> Value {
         match self {
             Value::Scalar(a) => return Value::Scalar((a*10f64.powi(prec)).round()/10f64.powi(prec)),

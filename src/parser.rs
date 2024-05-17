@@ -455,7 +455,7 @@ pub fn parse(expr: String) -> Result<Binary, ParserError> {
 ///
 ///pi and e need to be provided as variables if used.
 ///
-///If you are searching for a quick and easy way to evaluate an expression, have a look at [quick_eval()](fn@crate::quick_eval()).
+///If you are searching for a quick and easy way to evaluate an expression, have a look at [quick_eval()](fn@crate::quick_eval).
 pub fn eval(b: &Binary, vars: &Vec<Variable>) -> Result<Value, EvalError> {
     match b {
         Binary::Value(c) => return Ok(c.clone()),

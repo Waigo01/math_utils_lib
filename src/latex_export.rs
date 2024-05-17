@@ -5,7 +5,8 @@ use std::{fs, process, usize};
 ///
 ///- Calculation, specified by the Binary Tree of the calculation, its result and a possible Variable Name in which it is saved.
 ///- Equation, specified by both the left (left of the =) and the right (right of the =) Binary
-///Trees, its results and a possible Variable Name in which the results are saved.
+///Trees, its results and a possible Variable Name in which the results are saved. Multiple Tuples
+///of Trees specify a system of equations.
 ///
 ///# Example
 ///```

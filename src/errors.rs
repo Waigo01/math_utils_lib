@@ -1,6 +1,6 @@
 use std::fmt::{self, Display};
 
-///provides an enum with the corresponding From implementations in order to use as convenient return
+///provides an enum with the corresponding From implementations in order to use as a convenient return
 ///error type for this library.
 #[derive(Debug, PartialEq)]
 pub enum MathLibError {
@@ -96,8 +96,7 @@ impl Display for ParserError {
 #[derive(Debug, PartialEq)]
 pub enum EvalError {
     NoVariable(String),
-    MathError(String),
-    SolveError(Box<SolveError>)
+    MathError(String)
 }
 
 impl EvalError {
@@ -105,7 +104,6 @@ impl EvalError {
         match self {
             EvalError::NoVariable(s) => return format!("Could not find variable {}!", s),
             EvalError::MathError(s) => return s.to_string(),
-            EvalError::SolveError(s) => return s.get_reason()
         }
     }
 }
@@ -119,12 +117,6 @@ impl Display for EvalError {
 impl From<String> for EvalError {
     fn from(value: String) -> Self {
         EvalError::MathError(value)
-    }
-}
-
-impl From<SolveError> for EvalError {
-    fn from(value: SolveError) -> Self {
-        EvalError::SolveError(Box::new(value))
     }
 }
 

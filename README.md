@@ -4,7 +4,7 @@
 This repo/crate provides a number of math utilities:
 
 - parsing and evaluating expressions containing matrices and vectors
-- solving equations
+- solving equations and systems of equations
 - exporting a LaTeX document from a collection of parsed expressions or solved equations
 
 Precision:
@@ -37,7 +37,8 @@ assert_eq!(res, Value::Vector(vec![9., 15., 24.]));
 
 ```rust
 let a = Variable::new("A".to_string(), Value::Vector(vec![3., 5., 8.]));
-let b = Variable::new("B".to_string(), Value::Matrix(vec![vec![2., 0., 0.], vec![0., 2., 0.], vec![0., 0., 1.]]));
+let b = Variable::new("B".to_string(), Value::Matrix(vec![vec![2., 0., 0.], vec![0., 2., 0.],
+vec![0., 0., 1.]]));
 let res = quick_eval("B*A".to_string(), vec![a, b])?;
 
 assert_eq!(res, Value::Vector(vec![6., 10., 8.]));
@@ -47,10 +48,18 @@ assert_eq!(res, Value::Vector(vec![6., 10., 8.]));
 let equation = "x^2=9".to_string();
 
 let res = quick_solve(equation, "x".to_string(), vec![])?;
-
-let res_rounded = res.iter().map(|x| Value::Scalar((x.get_scalar()*1000.).round()/1000.)).collect::<Vec<Value>>();
+let res_rounded = res.iter().map(|x| x.round(3)).collect::<Vec<Value>>();
 
 assert_eq!(res_rounded, vec![Value::Scalar(3.), Value::Scalar(-3.)]);
+```
+
+```rust
+let equation = "400-100g=600-100k, -600-100g=-400-100k, 1000-100g=100k".to_string();
+
+let res = quick_solve(equation, vec![])?;
+let res_rounded = res.iter().map(|x| x.round(3)).collect::<Vec<Value>>();
+
+assert_eq!(res_rounded, vec![Value::Vector(vec![4., 6.])]);
 ```
 ## LaTeX:
 ```rust

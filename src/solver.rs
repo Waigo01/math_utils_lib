@@ -8,8 +8,8 @@ use crate::{errors::SolveError, parser::{Binary, Operation, SimpleOpType}, roots
 /// e and pi need to be provided as variables.
 ///
 /// If you are searching for an easy way of directly solving equations, have a look at
-/// [quick_solve()](fn@crate::quick_solve())
-pub fn solve(equations: Vec<(Binary, Binary)>, vars: Vec<Variable>) -> Result<Vec<Value>, SolveError> {
+/// [quick_solve()](fn@crate::quick_solve)
+pub fn solve(equations: Vec<(Binary, Binary)>, vars: &Vec<Variable>) -> Result<Vec<Value>, SolveError> {
     let mut final_expressions = vec![];
 
     for i in &equations {
@@ -21,6 +21,6 @@ pub fn solve(equations: Vec<(Binary, Binary)>, vars: Vec<Variable>) -> Result<Ve
 
         final_expressions.push(root_b);
     }
-    let root_finder = RootFinder::new(final_expressions, vars)?;
+    let root_finder = RootFinder::new(final_expressions, vars.to_vec())?;
     return root_finder.find_roots();
 }

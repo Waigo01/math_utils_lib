@@ -297,7 +297,7 @@ fn hard_solve3() -> Result<(), MathLibError> {
 
 #[test]
 fn hard_solve4() -> Result<(), MathLibError> {
-    let equation = "400-100g=600-100k, -600-100g=-400-100k, 1000-100g=100k, 0=0".to_string();
+    let equation = "400-100g=600-100k, -600-100g=-400-100k, 1000-100g=100k".to_string();
 
     let res = quick_solve(equation, vec![])?;
     let res_rounded = res.iter().map(|x| x.round(3)).collect::<Vec<Value>>();

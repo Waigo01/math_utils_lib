@@ -73,7 +73,7 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //! ```
 //!
 //! ```
-//! let equation = "400-100g=600-100k, -600-100g=-400-100k, 1000-100g=100k, 0=0".to_string();
+//! let equation = "400-100g=600-100k, -600-100g=-400-100k, 1000-100g=100k".to_string();
 //!
 //! let res = quick_solve(equation, vec![])?;
 //! let res_rounded = res.iter().map(|x| x.round(3)).collect::<Vec<Value>>();
@@ -163,7 +163,7 @@ pub fn quick_eval(mut expr: String, vars: Vec<Variable>) -> Result<Value, QuickE
 
 /// solves an equation or a system of equations towards the variables not yet specified in vars. It can additionaly be
 /// provided with other variables. If you just want to solve equations with parsed left and right
-/// hand side binaries, have a look at [solve()](fn@crate::solver::solve()).
+/// hand side binaries, have a look at [solve()](fn@solver::solve).
 ///
 /// # Example
 /// ```
@@ -175,7 +175,7 @@ pub fn quick_eval(mut expr: String, vars: Vec<Variable>) -> Result<Value, QuickE
 /// assert_eq!(res_rounded, vec![Value::Scalar(3.), Value::Scalar(-3.)]);
 /// ```
 /// ```
-/// let equation = "400-100g=600-100k, -600-100g=-400-100k, 1000-100g=100k, 0=0".to_string();
+/// let equation = "400-100g=600-100k, -600-100g=-400-100k, 1000-100g=100k".to_string();
 ///
 /// let res = quick_solve(equation, vec![])?;
 /// let res_rounded = res.iter().map(|x| x.round(3)).collect::<Vec<Value>>();
@@ -240,7 +240,7 @@ pub fn quick_solve(mut expr: String, vars: Vec<Variable>) -> Result<Vec<Value>, 
         parsed_equations.push((left_b, right_b));
     }
 
-    let roots = solve(parsed_equations, vars)?;
+    let roots = solve(parsed_equations, &vars)?;
 
     Ok(roots)
 }
