@@ -23,7 +23,7 @@ pub fn calculate_integral(expr: &Binary, in_terms_of: String, lower_bound: Value
                 ub = lb;
                 lb = temp;
             }
-            let dx = (ub-lb)/10f64.powf(PREC-2.);
+            let dx = (ub-lb)/10f64.powi(PREC-2);
             let mut sum = Value::Scalar(0.);
             let mut b = lb;
             while b < ub {
@@ -58,43 +58,20 @@ pub fn calculate_derivative(expr: &Binary, in_terms_of: String, at: Value, mut f
                 mut_vars.push(Variable::new(in_terms_of.clone(), at));
                 fx = Some(eval(expr, &mut_vars)?);
                 mut_vars.remove(mut_vars.len()-1);
-            } 
-            mut_vars.push(Variable::new(in_terms_of, Value::Scalar(s+10f64.powf(-(PREC)))));
-            let fxh = eval(expr, &mut_vars)?;
-            let h = Binary::from_operation(Operation::SimpleOperation {
-                op_type: SimpleOpType::Div,
-                left: Binary::from_operation(Operation::SimpleOperation {
-                    op_type: SimpleOpType::Sub,
-                    left: Binary::Value(fxh),
-                    right: Binary::Value(fx.unwrap())
-                }),
-                right: Binary::Value(Value::Scalar(10f64.powf(-(PREC))))
-            });
-            return eval(&h, &mut_vars);
-        },
-        Value::Vector(v) => {
-            if fx.is_none() {
-                mut_vars.push(Variable::new(in_terms_of.clone(), Value::Vector(v.clone())));
-                fx = Some(eval(&expr, &mut_vars)?);
-                mut_vars.remove(mut_vars.len()-1);
-            } 
-            let mut h_vec = vec![];
-            for i in v {
-                h_vec.push(i+10f64.powf(-(PREC)));
             }
-            mut_vars.push(Variable::new(in_terms_of.clone(), Value::Vector(h_vec)));
-            let fxh = eval(&expr, &mut_vars)?;
+            mut_vars.push(Variable::new(in_terms_of.clone(), Value::Scalar(s+10f64.powi(-(PREC)))));
+            let fxh = &eval(expr, &mut_vars)?;
             let h = Binary::from_operation(Operation::SimpleOperation {
                 op_type: SimpleOpType::Div,
                 left: Binary::from_operation(Operation::SimpleOperation {
                     op_type: SimpleOpType::Sub,
-                    left: Binary::from_value(fxh),
-                    right: Binary::from_value(fx.unwrap())
+                    left: Binary::Value(fxh.clone()),
+                    right: Binary::Value(fx.clone().unwrap().clone())
                 }),
-                right: Binary::from_value(Value::Scalar(10f64.powf(-(PREC))))
+                right: Binary::Value(Value::Scalar(10f64.powi(-(PREC))))
             });
-            return Ok(eval(&h, vars)?);
+            return Ok(eval(&h, &mut_vars)?);
         } 
-        _ => {return Err(EvalError::MathError("Only scalar and vector values are allowed!".to_string()))}
+        _ => {return Err(EvalError::MathError("Only scalar values are allowed!".to_string()))}
     }
 }

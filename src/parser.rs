@@ -59,7 +59,7 @@ pub enum AdvancedOpType {
     ///Calculate the derivative of a function f in respect to n at a value m (D(f, n, m))
     Derivative,
     ///Calculate the integral of a function f in respect to n with the bounds a and b (I(f, n, a, b))
-    Integral,
+    Integral 
 }
 
 ///used to construct a Binary Tree which is recursively evaluated by the [eval()] function.
@@ -276,6 +276,7 @@ pub fn parse(expr: String) -> Result<Binary, ParserError> {
     
     let op_types = vec![SimpleOpType::Add, SimpleOpType::Sub, SimpleOpType::Mult, SimpleOpType::Div, SimpleOpType::Cross, SimpleOpType::HiddenMult, SimpleOpType::Pow, SimpleOpType::Get];
     let mut ops_in_expr: Vec<(SimpleOpType, usize, usize, usize)> = vec![];
+    let mut highest_op: SimpleOpType = SimpleOpType::Add;
     let mut last_char = '\\';
     let mut brackets_open = 0;
     let mut curly_brackets_open = 0;
@@ -288,6 +289,7 @@ pub fn parse(expr: String) -> Result<Binary, ParserError> {
             }
         }
         if parenths_open == 0 && is_hidden_mult {
+            highest_op = SimpleOpType::HiddenMult;
             ops_in_expr.push((SimpleOpType::HiddenMult, i, 0, 0));
         }
         last_char = expr_chars[i];
@@ -317,15 +319,20 @@ pub fn parse(expr: String) -> Result<Binary, ParserError> {
         }
         let symbol = get_op_symbol(expr_chars[i]);
         if parenths_open == 0 && brackets_open == 0 && curly_brackets_open == 0 && i != 0 && i != expr_chars.len()-1 && symbol.is_some() {
+            highest_op = symbol.clone().unwrap();
             ops_in_expr.push((symbol.clone().unwrap(), i, 0, 1));
         } 
+    }
+
+    if highest_op == SimpleOpType::Sub || highest_op == SimpleOpType::Div {
+        ops_in_expr.reverse();
     }
 
     for o in op_types {
         for i in &ops_in_expr {
             if i.0 == o {
                 let left_b = parse(expr_chars[0..(i.1-i.2)].to_vec().iter().collect::<String>())?;
-                let right_b = parse(expr_chars[(i.1+i.3)..].to_vec().iter().collect::<String>())?;
+                let right_b = parse(expr_chars[(i.1+i.3)..].to_vec().iter().collect::<String>())?; 
                 return Ok(Binary::from_operation(Operation::SimpleOperation {
                     op_type: i.0.clone(),
                     left: left_b,
@@ -368,7 +375,25 @@ pub fn parse(expr: String) -> Result<Binary, ParserError> {
         if expr_chars.iter().collect::<String>().starts_with(i.1) {
             match i.0 {
                 AdvancedOpType::Derivative => {
-                    let args = expr_chars[i.1.len()..expr_chars.len()-1].to_vec().iter().collect::<String>().split(",").map(|s| s.to_string()).collect::<Vec<String>>();
+                    let aop_string = expr_chars[i.1.len()..expr_chars.len()-1].to_vec().iter().collect::<String>();
+
+                    let mut args = vec![];
+                    parenths_open = 0;
+                    let mut buffer = String::new();
+                    for j in aop_string.chars() {
+                        if parenths_open == 0 && j == ',' {
+                            args.push(buffer.clone());
+                            buffer.clear();
+                        } else {
+                            buffer.push(j);
+                        }
+                        if j == '(' || j == '[' || j == '{' {
+                            parenths_open += 1;
+                        } else if j == ')' || j == ']' || j == '}' {
+                            parenths_open -= 1;
+                        } 
+                    }
+                    args.push(buffer);
                     if args.len() != 3 {
                         return Err(ParserError::WrongNumberOfArgs("derivative".to_string()));
                     }
@@ -381,7 +406,24 @@ pub fn parse(expr: String) -> Result<Binary, ParserError> {
                     })));
                 },
                 AdvancedOpType::Integral => {
-                    let args = expr_chars[i.1.len()..expr_chars.len()-1].to_vec().iter().collect::<String>().split(",").map(|s| s.to_string()).collect::<Vec<String>>();
+                    let aop_string = expr_chars[i.1.len()..expr_chars.len()-1].to_vec().iter().collect::<String>();
+
+                    let mut args = vec![];
+                    parenths_open = 0;
+                    let mut buffer = String::new();
+                    for j in aop_string.chars() {
+                        if parenths_open == 0 && j == ',' {
+                            args.push(buffer.clone());
+                            buffer.clear();
+                        } else {
+                            buffer.push(j);
+                        }
+                        if j == '(' || j == '[' || j == '{' {
+                            parenths_open += 1;
+                        } else if j == ')' || j == ']' || j == '}' {
+                            parenths_open -= 1;
+                        }                    }
+                    args.push(buffer);
                     if args.len() != 4 {
                         return Err(ParserError::WrongNumberOfArgs("integral".to_string()));
                     }
@@ -394,7 +436,7 @@ pub fn parse(expr: String) -> Result<Binary, ParserError> {
                         lower_bound: parsed_lower_b,
                         upper_bound: parsed_upper_b
                     })));
-                }
+                } 
             }
         }
     }
@@ -413,7 +455,7 @@ pub fn parse(expr: String) -> Result<Binary, ParserError> {
 ///
 ///pi and e need to be provided as variables if used.
 ///
-///If you are searching for a quick and easy way to evaluate an expression, have a look at [quick_eval()](fn@crate::quick_eval()).
+///If you are searching for a quick and easy way to evaluate an expression, have a look at [quick_eval()](fn@crate::quick_eval).
 pub fn eval(b: &Binary, vars: &Vec<Variable>) -> Result<Value, EvalError> {
     match b {
         Binary::Value(c) => return Ok(c.clone()),
@@ -430,7 +472,7 @@ pub fn eval(b: &Binary, vars: &Vec<Variable>) -> Result<Value, EvalError> {
             match &**o {
                 Operation::SimpleOperation {op_type, left, right} => {
                     let lv = eval(&left, vars)?;
-                    let rv = eval(&right, vars)?;
+                    let rv = eval(&right, vars)?; 
                     match op_type {
                         SimpleOpType::Get => return Ok(maths::get(lv, rv)?),
                         SimpleOpType::Add => return Ok(maths::add(lv, rv)?),
@@ -443,7 +485,7 @@ pub fn eval(b: &Binary, vars: &Vec<Variable>) -> Result<Value, EvalError> {
                         SimpleOpType::Pow => return Ok(maths::pow(lv, rv)?),
                         SimpleOpType::Sin => return Ok(maths::sin(lv)?),
                         SimpleOpType::Cos => return Ok(maths::cos(lv)?),
-                        SimpleOpType::Tan => return Ok(maths::cos(lv)?),
+                        SimpleOpType::Tan => return Ok(maths::tan(lv)?),
                         SimpleOpType::Abs => return Ok(maths::abs(lv)?),
                         SimpleOpType::Sqrt => return Ok(maths::sqrt(lv)?),
                         SimpleOpType::Ln => return Ok(maths::ln(lv)?),
@@ -458,10 +500,12 @@ pub fn eval(b: &Binary, vars: &Vec<Variable>) -> Result<Value, EvalError> {
                         AdvancedOperation::Integral {expr, in_terms_of, lower_bound, upper_bound} => {
                             let lb = eval(&lower_bound, vars)?;
                             let ub = eval(&upper_bound, vars)?;
+
                             return Ok(maths::calculus::calculate_integral(&expr, in_terms_of.clone(), lb, ub, vars)?);
                         },
                         AdvancedOperation::Derivative {expr, in_terms_of, at} => {
                             let eat = eval(&at, vars)?;
+                            
                             return Ok(maths::calculus::calculate_derivative(&expr, in_terms_of.clone(), eat, None, vars)?);
                         }
                     }

@@ -9,7 +9,7 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
            to enable."
 )]
 //! - parsing and evaluating expressions containing matrices and vectors
-//! - solving equations
+//! - solving equations and systems of equations
 //! - exporting a LaTeX document from a collection of parsed expressions or solved equations (see 
 //! [StepType](enum@latex_export::StepType) and [export()])
 //!
@@ -67,10 +67,18 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //! let equation = "x^2=9".to_string();
 //!
 //! let res = quick_solve(equation, "x".to_string(), vec![])?;
-//!
-//! let res_rounded = res.iter().map(|x| Value::Scalar((x.get_scalar()*1000.).round()/1000.)).collect::<Vec<Value>>();
-//!
+//! let res_rounded = res.iter().map(|x| x.round(3)).collect::<Vec<Value>>();
+//! 
 //! assert_eq!(res_rounded, vec![Value::Scalar(3.), Value::Scalar(-3.)]);
+//! ```
+//!
+//! ```
+//! let equation = "400-100g=600-100k, -600-100g=-400-100k, 1000-100g=100k".to_string();
+//!
+//! let res = quick_solve(equation, vec![])?;
+//! let res_rounded = res.iter().map(|x| x.round(3)).collect::<Vec<Value>>();
+//!
+//! assert_eq!(res_rounded, vec![Value::Vector(vec![4., 6.])]);
 //! ```
 //! ## LaTeX:
 //! ```
@@ -88,17 +96,17 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //! ![LaTeX][latex-export]
 
 use errors::{QuickEvalError, QuickSolveError};
-use parser::{Binary, SimpleOpType, Operation};
 
 #[doc(hidden)]
 pub mod maths;
-pub mod basetypes;
 #[doc(hidden)]
 pub mod helpers;
+pub mod basetypes;
 pub mod latex_export;
 pub mod parser;
 pub mod errors;
 pub mod roots;
+pub mod solver;
 
 #[cfg(test)]
 mod tests;
@@ -106,16 +114,16 @@ mod tests;
 pub use basetypes::{Value, Variable};
 pub use latex_export::{export, ExportType, StepType};
 pub use parser::{parse, eval};
-pub use roots::find_roots;
+pub use solver::solve;
 pub use errors::MathLibError;
 
 ///defines the precision used by the equation solver and the printing precision, which is PREC-2.
 #[cfg(feature = "high-prec")]
-pub const PREC: f64 = 13.;
+pub const PREC: i32 = 13;
 
-///defines the precision used by the equation solver and the printing precision, which is PREC-2.
+///defines the precision used by the equation solver and the printing precision, which is PREC - 2.
 #[cfg(not(feature = "high-prec"))]
-pub const PREC: f64 = 8.;
+pub const PREC: i32 = 8;
 
 /// evaluates a given expression using the given variables (e and pi are provided by
 /// the function). If you just want the Binary Tree, have a look at [parse()].
@@ -153,21 +161,28 @@ pub fn quick_eval(mut expr: String, vars: Vec<Variable>) -> Result<Value, QuickE
     Ok(eval(&b_tree, &context_vars)?)
 }
 
-/// solves a given equation towards a given Variable Name (solve_var). It can additionaly be
-/// provided with other variables. If you just want a root finder, have a look at
-/// [find_roots()](fn@roots::find_roots).
+/// solves an equation or a system of equations towards the variables not yet specified in vars. It can additionaly be
+/// provided with other variables. If you just want to solve equations with parsed left and right
+/// hand side binaries, have a look at [solve()](fn@solver::solve).
 ///
 /// # Example
 /// ```
 /// let equation = "x^2=9".to_string();
 ///
 /// let res = quick_solve(equation, "x".to_string(), vec![])?;
-///
-/// let res_rounded = res.iter().map(|x| Value::Scalar((x.get_scalar()*1000.).round()/1000.)).collect::<Vec<Value>>();
+/// let res_rounded = res.iter().map(|x| x.round(3)).collect::<Vec<Value>>();
 ///
 /// assert_eq!(res_rounded, vec![Value::Scalar(3.), Value::Scalar(-3.)]);
 /// ```
-pub fn quick_solve(mut expr: String, solve_var: String, vars: Vec<Variable>) -> Result<Vec<Value>, QuickSolveError> {
+/// ```
+/// let equation = "400-100g=600-100k, -600-100g=-400-100k, 1000-100g=100k".to_string();
+///
+/// let res = quick_solve(equation, vec![])?;
+/// let res_rounded = res.iter().map(|x| x.round(3)).collect::<Vec<Value>>();
+///
+/// assert_eq!(res_rounded, vec![Value::Vector(vec![4., 6.])]);
+/// ```
+pub fn quick_solve(mut expr: String, vars: Vec<Variable>) -> Result<Vec<Value>, QuickSolveError> {
     let mut context_vars = vec![
         Variable::new("e".to_string(), Value::Scalar(std::f64::consts::E)),
         Variable::new("pi".to_string(), Value::Scalar(std::f64::consts::PI))
@@ -176,34 +191,56 @@ pub fn quick_solve(mut expr: String, solve_var: String, vars: Vec<Variable>) -> 
         if vars.iter().filter(|x| x.name == "e".to_string() || x.name == "pi".to_string()).collect::<Vec<&Variable>>().len() > 0 {
             return Err(QuickSolveError::DuplicateVars);
         }
-        for i in vars {
-            context_vars.push(i);
+        for i in &vars {
+            context_vars.push(i.clone());
         }
     }
     expr = expr.trim().split(" ").filter(|s| !s.is_empty()).collect();
 
-    if !expr.contains("=") {
-        return Err(QuickSolveError::NoEq);
+    let mut equations = vec![];
+    let mut parenths_open = 0;
+    let mut buffer = String::new();
+
+    for i in expr.chars() {
+        if parenths_open == 0 && i == ',' {
+            equations.push(buffer.clone());
+            buffer.clear();
+        } else {
+            buffer.push(i);
+        }
+
+        if i == '(' || i == '[' || i == '{' {
+            parenths_open += 1;
+        } else if i == ')' || i == ']' || i == '}' {
+            parenths_open -= 1;
+        }
+    }
+    equations.push(buffer);
+
+    let mut parsed_equations = vec![];
+
+    for i in equations {
+        if !expr.contains("=") {
+            return Err(QuickSolveError::NoEq);
+        }
+
+        let left = i.split("=").nth(0).unwrap().to_string();
+        let right = i.split("=").nth(1).unwrap().to_string();
+
+        let left_b;
+        let right_b;
+        if left.len() >= right.len() {
+            left_b = parse(left)?;
+            right_b = parse(right)?;
+        } else {
+            left_b = parse(right)?;
+            right_b = parse(left)?;
+        }
+
+        parsed_equations.push((left_b, right_b));
     }
 
-    let left = expr.split("=").nth(0).unwrap().to_string();
-    let right = expr.split("=").nth(1).unwrap().to_string();
+    let roots = solve(parsed_equations, &vars)?;
 
-    let left_b;
-    let right_b;
-    if left.len() >= right.len() {
-        left_b = parse(left)?;
-        right_b = parse(right)?;
-    } else {
-        left_b = parse(right)?;
-        right_b = parse(left)?;
-    }
-
-    let root_b = Binary::from_operation(Operation::SimpleOperation {
-        op_type: SimpleOpType::Sub,
-        left: left_b.clone(),
-        right: right_b.clone()
-    });
-
-    Ok(find_roots(root_b, context_vars, solve_var)?)
+    Ok(roots)
 }

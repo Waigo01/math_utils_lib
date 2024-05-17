@@ -70,7 +70,7 @@ impl Value {
         }
     }
     ///returns the matrix if the Value is a matrix and None if it is a scalar or a
-    ///vector (used in [find_roots()](fn@crate::roots::find_roots)).
+    ///vector.
     pub fn get_matrix(&self) -> Option<Vec<Vec<f64>>> {
         match self {
             Value::Matrix(a) => return Some(a.to_vec()),
@@ -78,14 +78,14 @@ impl Value {
             Value::Vector(_) => return None
         }
     }
-    /// rounds the value
-    pub fn round(&self, prec: f64) -> Value {
+    /// rounds the value.
+    pub fn round(&self, prec: i32) -> Value {
         match self {
-            Value::Scalar(a) => return Value::Scalar((a*10f64.powf(prec)).round()/10f64.powf(prec)),
+            Value::Scalar(a) => return Value::Scalar((a*10f64.powi(prec)).round()/10f64.powi(prec)),
             Value::Vector(v) => {
                 let mut new_vec = vec![];
                 for i in v {
-                    new_vec.push((i*10f64.powf(prec)).round()/10f64.powf(prec));
+                    new_vec.push((i*10f64.powi(prec)).round()/10f64.powi(prec));
                 }
                 return Value::Vector(new_vec);
             },
@@ -94,7 +94,7 @@ impl Value {
                 for i in m {
                     let mut row = vec![];
                     for j in i {
-                        row.push((j*10f64.powf(prec)).round()/10f64.powf(prec));
+                        row.push((j*10f64.powi(prec)).round()/10f64.powi(prec));
                     }
                     new_matrix.push(row);
                 }
