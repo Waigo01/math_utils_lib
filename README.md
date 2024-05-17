@@ -3,7 +3,7 @@
 
 This repo/crate provides a number of math utilities:
 
-- parsing and evaluating expressions containing matrices and vectors
+- parsing and evaluating expressions containing matrices (column major order) and vectors
 - solving equations and systems of equations
 - exporting a LaTeX document from a collection of parsed expressions or solved equations
 
