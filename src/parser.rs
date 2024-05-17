@@ -199,7 +199,15 @@ fn parse_value(s: String) -> Result<Value, ParserError> {
                 return Err(ParserError::NotRectMatrix)
             }
             output_m.push(row);
-            return Ok(Value::Matrix(output_m));
+            let mut col_matrix = vec![];
+            for i in 0..output_m[0].len() {
+                let mut row = vec![];
+                for j in 0..output_m.len() {
+                    row.push(output_m[j][i]);
+                }
+                col_matrix.push(row);
+            }
+            return Ok(Value::Matrix(col_matrix));
         } else if s.chars().nth(0).unwrap() == '[' && s.chars().nth(s.len()-1).unwrap() == ']' {
             let mut output_v = vec![];
             let mut n_buffer = String::new();
