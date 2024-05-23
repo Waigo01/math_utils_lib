@@ -37,6 +37,15 @@ fn easy_eval4() -> Result<(), MathLibError> {
 }
 
 #[test]
+fn easy_eval5() -> Result<(), MathLibError> {
+    let res = quick_eval("[3, 3/4, 6]".to_string(), vec![])?;
+
+    assert_eq!(res, Value::Vector(vec![3., 0.75, 6.]));
+
+    Ok(())
+}
+
+#[test]
 fn medium_eval1() -> Result<(), MathLibError> {
     let x = Variable::new("x".to_string(), Value::Scalar(3.));
     let res = quick_eval("3x".to_string(), vec![x])?;
@@ -134,7 +143,7 @@ fn medium_eval11() -> Result<(), MathLibError> {
 fn medium_eval12() {
     let res = quick_eval("[3, 3*3, -5]".to_string(), vec![]);
 
-    assert_eq!(res.unwrap_err(), QuickEvalError::ParserError(ParserError::ParseValue("[3,3*3,-5]".to_string())))
+    assert_eq!(res.unwrap_err(), QuickEvalError::ParserError(ParserError::ParseValue("3*3".to_string())))
 }
 
 #[test]
