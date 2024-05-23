@@ -130,12 +130,32 @@ fn get_op_symbol(c: char) -> Option<SimpleOpType> {
     }
 }
 
-fn parse_value(s: String) -> Result<Value, ParserError> {
-    if !s.contains(&"[") {
-        let val = match s.parse::<f64>() {
+fn parse_component(s: String) -> Result<f64, ParserError> {
+    if s.contains("/") && s.split("/").count() == 2 {
+        let split_s = s.split("/").collect::<Vec<&str>>();
+        let left_p = match split_s[0].parse::<f64>() {
             Ok(f) => f,
             Err(_) => return Err(ParserError::ParseValue(s))
         };
+        let right_p = match split_s[1].parse::<f64>() {
+            Ok(f) => f,
+            Err(_) => return Err(ParserError::ParseValue(s))
+        };
+        return Ok(left_p/right_p);
+    } else if !s.contains("/") {
+        let p = match s.parse::<f64>() {
+            Ok(f) => f,
+            Err(_) => return Err(ParserError::ParseValue(s))
+        };
+        return Ok(p);
+    } else {
+        return Err(ParserError::ParseValue(s))
+    }
+}
+
+fn parse_value(s: String) -> Result<Value, ParserError> {
+    if !s.contains(&"[") {
+        let val = parse_component(s)?;
         return Ok(Value::Scalar(val));
     } else if s.len() > 2 {
         if s.len() > 4 && s[1..s.len()-1].contains(&"[") && s.chars().nth(1).unwrap() == '[' && s.chars().nth(s.len()-2).unwrap() == ']' {
@@ -158,10 +178,7 @@ fn parse_value(s: String) -> Result<Value, ParserError> {
                         if n_buffer.is_empty() {
                             return Err(ParserError::EmptyVec)
                         }
-                        row.push(match n_buffer.parse::<f64>() {
-                            Ok(t) => t,
-                            Err(_) => return Err(ParserError::ParseValue(s))
-                        });
+                        row.push(parse_component(n_buffer.clone())?);
                         n_buffer.clear();
                     } else {
                         n_buffer.push(i);
@@ -171,10 +188,7 @@ fn parse_value(s: String) -> Result<Value, ParserError> {
                         if n_buffer.is_empty() {
                             return Err(ParserError::EmptyVec)
                         }
-                        row.push(match n_buffer.parse::<f64>() {
-                            Ok(t) => t,
-                            Err(_) => return Err(ParserError::ParseValue(s))
-                        });
+                        row.push(parse_component(n_buffer.clone())?);
                         if row_size.is_some() && row.len() != row_size.unwrap() {
                             return Err(ParserError::NotRectMatrix)
                         }
@@ -191,10 +205,7 @@ fn parse_value(s: String) -> Result<Value, ParserError> {
             if n_buffer.is_empty() {
                 return Err(ParserError::EmptyVec)
             }
-            row.push(match n_buffer.parse::<f64>() {
-                Ok(t) => t,
-                Err(_) => return Err(ParserError::ParseValue(s))
-            });
+            row.push(parse_component(n_buffer.clone())?);
             if row_size.is_some() && row.len() != row_size.unwrap() {
                 return Err(ParserError::NotRectMatrix)
             }
@@ -216,10 +227,7 @@ fn parse_value(s: String) -> Result<Value, ParserError> {
                     if n_buffer.is_empty() {
                         return Err(ParserError::EmptyVec)
                     }
-                    output_v.push(match n_buffer.parse::<f64>() {
-                        Ok(t) => t,
-                        Err(_) => return Err(ParserError::ParseValue(s))
-                    });
+                    output_v.push(parse_component(n_buffer.clone())?);
                     n_buffer.clear();
                 } else {
                     n_buffer.push(i);
@@ -228,10 +236,7 @@ fn parse_value(s: String) -> Result<Value, ParserError> {
             if n_buffer.is_empty() {
                 return Err(ParserError::EmptyVec);
             }
-            output_v.push(match n_buffer[0..n_buffer.len()-1].parse::<f64>() {
-                Ok(t) => t,
-                Err(_) => return Err(ParserError::ParseValue(s))
-            });
+            output_v.push(parse_component(n_buffer[0..n_buffer.len()-1].to_string())?);
             return Ok(Value::Vector(output_v));
         } else {
             return Err(ParserError::MissingBracket)
@@ -284,7 +289,7 @@ pub fn parse(expr: String) -> Result<Binary, ParserError> {
     
     let op_types = vec![SimpleOpType::Add, SimpleOpType::Sub, SimpleOpType::Mult, SimpleOpType::Div, SimpleOpType::Cross, SimpleOpType::HiddenMult, SimpleOpType::Pow, SimpleOpType::Get];
     let mut ops_in_expr: Vec<(SimpleOpType, usize, usize, usize)> = vec![];
-    let mut highest_op: SimpleOpType = SimpleOpType::Add;
+    let mut highest_op = 7;
     let mut last_char = '\\';
     let mut brackets_open = 0;
     let mut curly_brackets_open = 0;
@@ -297,7 +302,6 @@ pub fn parse(expr: String) -> Result<Binary, ParserError> {
             }
         }
         if parenths_open == 0 && is_hidden_mult {
-            highest_op = SimpleOpType::HiddenMult;
             ops_in_expr.push((SimpleOpType::HiddenMult, i, 0, 0));
         }
         last_char = expr_chars[i];
@@ -327,12 +331,20 @@ pub fn parse(expr: String) -> Result<Binary, ParserError> {
         }
         let symbol = get_op_symbol(expr_chars[i]);
         if parenths_open == 0 && brackets_open == 0 && curly_brackets_open == 0 && i != 0 && i != expr_chars.len()-1 && symbol.is_some() {
-            highest_op = symbol.clone().unwrap();
             ops_in_expr.push((symbol.clone().unwrap(), i, 0, 1));
         } 
     }
 
-    if highest_op == SimpleOpType::Sub || highest_op == SimpleOpType::Div {
+    for i in &ops_in_expr {
+        for (j, o) in op_types.iter().enumerate() {
+            if *o == i.0 && j < highest_op {
+                highest_op = j;
+                break;
+            }
+        }
+    }
+
+    if highest_op == 1 || highest_op == 3 {
         ops_in_expr.reverse();
     }
 
