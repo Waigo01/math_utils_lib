@@ -71,14 +71,36 @@ pub enum AdvancedOpType {
 ///- Operation
 #[derive(Debug, Clone)]
 pub enum Binary {
-    Value(Value),
+    Scalar(f64),
+    Vector(Box<Vec<Binary>>),
+    Matrix(Box<Vec<Vec<Binary>>>),
     Variable(String),
     Operation(Box<Operation>),
 }
 
 impl Binary {
     pub fn from_value(val: Value) -> Binary {
-        return Binary::Value(val);
+        match val {
+            Value::Scalar(s) => return Binary::Scalar(s),
+            Value::Vector(v) => {
+                let mut parsed_values = vec![];
+                for i in v {
+                    parsed_values.push(Binary::Scalar(i))
+                }
+                return Binary::Vector(Box::new(parsed_values))
+            },
+            Value::Matrix(m) => {
+                let mut parsed_rows = vec![];
+                for i in m {
+                    let mut row = vec![];
+                    for j in i {
+                        row.push(Binary::Scalar(j))
+                    }
+                    parsed_rows.push(row);
+                }
+                return Binary::Matrix(Box::new(parsed_rows));
+            }
+        }
     }
     pub fn from_variable(val: String) -> Binary {
         return Binary::Variable(val);
@@ -130,33 +152,13 @@ fn get_op_symbol(c: char) -> Option<SimpleOpType> {
     }
 }
 
-fn parse_component(s: String) -> Result<f64, ParserError> {
-    if s.contains("/") && s.split("/").count() == 2 {
-        let split_s = s.split("/").collect::<Vec<&str>>();
-        let left_p = match split_s[0].parse::<f64>() {
-            Ok(f) => f,
-            Err(_) => return Err(ParserError::ParseValue(s))
-        };
-        let right_p = match split_s[1].parse::<f64>() {
-            Ok(f) => f,
-            Err(_) => return Err(ParserError::ParseValue(s))
-        };
-        return Ok(left_p/right_p);
-    } else if !s.contains("/") {
+fn parse_value(s: String) -> Result<Binary, ParserError> {
+    if !s.contains(&"[") {
         let p = match s.parse::<f64>() {
             Ok(f) => f,
             Err(_) => return Err(ParserError::ParseValue(s))
         };
-        return Ok(p);
-    } else {
-        return Err(ParserError::ParseValue(s))
-    }
-}
-
-fn parse_value(s: String) -> Result<Value, ParserError> {
-    if !s.contains(&"[") {
-        let val = parse_component(s)?;
-        return Ok(Value::Scalar(val));
+        return Ok(Binary::Scalar(p));
     } else if s.len() > 2 {
         if s.len() > 4 && s[1..s.len()-1].contains(&"[") && s.chars().nth(1).unwrap() == '[' && s.chars().nth(s.len()-2).unwrap() == ']' {
             let mut output_m = vec![];
@@ -178,7 +180,7 @@ fn parse_value(s: String) -> Result<Value, ParserError> {
                         if n_buffer.is_empty() {
                             return Err(ParserError::EmptyVec)
                         }
-                        row.push(parse_component(n_buffer.clone())?);
+                        row.push(parse(n_buffer.clone())?);
                         n_buffer.clear();
                     } else {
                         n_buffer.push(i);
@@ -188,7 +190,7 @@ fn parse_value(s: String) -> Result<Value, ParserError> {
                         if n_buffer.is_empty() {
                             return Err(ParserError::EmptyVec)
                         }
-                        row.push(parse_component(n_buffer.clone())?);
+                        row.push(parse(n_buffer.clone())?);
                         if row_size.is_some() && row.len() != row_size.unwrap() {
                             return Err(ParserError::NotRectMatrix)
                         }
@@ -205,7 +207,7 @@ fn parse_value(s: String) -> Result<Value, ParserError> {
             if n_buffer.is_empty() {
                 return Err(ParserError::EmptyVec)
             }
-            row.push(parse_component(n_buffer.clone())?);
+            row.push(parse(n_buffer.clone())?);
             if row_size.is_some() && row.len() != row_size.unwrap() {
                 return Err(ParserError::NotRectMatrix)
             }
@@ -214,11 +216,11 @@ fn parse_value(s: String) -> Result<Value, ParserError> {
             for i in 0..output_m[0].len() {
                 let mut row = vec![];
                 for j in 0..output_m.len() {
-                    row.push(output_m[j][i]);
+                    row.push(output_m[j][i].clone());
                 }
                 col_matrix.push(row);
             }
-            return Ok(Value::Matrix(col_matrix));
+            return Ok(Binary::Matrix(Box::new(col_matrix)));
         } else if s.chars().nth(0).unwrap() == '[' && s.chars().nth(s.len()-1).unwrap() == ']' {
             let mut output_v = vec![];
             let mut n_buffer = String::new();
@@ -227,7 +229,7 @@ fn parse_value(s: String) -> Result<Value, ParserError> {
                     if n_buffer.is_empty() {
                         return Err(ParserError::EmptyVec)
                     }
-                    output_v.push(parse_component(n_buffer.clone())?);
+                    output_v.push(parse(n_buffer.clone())?);
                     n_buffer.clear();
                 } else {
                     n_buffer.push(i);
@@ -236,13 +238,13 @@ fn parse_value(s: String) -> Result<Value, ParserError> {
             if n_buffer.is_empty() {
                 return Err(ParserError::EmptyVec);
             }
-            output_v.push(parse_component(n_buffer[0..n_buffer.len()-1].to_string())?);
-            return Ok(Value::Vector(output_v));
+            output_v.push(parse(n_buffer[0..n_buffer.len()-1].to_string())?);
+            return Ok(Binary::Vector(Box::new(output_v)));
         } else {
             return Err(ParserError::MissingBracket)
         }
     } else {
-        return Err(ParserError::EmptyVec);
+        return Err(ParserError::ParseValue(s));
     }
 }
 
@@ -301,7 +303,7 @@ pub fn parse(expr: String) -> Result<Binary, ParserError> {
                 is_hidden_mult = false;
             }
         }
-        if parenths_open == 0 && is_hidden_mult {
+        if parenths_open == 0 && brackets_open == 0 && curly_brackets_open == 0 && is_hidden_mult {
             ops_in_expr.push((SimpleOpType::HiddenMult, i, 0, 0));
         }
         last_char = expr_chars[i];
@@ -468,7 +470,7 @@ pub fn parse(expr: String) -> Result<Binary, ParserError> {
 
     let v = parse_value(expr_chars.iter().collect())?;
 
-    return Ok(Binary::from_value(v));
+    return Ok(v);
 }
 
 ///used to evaluate a given binary tree in the context of the provided variables.
@@ -478,7 +480,31 @@ pub fn parse(expr: String) -> Result<Binary, ParserError> {
 ///If you are searching for a quick and easy way to evaluate an expression, have a look at [quick_eval()](fn@crate::quick_eval).
 pub fn eval(b: &Binary, vars: &Vec<Variable>) -> Result<Value, EvalError> {
     match b {
-        Binary::Value(c) => return Ok(c.clone()),
+        Binary::Scalar(s) => return Ok(Value::Scalar(*s)),
+        Binary::Vector(v) => {
+            let mut evaled_scalars = vec![];
+            for i in &**v {
+                evaled_scalars.push(match eval(i, vars)?.get_scalar() {
+                    Some(s) => s,
+                    None => return Err(EvalError::NonScalarInVector)
+                });
+            }
+            return Ok(Value::Vector(evaled_scalars))
+        },
+        Binary::Matrix(m) => {
+            let mut evaled_rows = vec![];
+            for i in &**m {
+                let mut row = vec![];
+                for j in i {
+                    row.push(match eval(j, vars)?.get_scalar() {
+                        Some(s) => s,
+                        None => return Err(EvalError::NonScalarInMatrix)
+                    });
+                }
+                evaled_rows.push(row);
+            }
+            return Ok(Value::Matrix(evaled_rows))
+        } 
         Binary::Variable(v) => {
             for i in vars {
                 if &i.name == v {

@@ -43,8 +43,24 @@ fn find_vars_in_expr(b: &Binary, mut ov: Vec<String>) -> Vec<String> {
             ov.push(v.to_string());
             return ov.to_owned();
         },
-        Binary::Value(_) => {
+        Binary::Scalar(_) => {
             return ov.to_owned();
+        },
+        Binary::Vector(v) => {
+            let mut found_vars = vec![];
+            for i in &**v {
+                found_vars.append(&mut find_vars_in_expr(i, ov.clone()));
+            }
+            return found_vars;
+        },
+        Binary::Matrix(m) => {
+            let mut found_vars = vec![];
+            for i in &**m {
+                for j in i {
+                    found_vars.append(&mut find_vars_in_expr(j, ov.clone()));
+                }
+            }
+            return found_vars;
         },
         Binary::Operation(o) => {
             match &**o {
@@ -261,7 +277,9 @@ impl RootFinder {
 
         for i in &expressions {
             match i {
-                Binary::Value(_) => return Err(SolveError::NothingToDo),
+                Binary::Vector(_) => return Err(SolveError::NothingToDo),
+                Binary::Scalar(_) => return Err(SolveError::NothingToDo),
+                Binary::Matrix(_) => return Err(SolveError::NothingToDo),
                 Binary::Variable(_) => return Err(SolveError::NothingToDo),
                 Binary::Operation(_) => {}
             }

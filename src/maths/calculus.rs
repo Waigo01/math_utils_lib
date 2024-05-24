@@ -65,10 +65,10 @@ pub fn calculate_derivative(expr: &Binary, in_terms_of: String, at: Value, mut f
                 op_type: SimpleOpType::Div,
                 left: Binary::from_operation(Operation::SimpleOperation {
                     op_type: SimpleOpType::Sub,
-                    left: Binary::Value(fxh.clone()),
-                    right: Binary::Value(fx.clone().unwrap().clone())
+                    left: Binary::from_value(fxh.clone()),
+                    right: Binary::from_value(fx.clone().unwrap().clone())
                 }),
-                right: Binary::Value(Value::Scalar(10f64.powi(-(PREC))))
+                right: Binary::from_value(Value::Scalar(10f64.powi(-(PREC))))
             });
             return Ok(eval(&h, &mut_vars)?);
         } 

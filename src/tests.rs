@@ -140,10 +140,12 @@ fn medium_eval11() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn medium_eval12() {
-    let res = quick_eval("[3, 3*3, -5]".to_string(), vec![]);
+fn medium_eval12() -> Result<(), MathLibError> {
+    let res = quick_eval("[3, 3*3, -5]".to_string(), vec![])?;
 
-    assert_eq!(res.unwrap_err(), QuickEvalError::ParserError(ParserError::ParseValue("3*3".to_string())))
+    assert_eq!(res, Value::Vector(vec![3., 9., -5.]));
+
+    return Ok(())
 }
 
 #[test]
@@ -189,6 +191,15 @@ fn medium_eval17() -> Result<(), MathLibError> {
     let res = quick_eval("3*[[2, 0, 0], [0, 1, 0], [0, 0, 5]]*[[1, 0, 0], [0, 1, 0], [0, 0, 1]]*[3, 4, 5]".to_string(), vec![])?;
 
     assert_eq!(res, Value::Vector(vec![18., 12., 75.]));
+
+    Ok(())
+}
+
+#[test]
+fn medium_eval18() -> Result<(), MathLibError> {
+    let res = quick_eval("[sqrt(25), 2pi, 3]".to_string(), vec![])?;
+
+    assert_eq!(res, Value::Vector(vec![5., 2.*std::f64::consts::PI, 3.]));
 
     Ok(())
 }

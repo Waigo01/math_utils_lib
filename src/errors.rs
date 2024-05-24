@@ -95,6 +95,8 @@ impl Display for ParserError {
 
 #[derive(Debug, PartialEq)]
 pub enum EvalError {
+    NonScalarInVector,
+    NonScalarInMatrix,
     NoVariable(String),
     MathError(String)
 }
@@ -102,6 +104,8 @@ pub enum EvalError {
 impl EvalError {
     pub fn get_reason(&self) -> String {
         match self {
+            EvalError::NonScalarInVector => return "Vectors can only contain scalars!".to_string(),
+            EvalError::NonScalarInMatrix => return "Matrices can only contain scalars!".to_string(),
             EvalError::NoVariable(s) => return format!("Could not find variable {}!", s),
             EvalError::MathError(s) => return s.to_string(),
         }

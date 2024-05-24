@@ -1,4 +1,4 @@
-use crate::{basetypes::Value, parser::{AdvancedOperation, Binary, Operation, SimpleOpType}};
+use crate::{basetypes::Value, helpers::round_and_format, parser::{AdvancedOperation, Binary, Operation, SimpleOpType}};
 use std::{fs, process, usize};
 
 ///provides a way of saving a step. A step can either be a: 
@@ -20,9 +20,53 @@ pub enum StepType {
     Equ((Vec<(Binary, Binary)>, Vec<Value>, Option<String>))
 }
 
+enum LatexValue {
+    Scalar(f64),
+    Vector(Vec<Binary>),
+    Matrix(Vec<Vec<Binary>>)
+}
+
+fn latex_print(val: LatexValue) -> Result<String, String> {
+    match val {
+        LatexValue::Scalar(s) => return Ok(round_and_format(s, true)),
+        LatexValue::Vector(v) => {
+            let mut output_string = "\\begin{pmatrix}".to_string();
+            for i in 0..v.len() {
+                let latex_vi = latex_recurse(&v[i])?;
+                if i != v.len()-1 {
+                    output_string += &format!("{}\\\\ ", latex_vi);
+                } else {
+                    output_string += &latex_vi;
+                }
+            }
+            output_string += "\\end{pmatrix}";
+            return Ok(output_string)
+        },
+        LatexValue::Matrix(m) => {
+            let mut output_string = "\\begin{bmatrix}".to_string();
+            for i in 0..m.len(){
+                let mut row_string = "".to_string();
+                for j in 0..m[i].len() {
+                    let matrix_mij = latex_recurse(&m[i][j])?;
+                    if j != m[i].len()-1 {
+                        row_string += &format!("{} & ", matrix_mij);
+                    } else {
+                        row_string += &format!("{} \\\\", matrix_mij);
+                    }
+                }
+                output_string += &row_string;
+            }
+            output_string += "\\end{bmatrix}";
+            return Ok(output_string);
+        }
+    }
+}
+
 fn latex_recurse(b: &Binary) -> Result<String, String> {
     match b {
-        Binary::Value(b) => return Ok(b.latex_print()),
+        Binary::Scalar(s) => return Ok(latex_print(LatexValue::Scalar(*s))?),
+        Binary::Vector(v) => return Ok(latex_print(LatexValue::Vector(*v.clone()))?),
+        Binary::Matrix(m) => return Ok(latex_print(LatexValue::Matrix(*m.clone()))?),
         Binary::Variable(v) => {
             if v == "pi" {
                 return Ok("\\pi".to_string());
