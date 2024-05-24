@@ -67,8 +67,8 @@ let expression = "((25x^3-96x^2+512x+384)/(x^4+2x^3+90x^2-128x+1664)^(1.5))/(-sq
 let parsed = parse(expression)?;
 let vars = vec![Variable::new("x".to_string(), Value::Scalar(-0.655639))];
 let result = eval(&parsed, &vars)?;
-let var_assign = StepType::Calc((Binary::Value(Value::Scalar(-0.655639)), Value::Scalar(-0.655639), Some("x".to_string())));
-let step = StepType::Calc((parsed, result, None));
+let var_assign = Step::Calc((Binary::Scalar(-0.655639), Value::Scalar(-0.655639), Some("x".to_string())));
+let step = Step::Calc((parsed, result, None));
 export(vec![var_assign, step], "export".to_string(), ExportType::Png);
 ```
 

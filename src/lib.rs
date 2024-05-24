@@ -11,7 +11,7 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //! - parsing and evaluating expressions containing matrices and vectors
 //! - solving equations and systems of equations
 //! - exporting a LaTeX document from a collection of parsed expressions or solved equations (see 
-//! [StepType](enum@latex_export::StepType) and [export()])
+//! [Step](enum@latex_export::Step) and [export()])
 //!
 //! Precision ([PREC]):
 //!
@@ -86,8 +86,8 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //! let parsed = parse(expression)?;
 //! let vars = vec![Variable::new("x".to_string(), Value::Scalar(-0.655639))];
 //! let result = eval(&parsed, &vars)?;
-//! let var_assign = StepType::Calc((Binary::Value(Value::Scalar(-0.655639)), Value::Scalar(-0.655639), Some("x".to_string())));
-//! let step = StepType::Calc((parsed, result, None));
+//! let var_assign = Step::Calc((Binary::Scalar(-0.655639), Value::Scalar(-0.655639), Some("x".to_string())));
+//! let step = Step::Calc((parsed, result, None));
 //! export(vec![var_assign, step], "export".to_string(), ExportType::Png);
 //! ```
 //!
@@ -112,7 +112,7 @@ pub mod solver;
 mod tests;
 
 pub use basetypes::{Value, Variable};
-pub use latex_export::{export, ExportType, StepType};
+pub use latex_export::{export, ExportType, Step};
 pub use parser::{parse, eval};
 pub use solver::solve;
 pub use errors::MathLibError;

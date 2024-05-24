@@ -10,12 +10,12 @@ use std::{fs, process, usize};
 ///
 ///# Example
 ///```
-///let steps: Vec<StepType> = vec![
-///     StepType::Calc((BinaryTree, Result, Some("A".to_string())))
+///let steps: Vec<Step> = vec![
+///     Step::Calc((BinaryTree, Result, Some("A".to_string())))
 ///];
 ///```
 #[derive(Debug, Clone)]
-pub enum StepType {
+pub enum Step {
     Calc((Binary, Value, Option<String>)),
     Equ((Vec<(Binary, Binary)>, Vec<Value>, Option<String>))
 }
@@ -131,14 +131,14 @@ pub enum ExportType {
     Tex
 }
 
-///exports a history of [StepType] to a file named <file_name> with the file type defined
+///exports a history of [Step] to a file named <file_name> with the file type defined
 ///by export_type (see [ExportType] for further details).
-pub fn export(history: Vec<StepType>, file_name: String, export_type: ExportType) {
+pub fn export(history: Vec<Step>, file_name: String, export_type: ExportType) {
     let mut output_string = "\\documentclass[12pt, letterpaper]{article}\n\\usepackage{amsmath}\n\\usepackage[margin=1in]{geometry}\n\\allowdisplaybreaks\n\\begin{document}\n\\begin{align*}\n".to_string();
     let mut j = 0;
     for s in history {
         match s {
-            StepType::Calc(i) => {
+            Step::Calc(i) => {
                 let mut aligner = "&";
                 if i.2.is_some() {
                     output_string += &format!("{} &= ", i.2.unwrap());
@@ -156,7 +156,7 @@ pub fn export(history: Vec<StepType>, file_name: String, export_type: ExportType
                     output_string += &format!("{} \\tag{{{}}}\\label{{eq:{}}} \\\\ \\\\ \n", expression, j+1, j+1);
                 }
             }, 
-            StepType::Equ(e) => {
+            Step::Equ(e) => {
                 let mut recursed_eq = vec![];
                 for i in &e.0 {
                     let left = match latex_recurse(&i.0) {
