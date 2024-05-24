@@ -78,6 +78,27 @@ impl Value {
             Value::Vector(_) => return None
         }
     }
+    /// return true if the value is a scalar.
+    pub fn is_scalar(&self) -> bool {
+        match self {
+            Value::Scalar(_) => return true,
+            _ => return false
+        }
+    }
+    /// returns true if the value is a vector.
+    pub fn is_vector(&self) -> bool {
+        match self {
+            Value::Vector(_) => return true,
+            _ => return false
+        }
+    }
+    /// returns true if the value is a matrix.
+    pub fn is_matrix(&self) -> bool {
+        match self {
+            Value::Matrix(_) => return true,
+            _ => return false
+        }
+    }
     /// rounds the value.
     pub fn round(&self, prec: i32) -> Value {
         match self {
