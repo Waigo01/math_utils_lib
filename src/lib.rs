@@ -240,7 +240,7 @@ pub fn quick_solve(mut expr: String, vars: Vec<Variable>) -> Result<Vec<Value>, 
         parsed_equations.push((left_b, right_b));
     }
 
-    let roots = solve(parsed_equations, &vars)?;
+    let roots = solve(parsed_equations, &context_vars)?;
 
     Ok(roots)
 }

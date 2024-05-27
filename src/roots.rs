@@ -299,7 +299,7 @@ impl RootFinder {
             for (i, var) in vars_in_expr.iter().enumerate() {
                 if !var_names.contains(&var) {
                     if !search_vars_names.contains(var) {
-                        if i > var.len() {
+                        if i > search_vars_names.len() {
                             search_vars_names.push(var.to_string());
                         } else {
                             search_vars_names.insert(i, var.to_string());
