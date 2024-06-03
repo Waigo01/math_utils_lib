@@ -205,6 +205,15 @@ fn medium_eval18() -> Result<(), MathLibError> {
 }
 
 #[test]
+fn medium_eval19() -> Result<(), MathLibError> {
+    let res = quick_eval("[0, 0.5, 0]#[-0.8, 0, 0.6]".to_string(), vec![])?;
+
+    assert_eq!(res, Value::Vector(vec![0.3, 0., 0.4]));
+
+    Ok(())
+}
+
+#[test]
 fn calculus_eval1() -> Result<(), MathLibError> {
     let res = quick_eval("D(x^2, x, 3)".to_string(), vec![])?;
 

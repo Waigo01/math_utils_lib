@@ -22,9 +22,9 @@ pub fn vcross(a: Vec<f64>, b: Vec<f64>) -> Result<Value, String> {
         }
     }
 
-    output_v[0] = expand_va[1] * expand_vb[2] - expand_va[2] * expand_vb[1];
-    output_v[1] = expand_va[2] * expand_vb[0] - expand_va[0] * expand_vb[2];
-    output_v[2] = expand_va[0] * expand_vb[1] - expand_va[1] * expand_vb[0];
+    output_v.push(expand_va[1] * expand_vb[2] - expand_va[2] * expand_vb[1]);
+    output_v.push(expand_va[2] * expand_vb[0] - expand_va[0] * expand_vb[2]);
+    output_v.push(expand_va[0] * expand_vb[1] - expand_va[1] * expand_vb[0]);
 
     return Ok(Value::Vector(output_v));
 }
