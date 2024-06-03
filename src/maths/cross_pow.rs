@@ -6,7 +6,7 @@ pub fn vcross(a: Vec<f64>, b: Vec<f64>) -> Result<Value, String> {
         return Err("Vectors have different dimensions!".to_string());
     }
     if a.len() > 3 {
-        return Err("Vectors can't compute cross product with dim(V) > 3!".to_string());
+        return Err("Can't compute cross product with dim(V) > 3!".to_string());
     }
 
     let mut output_v = vec![];
