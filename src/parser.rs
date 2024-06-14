@@ -1,4 +1,4 @@
-use crate::{basetypes::{Value, Variable}, errors::{EvalError, ParserError}, maths};
+use crate::{basetypes::{Value, Variable, VariableContent}, errors::{EvalError, ParserError}, maths};
 
 ///specifies the type of operation for the [SimpleOperation](Operation::SimpleOperation) struct.
 ///
@@ -75,6 +75,10 @@ pub enum Binary {
     Vector(Box<Vec<Binary>>),
     Matrix(Box<Vec<Vec<Binary>>>),
     Variable(String),
+    Function {
+        name: String,
+        inputs: Box<Vec<Binary>>
+    },
     Operation(Box<Operation>),
 }
 
@@ -102,8 +106,8 @@ impl Binary {
             }
         }
     }
-    pub fn from_variable(val: String) -> Binary {
-        return Binary::Variable(val);
+    pub fn from_variable<S: Into<String>>(val: S) -> Binary {
+        return Binary::Variable(val.into());
     }
     pub fn from_operation(val: Operation) -> Binary {
         return Binary::Operation(Box::new(val));
@@ -249,7 +253,8 @@ fn parse_value(s: String) -> Result<Binary, ParserError> {
 }
 
 ///used to construct a Binary Tree from a mathematical expression.
-pub fn parse(expr: String) -> Result<Binary, ParserError> {
+pub fn parse<S: Into<String>>(expr: S) -> Result<Binary, ParserError> {
+    let expr = expr.into();
     if expr.is_empty() {
         return Err(ParserError::EmptyExpr);
     }
@@ -462,6 +467,32 @@ pub fn parse(expr: String) -> Result<Binary, ParserError> {
             }
         }
     }
+    
+    // is it a custom function?
+
+    if expr.contains("(") && expr.find("(").unwrap() != 0 && *expr_chars.last().unwrap() == ')' {
+        let first_parenth = expr.find("(").unwrap();
+        let mut inputs = vec![];
+        let mut buffer = String::new();
+        parenths_open = 0;
+        for i in expr_chars[first_parenth+1..expr_chars.len()-1].iter() {
+            if *i == '(' || *i == '[' || *i == '{' {
+                parenths_open += 1;
+            }
+            if *i == ')' || *i == ']' || *i == '}' {
+                parenths_open -= 1;
+            } 
+            if *i == ',' && parenths_open == 0 {
+                inputs.push(parse(buffer.clone())?);
+                buffer.clear();
+            } else {
+                buffer.push(*i);
+            }
+        }
+        inputs.push(parse(buffer)?);
+        return Ok(Binary::Function { name: expr.split("(").nth(0).unwrap().to_string(), inputs: Box::new(inputs) })
+    }
+    
     // is it a variable?
 
     if expr_chars[0].is_alphabetic() || expr_chars[0] == '\\' {
@@ -504,16 +535,62 @@ pub fn eval(b: &Binary, vars: &Vec<Variable>) -> Result<Value, EvalError> {
                 evaled_rows.push(row);
             }
             return Ok(Value::Matrix(evaled_rows))
-        } 
+        }, 
         Binary::Variable(v) => {
             for i in vars {
-                if &i.name == v {
-                    return Ok(i.value.clone());
-                }
+                match &i.content {
+                    VariableContent::Function { .. } => continue,
+                    VariableContent::Value(vv) => {
+                        if &i.name == v {
+                            return Ok(vv.clone());
+                        }
+                    }
+                } 
             }
 
             return Err(EvalError::NoVariable(v.to_string()));
-        }
+        },
+        Binary::Function { name, inputs } => {
+            let mut function = None;
+            for i in vars {
+                match &i.content {
+                    VariableContent::Value(_) => continue,
+                    VariableContent::Function { binary, inputs } => {
+                        if i.name == name.to_string() {
+                            function = Some((binary, inputs));
+                            break;
+                        }
+                    }
+                } 
+            }
+            if function.is_none() {
+                return Err(EvalError::NoFunction(name.to_string()));
+            }
+
+            let function = function.unwrap();
+            
+            if inputs.len() != function.1.len() {
+                return Err(EvalError::WrongNumberOfArgs((inputs.len(), function.1.len())));
+            }
+
+            let mut eval_inputs = vec![];
+            for i in inputs.iter() {
+                eval_inputs.push(eval(i, vars)?);
+            }
+
+            let mut f_vars = vec![];
+            for i in 0..inputs.len() {
+                f_vars.push(Variable::from_value(function.1[i].clone(), eval_inputs[i].clone()));
+            }
+
+            for i in vars.iter() {
+                if !f_vars.iter().map(|v| v.name.clone()).collect::<Vec<String>>().contains(&i.name) {
+                    f_vars.push(i.clone());
+                }
+            }
+
+            return eval(&function.0, &f_vars);
+        },
         Binary::Operation(o) => {
             match &**o {
                 Operation::SimpleOperation {op_type, left, right} => {

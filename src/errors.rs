@@ -98,6 +98,8 @@ pub enum EvalError {
     NonScalarInVector,
     NonScalarInMatrix,
     NoVariable(String),
+    NoFunction(String),
+    WrongNumberOfArgs((usize, usize)),
     MathError(String)
 }
 
@@ -107,6 +109,8 @@ impl EvalError {
             EvalError::NonScalarInVector => return "Vectors can only contain scalars!".to_string(),
             EvalError::NonScalarInMatrix => return "Matrices can only contain scalars!".to_string(),
             EvalError::NoVariable(s) => return format!("Could not find variable {}!", s),
+            EvalError::NoFunction(s) => return format!("Could not find function {}!", s),
+            EvalError::WrongNumberOfArgs((e, g)) => return format!("Wrong number of arguments! Expected {} arguments, {} were given!", e, g),
             EvalError::MathError(s) => return s.to_string(),
         }
     }

@@ -1,4 +1,5 @@
 use crate::helpers::{center_in_string, round_and_format};
+use crate::parser::Binary;
 
 #[doc(hidden)]
 const VAR_SYMBOLS: [(&str, &str); 48] = [("\\alpha", "𝛼"), ("\\Alpha", "𝛢"), ("\\beta", "𝛽"), ("\\Beta", "𝛣"), ("\\gamma", "𝛾"), ("\\Gamma", "𝚪"),
@@ -8,7 +9,22 @@ const VAR_SYMBOLS: [(&str, &str); 48] = [("\\alpha", "𝛼"), ("\\Alpha", "𝛢"
 ("\\Pi", "𝛱"), ("\\rho", "𝜌"), ("\\Rho", "𝛲"), ("\\sigma", "𝜎"), ("\\Sigma", "𝛴"), ("\\tau", "𝜏"), ("\\Tau", "𝛵"), ("\\upsilon", "𝜐"),
 ("\\Upsilon", "𝛶"), ("\\phi", "𝜑"), ("\\Phi", "𝛷"), ("\\xi", "𝜒"), ("\\Xi", "𝛸"), ("\\psi", "𝜓"), ("\\Psi", "𝛹"), ("\\omega", "𝜔"), ("\\Omega", "𝛺")];
 
+/// specifies the contents of a variable.
+///
+/// It can either hold a simple Value or a Function, specified by a parsed binary and the names of
+/// its input variables.
+#[derive(Clone, Debug)]
+pub enum VariableContent {
+    Value(Value),
+    Function {
+        binary: Binary,
+        inputs: Vec<String>
+    }
+}
+
 ///specifies a Variable that can be used in the context of an evaluation or equation.
+///
+///Variables can contain Values or Functions. For more information, see [VariableContent].
 ///
 ///Variable Names following the LaTeX format for greek letters (e.g \sigma) (except pi which is not
 ///\pi but just pi) will get replaced with their unicode counterparts when pretty printing.
@@ -20,20 +36,33 @@ const VAR_SYMBOLS: [(&str, &str); 48] = [("\\alpha", "𝛼"), ("\\Alpha", "𝛢"
 ///
 ///```
 ///let context: Vec<Variable> = vec![
-///     Variable::new("pi".to_string(), Value::Scalar(3.14159)),
+///     Variable::from_value("pi".to_string(), Value::Scalar(3.14159)),
 ///];
 ///```
 #[derive(Debug, Clone)]
 pub struct Variable {
     pub name: String,
-    pub value: Value
+    pub content: VariableContent
 }
 
 impl Variable {
-    /// a simple function to create a new [Variable].
-    pub fn new(name: String, value: Value) -> Variable {
-        Variable { name, value}
-    } 
+    /// creates a new [Variable] from a [Value].
+    pub fn from_value<S: Into<String>>(name: S, value: Value) -> Variable {
+        Variable { name: name.into(), content: VariableContent::Value(value)}
+    }
+    /// creates a new [Variable] from a function, which is represented with a
+    /// parsed binary and the names of its input variables.
+    pub fn from_function<S: Into<String>>(name: S, binary: Binary, inputs: Vec<S>) -> Variable {
+        Variable {name: name.into(), content: VariableContent::Function { binary, inputs: inputs.into_iter().map(|i| i.into()).collect() }}
+    }
+    /// returns the the value saved within a variable, if the variable content is a value. If this
+    /// is not the case it returns None.
+    pub fn get_value(&self) -> Option<Value> {
+        match &self.content {
+            VariableContent::Value(v) => return Some(v.clone()),
+            VariableContent::Function { .. } => return None
+        }
+    }
 }
 
 ///specifies a Value that can be a Matrix, Vector or a Scalar.

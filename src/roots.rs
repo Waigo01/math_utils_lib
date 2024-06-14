@@ -43,6 +43,13 @@ fn find_vars_in_expr(b: &Binary, mut ov: Vec<String>) -> Vec<String> {
             ov.push(v.to_string());
             return ov.to_owned();
         },
+        Binary::Function { inputs, .. } => {
+            let mut found_vars = vec![];
+            for i in &**inputs {
+                found_vars.append(&mut find_vars_in_expr(i, ov.clone()));
+            }
+            return found_vars;
+        }
         Binary::Scalar(_) => {
             return ov.to_owned();
         },
@@ -166,7 +173,7 @@ fn jacobi_and_gauss(search_expres: &Vec<Binary>, x: &Vec<Variable>, vars: &mut V
                     added_vars += 1;
                 }
             }
-            row.push(calculate_derivative(&search_expres[i], x[j].name.clone(), x[j].value.clone(), Some(Value::Scalar(fx[i])), vars)?.get_scalar().unwrap());
+            row.push(calculate_derivative(&search_expres[i], x[j].name.clone(), x[j].get_value().unwrap().clone(), Some(Value::Scalar(fx[i])), vars)?.get_scalar().unwrap());
             for _ in 0..added_vars {
                 vars.remove(vars.len()-1);
             }
@@ -186,7 +193,7 @@ fn jacobi_and_gauss(search_expres: &Vec<Binary>, x: &Vec<Variable>, vars: &mut V
     let mut x_new = vec![];
 
     for i in 0..x.len() {
-        x_new.push(Variable::new(x[i].name.clone(), Value::Scalar(x_new_minus_x.get_vector().unwrap()[i] + x[i].value.get_scalar().unwrap())));
+        x_new.push(Variable::from_value(x[i].name.clone(), Value::Scalar(x_new_minus_x.get_vector().unwrap()[i] + x[i].get_value().unwrap().get_scalar().unwrap())));
     }
 
     return Ok(x_new);
@@ -233,7 +240,7 @@ fn newton(search_expres: &Vec<Binary>, check_expres: &Vec<Binary> , x: &Vec<Vari
     let new_x = jacobi_and_gauss(search_expres, x, vars, fx)?;
 
     for i in &new_x {
-        if i.value.is_inf_or_nan() {
+        if i.get_value().unwrap().is_inf_or_nan() {
             return Err(NewtonError::NaNOrInf);
         }
     }
@@ -281,6 +288,7 @@ impl RootFinder {
                 Binary::Scalar(_) => return Err(SolveError::NothingToDo),
                 Binary::Matrix(_) => return Err(SolveError::NothingToDo),
                 Binary::Variable(_) => return Err(SolveError::NothingToDo),
+                Binary::Function {..} => return Err(SolveError::NothingToDo),
                 Binary::Operation(_) => {}
             }
         }
@@ -314,7 +322,7 @@ impl RootFinder {
         }
 
         for i in &search_vars_names {
-            vars.push(Variable::new(i.to_string(), Value::Scalar(2.5690823)));
+            vars.push(Variable::from_value(i.to_string(), Value::Scalar(2.5690823)));
         }
 
         let initial_res = eval(&expressions[0], &vars)?;
@@ -359,7 +367,7 @@ impl RootFinder {
             'solve_loop_0: for j in -1000..1000 {
                 let mut x = vec![];
                 for k in &self.search_vars_names {
-                    x.push(Variable::new(k.to_string(), Value::Scalar(j as f64)));
+                    x.push(Variable::from_value(k.to_string(), Value::Scalar(j as f64)));
                 }
 
                 'solve_loop_1: for _ in 0..1000 {
@@ -372,7 +380,7 @@ impl RootFinder {
                                 NewtonReturn::FinishedX(fin_x) => {
                                     let mut result_vec = vec![];
                                     for i in fin_x {
-                                        result_vec.push(i.value.get_scalar().unwrap());
+                                        result_vec.push(i.get_value().unwrap().get_scalar().unwrap());
                                     }
                                     if result_vec.len() == 1 {
                                         results.push(Value::Scalar(result_vec[0].clone()));

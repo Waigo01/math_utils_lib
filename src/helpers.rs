@@ -48,6 +48,13 @@ pub fn round_and_format(x: f64, latex: bool) -> String {
         let right = scientific.split("e").nth(1).unwrap();
         return format!("{}\\cdot 10^{{{}}}", left, right);
     } else {
-        return ((x*10f64.powi(PREC-2)).round()/10f64.powi(PREC-2)).to_string();
+        let rounded = (x*10f64.powi(PREC-2)).round()/10f64.powi(PREC-2);
+        let rounded_string;
+        if rounded == 0. && rounded.to_string().len() > 1 {
+            rounded_string = rounded.to_string()[1..].to_string();
+        } else {
+            rounded_string = rounded.to_string();
+        }
+        return rounded_string;
     }
 }

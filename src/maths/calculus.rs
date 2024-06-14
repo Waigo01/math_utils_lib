@@ -27,7 +27,7 @@ pub fn calculate_integral(expr: &Binary, in_terms_of: String, lower_bound: Value
             let mut sum = Value::Scalar(0.);
             let mut b = lb;
             while b < ub {
-                mut_vars.push(Variable::new(in_terms_of.clone(), Value::Scalar(b)));
+                mut_vars.push(Variable::from_value(in_terms_of.clone(), Value::Scalar(b)));
                 sum = add(sum, eval(expr, &mut_vars)?)?;
                 mut_vars.remove(mut_vars.len()-1);
                 b += dx;
@@ -55,11 +55,11 @@ pub fn calculate_derivative(expr: &Binary, in_terms_of: String, at: Value, mut f
     match at {
         Value::Scalar(s) => {
             if fx.is_none() {
-                mut_vars.push(Variable::new(in_terms_of.clone(), at));
+                mut_vars.push(Variable::from_value(in_terms_of.clone(), at));
                 fx = Some(eval(expr, &mut_vars)?);
                 mut_vars.remove(mut_vars.len()-1);
             }
-            mut_vars.push(Variable::new(in_terms_of.clone(), Value::Scalar(s+10f64.powi(-(PREC)))));
+            mut_vars.push(Variable::from_value(in_terms_of.clone(), Value::Scalar(s+10f64.powi(-(PREC)))));
             let fxh = &eval(expr, &mut_vars)?;
             let h = Binary::from_operation(Operation::SimpleOperation {
                 op_type: SimpleOpType::Div,

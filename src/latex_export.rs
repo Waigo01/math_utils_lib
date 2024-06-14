@@ -17,7 +17,8 @@ use std::{fs, process, usize};
 #[derive(Debug, Clone)]
 pub enum Step {
     Calc((Binary, Value, Option<String>)),
-    Equ((Vec<(Binary, Binary)>, Vec<Value>, Option<String>))
+    Equ((Vec<(Binary, Binary)>, Vec<Value>, Option<String>)),
+    Fun((Binary, Vec<String>, String))
 }
 
 enum LatexValue {
@@ -73,6 +74,18 @@ fn latex_recurse(b: &Binary) -> Result<String, String> {
             }
             return Ok(v.to_string())
         },
+        Binary::Function { name, inputs } => {
+            let mut inputs_str = String::new();
+            for (i, inp) in inputs.iter().enumerate() {
+                let recursed = latex_recurse(inp)?;
+                if i != inputs.len() - 1 {
+                    inputs_str += &format!("{}, ", recursed);
+                } else {
+                    inputs_str += &format!("{}", recursed);
+                }
+            }
+            return Ok(format!("{}({})", name, inputs_str));
+        }
         Binary::Operation(o) => {
             match &**o  {
                 Operation::SimpleOperation {op_type, left, right} => {
@@ -133,7 +146,8 @@ pub enum ExportType {
 
 ///exports a history of [Step] to a file named <file_name> with the file type defined
 ///by export_type (see [ExportType] for further details).
-pub fn export(history: Vec<Step>, file_name: String, export_type: ExportType) {
+pub fn export<S: Into<String>>(history: Vec<Step>, file_name: S, export_type: ExportType) {
+    let file_name = file_name.into();
     let mut output_string = "\\documentclass[12pt, letterpaper]{article}\n\\usepackage{amsmath}\n\\usepackage[margin=1in]{geometry}\n\\allowdisplaybreaks\n\\begin{document}\n\\begin{align*}\n".to_string();
     let mut j = 0;
     for s in history {
@@ -192,6 +206,23 @@ pub fn export(history: Vec<Step>, file_name: String, export_type: ExportType) {
                         output_string += "\\\\ \n";
                     }
                 } 
+            },
+            Step::Fun(f) => {
+                let recursed_fn = match latex_recurse(&f.0) {
+                    Ok(s) => s,
+                    Err(_) => return
+                }; 
+
+                let mut inputs_str = String::new();
+                for (i, inp) in f.1.iter().enumerate() {
+                    if i != f.1.len()-1 {
+                        inputs_str += &format!("{}, ", inp);
+                    } else {
+                        inputs_str += &format!("{}", inp);
+                    }
+                }
+
+                output_string += &format!("{}({}) &= {} \\\\ \n", f.2, inputs_str, recursed_fn);
             }
         }
         j += 1;

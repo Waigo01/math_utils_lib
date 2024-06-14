@@ -141,10 +141,11 @@ pub const PREC: i32 = 8;
 ///
 /// assert_eq!(res, Value::Scalar(9.));
 /// ```
-pub fn quick_eval(mut expr: String, vars: Vec<Variable>) -> Result<Value, QuickEvalError> {
+pub fn quick_eval<S: Into<String>>(expr: S, vars: Vec<Variable>) -> Result<Value, QuickEvalError> {
+    let mut expr = expr.into();
     let mut context_vars = vec![
-        Variable::new("e".to_string(), Value::Scalar(std::f64::consts::E)),
-        Variable::new("pi".to_string(), Value::Scalar(std::f64::consts::PI))
+        Variable::from_value("e".to_string(), Value::Scalar(std::f64::consts::E)),
+        Variable::from_value("pi".to_string(), Value::Scalar(std::f64::consts::PI))
     ];
     if !vars.is_empty() {
         if vars.iter().filter(|x| x.name == "e".to_string() || x.name == "pi".to_string()).collect::<Vec<&Variable>>().len() > 0 {
@@ -182,10 +183,11 @@ pub fn quick_eval(mut expr: String, vars: Vec<Variable>) -> Result<Value, QuickE
 ///
 /// assert_eq!(res_rounded, vec![Value::Vector(vec![4., 6.])]);
 /// ```
-pub fn quick_solve(mut expr: String, vars: Vec<Variable>) -> Result<Vec<Value>, QuickSolveError> {
+pub fn quick_solve<S: Into<String>>(expr: S, vars: Vec<Variable>) -> Result<Vec<Value>, QuickSolveError> {
+    let mut expr = expr.into();
     let mut context_vars = vec![
-        Variable::new("e".to_string(), Value::Scalar(std::f64::consts::E)),
-        Variable::new("pi".to_string(), Value::Scalar(std::f64::consts::PI))
+        Variable::from_value("e".to_string(), Value::Scalar(std::f64::consts::E)),
+        Variable::from_value("pi".to_string(), Value::Scalar(std::f64::consts::PI))
     ];
     if !vars.is_empty() {
         if vars.iter().filter(|x| x.name == "e".to_string() || x.name == "pi".to_string()).collect::<Vec<&Variable>>().len() > 0 {
