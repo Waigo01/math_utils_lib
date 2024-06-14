@@ -63,6 +63,18 @@ impl Variable {
             VariableContent::Function { .. } => return None
         }
     }
+
+    pub fn pretty_print<S: Into<String>>(&self, var_name: Option<S>) -> String {
+        match &self.content {
+            VariableContent::Value(v) => {
+                if var_name.is_some() {
+                    return v.pretty_print(Some(var_name.unwrap().into()))
+                }
+                return v.pretty_print(None)
+            },
+            VariableContent::Function { .. } => return "".to_string()
+        }
+    }
 }
 
 ///specifies a Value that can be a Matrix, Vector or a Scalar.
