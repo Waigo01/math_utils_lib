@@ -160,7 +160,7 @@ pub fn quick_eval<S: Into<String>>(expr: S, state: Store) -> Result<Value, Quick
 
     let b_tree = parse(expr)?;
     
-    Ok(eval(&b_tree, &Store::new(&context_vars, state.funs))?)
+    Ok(eval(&b_tree, &Store::new(&context_vars, &state.funs))?)
 }
 
 /// solves an equation or a system of equations towards the variables not yet specified in vars. It can additionaly be
@@ -243,7 +243,7 @@ pub fn quick_solve<S: Into<String>>(expr: S, state: Store) -> Result<Vec<Value>,
         parsed_equations.push((left_b, right_b));
     }
 
-    let roots = solve(parsed_equations, &Store::new(&context_vars, state.funs))?;
+    let roots = solve(parsed_equations, &Store::new(&context_vars, &state.funs))?;
 
     Ok(roots)
 }

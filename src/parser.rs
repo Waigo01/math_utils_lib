@@ -579,7 +579,7 @@ pub fn eval(b: &Binary, state: &Store) -> Result<Value, EvalError> {
                 }
             }
 
-            return eval(&function.binary, &Store::new(&f_vars, state.funs));
+            return eval(&function.binary, &Store::new(&f_vars, &state.funs));
         },
         Binary::Operation(o) => {
             match &**o {

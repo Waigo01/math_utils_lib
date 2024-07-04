@@ -51,23 +51,23 @@ impl Function {
 }
 
 #[derive(Debug, Clone)]
-pub struct Store<'a> {
-    pub vars: &'a[Variable],
-    pub funs: &'a[Function]
+pub struct Store {
+    pub vars: Vec<Variable>,
+    pub funs: Vec<Function>
 }
 
-impl<'a> Store<'_> {
-    pub fn new(vars: &'a [Variable], funs: &'a [Function]) -> Store<'a> {
-        Store {vars, funs}
+impl Store {
+    pub fn new<V: AsRef<[Variable]>, F: AsRef<[Function]>>(vars: V, funs: F) -> Store {
+        Store {vars: vars.as_ref().to_vec(), funs: funs.as_ref().to_vec()}
     }
-    pub fn empty() -> Store<'a> {
-        Store { vars: &[], funs: &[] }
+    pub fn empty() -> Store {
+        Store { vars: vec![], funs: vec![] }
     }
-    pub fn from_vars(vars: &'a [Variable]) -> Store<'a> {
-        Store { vars, funs: &[] }
+    pub fn from_vars<V: AsRef<[Variable]>>(vars: V) -> Store {
+        Store { vars: vars.as_ref().to_vec(), funs: vec![] }
     }
-    pub fn from_funs(funs: &'a [Function]) -> Store<'a> {
-        Store { vars: &[], funs }
+    pub fn from_funs<F: AsRef<[Function]>>(funs: F) -> Store {
+        Store { vars: vec![], funs: funs.as_ref().to_vec() }
     }
 }
 

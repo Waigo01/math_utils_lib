@@ -28,7 +28,7 @@ pub fn calculate_integral(expr: &Binary, in_terms_of: String, lower_bound: Value
             let mut b = lb;
             while b < ub {
                 mut_vars.push(Variable::new(&in_terms_of, Value::Scalar(b)));
-                sum = add(sum, eval(expr, &Store::new(&mut_vars, state.funs))?)?;
+                sum = add(sum, eval(expr, &Store::new(&mut_vars, &state.funs))?)?;
                 mut_vars.remove(mut_vars.len()-1);
                 b += dx;
             }
@@ -56,11 +56,11 @@ pub fn calculate_derivative(expr: &Binary, in_terms_of: String, at: Value, mut f
         Value::Scalar(s) => {
             if fx.is_none() {
                 mut_vars.push(Variable::new(&in_terms_of, at));
-                fx = Some(eval(expr, &Store::new(&mut_vars, state.funs))?);
+                fx = Some(eval(expr, &Store::new(&mut_vars, &state.funs))?);
                 mut_vars.remove(mut_vars.len()-1);
             }
             mut_vars.push(Variable::new(in_terms_of, Value::Scalar(s+10f64.powi(-(PREC)))));
-            let fxh = &eval(expr, &Store::new(&mut_vars, state.funs))?;
+            let fxh = &eval(expr, &Store::new(&mut_vars, &state.funs))?;
             let h = Binary::from_operation(Operation::SimpleOperation {
                 op_type: SimpleOpType::Div,
                 left: Binary::from_operation(Operation::SimpleOperation {
@@ -70,7 +70,7 @@ pub fn calculate_derivative(expr: &Binary, in_terms_of: String, at: Value, mut f
                 }),
                 right: Binary::from_value(Value::Scalar(10f64.powi(-(PREC))))
             });
-            return Ok(eval(&h, &Store::new(&mut_vars, state.funs))?);
+            return Ok(eval(&h, &Store::new(&mut_vars, &state.funs))?);
         } 
         _ => {return Err(EvalError::MathError("Only scalar values are allowed!".to_string()))}
     }

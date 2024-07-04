@@ -48,7 +48,7 @@ fn easy_eval5() -> Result<(), MathLibError> {
 #[test]
 fn medium_eval1() -> Result<(), MathLibError> {
     let x = Variable::new("x", Value::Scalar(3.));
-    let res = quick_eval("3x", Store::from_vars(&vec![x]))?;
+    let res = quick_eval("3x", Store::from_vars(vec![x]))?;
 
     assert_eq!(res, Value::Scalar(9.));
     Ok(())
@@ -57,7 +57,7 @@ fn medium_eval1() -> Result<(), MathLibError> {
 #[test]
 fn medium_eval2() -> Result<(), MathLibError> {
     let a = Variable::new("A", Value::Vector(vec![3., 5., 8.]));
-    let res = quick_eval("3A", Store::from_vars(&vec![a]))?;
+    let res = quick_eval("3A", Store::from_vars(vec![a]))?;
 
     assert_eq!(res, Value::Vector(vec![9., 15., 24.]));
 
@@ -68,7 +68,7 @@ fn medium_eval2() -> Result<(), MathLibError> {
 fn medium_eval3() -> Result<(), MathLibError> {
     let a = Variable::new("A", Value::Vector(vec![3., 5., 8.]));
     let b = Variable::new("B", Value::Matrix(vec![vec![2., 0., 0.], vec![0., 2., 0.], vec![0., 0., 1.]]));
-    let res = quick_eval("B*A", Store::from_vars(&vec![a, b]))?;
+    let res = quick_eval("B*A", Store::from_vars(vec![a, b]))?;
 
     assert_eq!(res, Value::Vector(vec![6., 10., 8.]));
 
@@ -79,7 +79,7 @@ fn medium_eval3() -> Result<(), MathLibError> {
 fn medium_eval4() -> Result<(), MathLibError> {
     let a = Variable::new("A", Value::Matrix(vec![vec![3., 5., 7.], vec![4., 8., 2.], vec![1., 9., 2.]]));
     let b = Variable::new("B", Value::Matrix(vec![vec![7., 9., 10.], vec![1., 55., 8.], vec![22., 9., 2.]]));
-    let res = quick_eval("A*B", Store::from_vars(&vec![a, b]))?;
+    let res = quick_eval("A*B", Store::from_vars(vec![a, b]))?;
 
     assert_eq!(res, Value::Matrix(vec![vec![180., 365., 84.], vec![80., 494., 108.], vec![60., 522., 86.]]));
 
@@ -152,7 +152,7 @@ fn medium_eval12() -> Result<(), MathLibError> {
 fn medium_eval13() -> Result<(), MathLibError> {
     let vars = vec![Variable::new("A_{3*6}", Value::Scalar(3.))];
 
-    let res = quick_eval("A_{3*6}*3", Store::from_vars(&vars))?;
+    let res = quick_eval("A_{3*6}*3", Store::from_vars(vars))?;
 
     assert_eq!(res, Value::Scalar(9.));
 
@@ -218,7 +218,7 @@ fn medium_eval20() -> Result<(), MathLibError> {
     let function = parse("5x^2+2x+x")?;
     let function_var = Function::new("f", function, vec!["x"]);
 
-    let res = quick_eval("f(5)", Store::from_funs(&vec![function_var]))?;
+    let res = quick_eval("f(5)", Store::from_funs(vec![function_var]))?;
 
     assert_eq!(res, Value::Scalar(140.));
 
@@ -231,7 +231,7 @@ fn medium_eval21() -> Result<(), MathLibError> {
     let function_var = Function::new("f", function, vec!["x"]);
     let a = Variable::new("A", Value::Vector(vec![3., 4., 5.]));
 
-    let res = quick_eval("f([3, 4, 5])", Store::new(&vec![a], &vec![function_var]))?;
+    let res = quick_eval("f([3, 4, 5])", Store::new(vec![a], vec![function_var]))?;
 
     assert_eq!(res, Value::Vector(vec![0., 0., 0.]));
 
@@ -261,7 +261,7 @@ fn hard_eval1() -> Result<(), MathLibError> {
     let x = Variable::new("x", Value::Scalar(3.));
     let a = Variable::new("A", Value::Vector(vec![3., 2., 1.]));
     let b = Variable::new("B", Value::Matrix(vec![vec![2., 3., 4.], vec![5., 1., 7.], vec![2., 3., 6.]]));
-    let res = quick_eval("(x*B*A)?1", Store::from_vars(&vec![a, x, b]))?;
+    let res = quick_eval("(x*B*A)?1", Store::from_vars(vec![a, x, b]))?;
 
     assert_eq!(res, Value::Scalar(72.));
 
@@ -329,7 +329,7 @@ fn medium_solve4() -> Result<(), MathLibError> {
     let function = parse("4x^2-9")?;
     let function_var = Function::new("f", function, vec!["x"]);
 
-    let mut res = quick_solve("f(x)=0", Store::from_funs(&vec![function_var]))?;
+    let mut res = quick_solve("f(x)=0", Store::from_funs(vec![function_var]))?;
 
     res = res.iter().map(|r| r.round(3)).collect();
 

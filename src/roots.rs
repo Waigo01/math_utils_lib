@@ -175,7 +175,7 @@ fn jacobi_and_gauss(search_expres: &Vec<Binary>, x: &Vec<Variable>, state: &mut 
                     added_vars += 1;
                 }
             }
-            row.push(calculate_derivative(&search_expres[i], x[j].name.clone(), x[j].value.clone(), Some(Value::Scalar(fx[i])), &Store::new(&vars, state.funs))?.get_scalar().unwrap());
+            row.push(calculate_derivative(&search_expres[i], x[j].name.clone(), x[j].value.clone(), Some(Value::Scalar(fx[i])), &Store::new(&vars, &state.funs))?.get_scalar().unwrap());
             for _ in 0..added_vars {
                 vars.remove(state.vars.len()-1);
             }
@@ -213,7 +213,7 @@ fn newton(search_expres: &Vec<Binary>, check_expres: &Vec<Binary> , x: &Vec<Vari
         vars.push(i.clone());
     }
     for i in search_expres {
-        fx.push(eval(i, &Store::new(&vars, state.funs))?.get_scalar().unwrap());
+        fx.push(eval(i, &Store::new(&vars, &state.funs))?.get_scalar().unwrap());
     }
     for _ in x {
         vars.remove(state.vars.len()-1);
@@ -225,7 +225,7 @@ fn newton(search_expres: &Vec<Binary>, check_expres: &Vec<Binary> , x: &Vec<Vari
             vars.push(i.clone());
         }
         for i in check_expres {
-            check_results.push(eval(i, &Store::new(&vars, state.funs))?.get_scalar().unwrap());
+            check_results.push(eval(i, &Store::new(&vars, &state.funs))?.get_scalar().unwrap());
         }
         for _ in x {
             vars.remove(vars.len()-1);
@@ -266,14 +266,14 @@ fn generate_combinations(arr: Vec<usize>, len: usize, prev_arr: Vec<usize>) -> V
 
 /// defines a root finder to find the roots of an expression/multiple expressions (system of equations).
 #[derive(Debug)]
-pub struct RootFinder<'a> {
+pub struct RootFinder {
     expressions: Vec<Binary>,
     combinations: Vec<Vec<usize>>,
-    state: Store<'a>,
+    state: Store,
     search_vars_names: Vec<String>
 }
 
-impl<'a> RootFinder<'_> {
+impl RootFinder {
     /// creates a new [RootFinder](struct@crate::roots::RootFinder) using a vec of expressions which represents
     /// the functions that you want the roots to be found of. Multiple expressions act as a system
     /// of equations. Additionally you have to pass the global variables.
@@ -303,7 +303,7 @@ impl<'a> RootFinder<'_> {
 
             let mut var_names = vec![];
 
-            for var in state.vars {
+            for var in &state.vars {
                 var_names.push(var.name.clone());
             }
 
@@ -330,7 +330,7 @@ impl<'a> RootFinder<'_> {
             vars.push(Variable::new(i.to_string(), Value::Scalar(2.5690823)));
         }
 
-        let initial_res = eval(&expressions[0], &Store::new(&vars, state.funs))?;
+        let initial_res = eval(&expressions[0], &Store::new(&vars, &state.funs))?;
 
         for _ in &search_vars_names {
             vars.remove(state.vars.len()-1);
