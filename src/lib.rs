@@ -116,6 +116,7 @@ pub use latex_export::{export, ExportType, Step};
 pub use parser::{parse, eval};
 pub use solver::solve;
 pub use errors::MathLibError;
+pub use basetypes::Store;
 
 ///defines the precision used by the equation solver and the printing precision, which is PREC-2.
 #[cfg(feature = "high-prec")]
@@ -141,25 +142,25 @@ pub const PREC: i32 = 8;
 ///
 /// assert_eq!(res, Value::Scalar(9.));
 /// ```
-pub fn quick_eval<S: Into<String>>(expr: S, vars: Vec<Variable>) -> Result<Value, QuickEvalError> {
+pub fn quick_eval<S: Into<String>>(expr: S, state: Store) -> Result<Value, QuickEvalError> {
     let mut expr = expr.into();
     let mut context_vars = vec![
-        Variable::from_value("e".to_string(), Value::Scalar(std::f64::consts::E)),
-        Variable::from_value("pi".to_string(), Value::Scalar(std::f64::consts::PI))
+        Variable::new("e".to_string(), Value::Scalar(std::f64::consts::E)),
+        Variable::new("pi".to_string(), Value::Scalar(std::f64::consts::PI))
     ];
-    if !vars.is_empty() {
-        if vars.iter().filter(|x| x.name == "e".to_string() || x.name == "pi".to_string()).collect::<Vec<&Variable>>().len() > 0 {
+    if !state.vars.is_empty() {
+        if state.vars.iter().filter(|x| x.name == "e".to_string() || x.name == "pi".to_string()).collect::<Vec<&Variable>>().len() > 0 {
             return Err(QuickEvalError::DuplicateVars);
         }
-        for i in vars {
-            context_vars.push(i);
+        for i in state.vars {
+            context_vars.push(i.clone());
         }
     }
     expr = expr.trim().split(" ").filter(|s| !s.is_empty()).collect();
 
     let b_tree = parse(expr)?;
     
-    Ok(eval(&b_tree, &context_vars)?)
+    Ok(eval(&b_tree, &Store::new(&context_vars, state.funs))?)
 }
 
 /// solves an equation or a system of equations towards the variables not yet specified in vars. It can additionaly be
@@ -183,17 +184,17 @@ pub fn quick_eval<S: Into<String>>(expr: S, vars: Vec<Variable>) -> Result<Value
 ///
 /// assert_eq!(res_rounded, vec![Value::Vector(vec![4., 6.])]);
 /// ```
-pub fn quick_solve<S: Into<String>>(expr: S, vars: Vec<Variable>) -> Result<Vec<Value>, QuickSolveError> {
+pub fn quick_solve<S: Into<String>>(expr: S, state: Store) -> Result<Vec<Value>, QuickSolveError> {
     let mut expr = expr.into();
     let mut context_vars = vec![
-        Variable::from_value("e".to_string(), Value::Scalar(std::f64::consts::E)),
-        Variable::from_value("pi".to_string(), Value::Scalar(std::f64::consts::PI))
+        Variable::new("e".to_string(), Value::Scalar(std::f64::consts::E)),
+        Variable::new("pi".to_string(), Value::Scalar(std::f64::consts::PI))
     ];
-    if !vars.is_empty() {
-        if vars.iter().filter(|x| x.name == "e".to_string() || x.name == "pi".to_string()).collect::<Vec<&Variable>>().len() > 0 {
+    if !state.vars.is_empty() {
+        if state.vars.iter().filter(|x| x.name == "e".to_string() || x.name == "pi".to_string()).collect::<Vec<&Variable>>().len() > 0 {
             return Err(QuickSolveError::DuplicateVars);
         }
-        for i in &vars {
+        for i in state.vars {
             context_vars.push(i.clone());
         }
     }
@@ -242,7 +243,7 @@ pub fn quick_solve<S: Into<String>>(expr: S, vars: Vec<Variable>) -> Result<Vec<
         parsed_equations.push((left_b, right_b));
     }
 
-    let roots = solve(parsed_equations, &context_vars)?;
+    let roots = solve(parsed_equations, &Store::new(&context_vars, state.funs))?;
 
     Ok(roots)
 }

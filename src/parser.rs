@@ -1,4 +1,4 @@
-use crate::{basetypes::{Value, Variable, VariableContent}, errors::{EvalError, ParserError}, maths};
+use crate::{basetypes::{Value, Variable}, errors::{EvalError, ParserError}, maths, Store};
 
 ///specifies the type of operation for the [SimpleOperation](Operation::SimpleOperation) struct.
 ///
@@ -184,7 +184,7 @@ fn parse_value(s: String) -> Result<Binary, ParserError> {
                         if n_buffer.is_empty() {
                             return Err(ParserError::EmptyVec)
                         }
-                        row.push(parse(n_buffer.clone())?);
+                        row.push(parse(&n_buffer)?);
                         n_buffer.clear();
                     } else {
                         n_buffer.push(i);
@@ -194,7 +194,7 @@ fn parse_value(s: String) -> Result<Binary, ParserError> {
                         if n_buffer.is_empty() {
                             return Err(ParserError::EmptyVec)
                         }
-                        row.push(parse(n_buffer.clone())?);
+                        row.push(parse(&n_buffer)?);
                         if row_size.is_some() && row.len() != row_size.unwrap() {
                             return Err(ParserError::NotRectMatrix)
                         }
@@ -211,7 +211,7 @@ fn parse_value(s: String) -> Result<Binary, ParserError> {
             if n_buffer.is_empty() {
                 return Err(ParserError::EmptyVec)
             }
-            row.push(parse(n_buffer.clone())?);
+            row.push(parse(&n_buffer)?);
             if row_size.is_some() && row.len() != row_size.unwrap() {
                 return Err(ParserError::NotRectMatrix)
             }
@@ -233,7 +233,7 @@ fn parse_value(s: String) -> Result<Binary, ParserError> {
                     if n_buffer.is_empty() {
                         return Err(ParserError::EmptyVec)
                     }
-                    output_v.push(parse(n_buffer.clone())?);
+                    output_v.push(parse(&n_buffer)?);
                     n_buffer.clear();
                 } else {
                     n_buffer.push(i);
@@ -338,7 +338,7 @@ pub fn parse<S: Into<String>>(expr: S) -> Result<Binary, ParserError> {
         }
         let symbol = get_op_symbol(expr_chars[i]);
         if parenths_open == 0 && brackets_open == 0 && curly_brackets_open == 0 && i != 0 && i != expr_chars.len()-1 && symbol.is_some() {
-            ops_in_expr.push((symbol.clone().unwrap(), i, 0, 1));
+            ops_in_expr.push((symbol.unwrap(), i, 0, 1));
         } 
     }
 
@@ -424,8 +424,8 @@ pub fn parse<S: Into<String>>(expr: S) -> Result<Binary, ParserError> {
                     if args.len() != 3 {
                         return Err(ParserError::WrongNumberOfArgs("derivative".to_string()));
                     }
-                    let parsed_function = parse(args[0].clone())?;
-                    let parsed_value_at = parse(args[2].clone())?;
+                    let parsed_function = parse(&args[0])?;
+                    let parsed_value_at = parse(&args[2])?;
                     return Ok(Binary::from_operation(Operation::AdvancedOperation(AdvancedOperation::Derivative {
                         expr: parsed_function,
                         in_terms_of: args[1].clone(),
@@ -454,9 +454,9 @@ pub fn parse<S: Into<String>>(expr: S) -> Result<Binary, ParserError> {
                     if args.len() != 4 {
                         return Err(ParserError::WrongNumberOfArgs("integral".to_string()));
                     }
-                    let parsed_function = parse(args[0].clone())?;
-                    let parsed_lower_b = parse(args[2].clone())?;
-                    let parsed_upper_b = parse(args[3].clone())?;
+                    let parsed_function = parse(&args[0])?;
+                    let parsed_lower_b = parse(&args[2])?;
+                    let parsed_upper_b = parse(&args[3])?;
                     return Ok(Binary::from_operation(Operation::AdvancedOperation(AdvancedOperation::Integral {
                         expr: parsed_function,
                         in_terms_of: args[1].clone(),
@@ -483,7 +483,7 @@ pub fn parse<S: Into<String>>(expr: S) -> Result<Binary, ParserError> {
                 parenths_open -= 1;
             } 
             if *i == ',' && parenths_open == 0 {
-                inputs.push(parse(buffer.clone())?);
+                inputs.push(parse(&buffer)?);
                 buffer.clear();
             } else {
                 buffer.push(*i);
@@ -509,13 +509,13 @@ pub fn parse<S: Into<String>>(expr: S) -> Result<Binary, ParserError> {
 ///pi and e need to be provided as variables if used.
 ///
 ///If you are searching for a quick and easy way to evaluate an expression, have a look at [quick_eval()](fn@crate::quick_eval).
-pub fn eval(b: &Binary, vars: &Vec<Variable>) -> Result<Value, EvalError> {
+pub fn eval(b: &Binary, state: &Store) -> Result<Value, EvalError> {
     match b {
         Binary::Scalar(s) => return Ok(Value::Scalar(*s)),
         Binary::Vector(v) => {
             let mut evaled_scalars = vec![];
             for i in &**v {
-                evaled_scalars.push(match eval(i, vars)?.get_scalar() {
+                evaled_scalars.push(match eval(i, state)?.get_scalar() {
                     Some(s) => s,
                     None => return Err(EvalError::NonScalarInVector)
                 });
@@ -527,7 +527,7 @@ pub fn eval(b: &Binary, vars: &Vec<Variable>) -> Result<Value, EvalError> {
             for i in &**m {
                 let mut row = vec![];
                 for j in i {
-                    row.push(match eval(j, vars)?.get_scalar() {
+                    row.push(match eval(j, state)?.get_scalar() {
                         Some(s) => s,
                         None => return Err(EvalError::NonScalarInMatrix)
                     });
@@ -537,30 +537,20 @@ pub fn eval(b: &Binary, vars: &Vec<Variable>) -> Result<Value, EvalError> {
             return Ok(Value::Matrix(evaled_rows))
         }, 
         Binary::Variable(v) => {
-            for i in vars {
-                match &i.content {
-                    VariableContent::Function { .. } => continue,
-                    VariableContent::Value(vv) => {
-                        if &i.name == v {
-                            return Ok(vv.clone());
-                        }
-                    }
-                } 
+            for i in state.vars.iter() {
+                if &i.name == v {
+                    return Ok(i.value.clone());
+                }
             }
 
             return Err(EvalError::NoVariable(v.to_string()));
         },
         Binary::Function { name, inputs } => {
             let mut function = None;
-            for i in vars {
-                match &i.content {
-                    VariableContent::Value(_) => continue,
-                    VariableContent::Function { binary, inputs } => {
-                        if i.name == name.to_string() {
-                            function = Some((binary, inputs));
-                            break;
-                        }
-                    }
+            for i in state.funs.iter() {
+                if i.name == name.to_string() {
+                    function = Some(i);
+                    break;
                 } 
             }
             if function.is_none() {
@@ -569,33 +559,33 @@ pub fn eval(b: &Binary, vars: &Vec<Variable>) -> Result<Value, EvalError> {
 
             let function = function.unwrap();
             
-            if inputs.len() != function.1.len() {
-                return Err(EvalError::WrongNumberOfArgs((inputs.len(), function.1.len())));
+            if inputs.len() != function.inputs.len() {
+                return Err(EvalError::WrongNumberOfArgs((inputs.len(), function.inputs.len())));
             }
 
             let mut eval_inputs = vec![];
             for i in inputs.iter() {
-                eval_inputs.push(eval(i, vars)?);
+                eval_inputs.push(eval(i, state)?);
             }
 
             let mut f_vars = vec![];
             for i in 0..inputs.len() {
-                f_vars.push(Variable::from_value(function.1[i].clone(), eval_inputs[i].clone()));
+                f_vars.push(Variable::new(&function.inputs[i], eval_inputs[i].clone()));
             }
 
-            for i in vars.iter() {
-                if !f_vars.iter().map(|v| v.name.clone()).collect::<Vec<String>>().contains(&i.name) {
+            for i in state.vars.iter() {
+                if !f_vars.iter().map(|v| v.name.to_string()).collect::<Vec<String>>().contains(&i.name) {
                     f_vars.push(i.clone());
                 }
             }
 
-            return eval(&function.0, &f_vars);
+            return eval(&function.binary, &Store::new(&f_vars, state.funs));
         },
         Binary::Operation(o) => {
             match &**o {
                 Operation::SimpleOperation {op_type, left, right} => {
-                    let lv = eval(&left, vars)?;
-                    let rv = eval(&right, vars)?; 
+                    let lv = eval(&left, state)?;
+                    let rv = eval(&right, state)?; 
                     match op_type {
                         SimpleOpType::Get => return Ok(maths::get(lv, rv)?),
                         SimpleOpType::Add => return Ok(maths::add(lv, rv)?),
@@ -621,15 +611,15 @@ pub fn eval(b: &Binary, vars: &Vec<Variable>) -> Result<Value, EvalError> {
                 Operation::AdvancedOperation(a) => {
                     match a {
                         AdvancedOperation::Integral {expr, in_terms_of, lower_bound, upper_bound} => {
-                            let lb = eval(&lower_bound, vars)?;
-                            let ub = eval(&upper_bound, vars)?;
+                            let lb = eval(&lower_bound, state)?;
+                            let ub = eval(&upper_bound, state)?;
 
-                            return Ok(maths::calculus::calculate_integral(&expr, in_terms_of.clone(), lb, ub, vars)?);
+                            return Ok(maths::calculus::calculate_integral(&expr, in_terms_of.clone(), lb, ub, state)?);
                         },
                         AdvancedOperation::Derivative {expr, in_terms_of, at} => {
-                            let eat = eval(&at, vars)?;
+                            let eat = eval(&at, state)?;
                             
-                            return Ok(maths::calculus::calculate_derivative(&expr, in_terms_of.clone(), eat, None, vars)?);
+                            return Ok(maths::calculus::calculate_derivative(&expr, in_terms_of.clone(), eat, None, state)?);
                         }
                     }
                 }

@@ -9,22 +9,7 @@ const VAR_SYMBOLS: [(&str, &str); 48] = [("\\alpha", "𝛼"), ("\\Alpha", "𝛢"
 ("\\Pi", "𝛱"), ("\\rho", "𝜌"), ("\\Rho", "𝛲"), ("\\sigma", "𝜎"), ("\\Sigma", "𝛴"), ("\\tau", "𝜏"), ("\\Tau", "𝛵"), ("\\upsilon", "𝜐"),
 ("\\Upsilon", "𝛶"), ("\\phi", "𝜑"), ("\\Phi", "𝛷"), ("\\xi", "𝜒"), ("\\Xi", "𝛸"), ("\\psi", "𝜓"), ("\\Psi", "𝛹"), ("\\omega", "𝜔"), ("\\Omega", "𝛺")];
 
-/// specifies the contents of a variable.
-///
-/// It can either hold a simple Value or a Function, specified by a parsed binary and the names of
-/// its input variables.
-#[derive(Clone, Debug)]
-pub enum VariableContent {
-    Value(Value),
-    Function {
-        binary: Binary,
-        inputs: Vec<String>
-    }
-}
-
 ///specifies a Variable that can be used in the context of an evaluation or equation.
-///
-///Variables can contain Values or Functions. For more information, see [VariableContent].
 ///
 ///Variable Names following the LaTeX format for greek letters (e.g \sigma) (except pi which is not
 ///\pi but just pi) will get replaced with their unicode counterparts when pretty printing.
@@ -36,44 +21,53 @@ pub enum VariableContent {
 ///
 ///```
 ///let context: Vec<Variable> = vec![
-///     Variable::from_value("pi".to_string(), Value::Scalar(3.14159)),
+///     Variable::new("pi".to_string(), Value::Scalar(3.14159)),
 ///];
 ///```
 #[derive(Debug, Clone)]
 pub struct Variable {
     pub name: String,
-    pub content: VariableContent
+    pub value: Value
 }
 
 impl Variable {
     /// creates a new [Variable] from a [Value].
-    pub fn from_value<S: Into<String>>(name: S, value: Value) -> Variable {
-        Variable { name: name.into(), content: VariableContent::Value(value)}
-    }
-    /// creates a new [Variable] from a function, which is represented with a
-    /// parsed binary and the names of its input variables.
-    pub fn from_function<S: Into<String>>(name: S, binary: Binary, inputs: Vec<S>) -> Variable {
-        Variable {name: name.into(), content: VariableContent::Function { binary, inputs: inputs.into_iter().map(|i| i.into()).collect() }}
-    }
-    /// returns the the value saved within a variable, if the variable content is a value. If this
-    /// is not the case it returns None.
-    pub fn get_value(&self) -> Option<Value> {
-        match &self.content {
-            VariableContent::Value(v) => return Some(v.clone()),
-            VariableContent::Function { .. } => return None
-        }
-    }
+    pub fn new<S: Into<String>>(name: S, value: Value) -> Variable {
+        Variable { name: name.into(), value}
+    } 
+}
 
-    pub fn pretty_print<S: Into<String>>(&self, var_name: Option<S>) -> String {
-        match &self.content {
-            VariableContent::Value(v) => {
-                if var_name.is_some() {
-                    return v.pretty_print(Some(var_name.unwrap().into()))
-                }
-                return v.pretty_print(None)
-            },
-            VariableContent::Function { .. } => return "".to_string()
-        }
+#[derive(Debug, Clone)]
+pub struct Function {
+    pub name: String,
+    pub binary: Binary,
+    pub inputs: Vec<String>
+}
+
+impl Function {
+    pub fn new<S: Into<String>>(name: S, binary: Binary, inputs: Vec<S>) -> Function {
+        Function { name: name.into(), binary, inputs: inputs.into_iter().map(|s| s.into()).collect() }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Store<'a> {
+    pub vars: &'a[Variable],
+    pub funs: &'a[Function]
+}
+
+impl<'a> Store<'_> {
+    pub fn new(vars: &'a [Variable], funs: &'a [Function]) -> Store<'a> {
+        Store {vars, funs}
+    }
+    pub fn empty() -> Store<'a> {
+        Store { vars: &[], funs: &[] }
+    }
+    pub fn from_vars(vars: &'a [Variable]) -> Store<'a> {
+        Store { vars, funs: &[] }
+    }
+    pub fn from_funs(funs: &'a [Function]) -> Store<'a> {
+        Store { vars: &[], funs }
     }
 }
 

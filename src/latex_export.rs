@@ -16,9 +16,21 @@ use std::{fs, process, usize};
 ///```
 #[derive(Debug, Clone)]
 pub enum Step {
-    Calc((Binary, Value, Option<String>)),
-    Equ((Vec<(Binary, Binary)>, Vec<Value>, Option<String>)),
-    Fun((Binary, Vec<String>, String))
+    Calc{
+        term: Binary,
+        result: Value,
+        variable_save: Option<String>
+    },
+    Equ{
+        eqs: Vec<(Binary, Binary)>,
+        results: Vec<Value>,
+        variable_save: Option<String>
+    },
+    Fun{
+        term: Binary,
+        inputs: Vec<String>,
+        name: String
+    }
 }
 
 enum LatexValue {
@@ -152,17 +164,17 @@ pub fn export<S: Into<String>>(history: Vec<Step>, file_name: S, export_type: Ex
     let mut j = 0;
     for s in history {
         match s {
-            Step::Calc(i) => {
+            Step::Calc{term, result, variable_save} => {
                 let mut aligner = "&";
-                if i.2.is_some() {
-                    output_string += &format!("{} &= ", i.2.unwrap());
+                if variable_save.is_some() {
+                    output_string += &format!("{} &= ", variable_save.unwrap());
                     aligner = "";
                 }
-                let expression = match latex_recurse(&i.0) {
+                let expression = match latex_recurse(&term) {
                     Ok(s) => s,
                     Err(_) => return
                 };
-                let res = i.1.latex_print();
+                let res = result.latex_print();
 
                 if expression != res {
                     output_string += &format!("{} {}= {} \\tag{{{}}}\\label{{eq:{}}} \\\\ \\\\ \n", expression, aligner, res, j+1, j+1);
@@ -170,9 +182,9 @@ pub fn export<S: Into<String>>(history: Vec<Step>, file_name: S, export_type: Ex
                     output_string += &format!("{} \\tag{{{}}}\\label{{eq:{}}} \\\\ \\\\ \n", expression, j+1, j+1);
                 }
             }, 
-            Step::Equ(e) => {
+            Step::Equ{eqs, results, variable_save} => {
                 let mut recursed_eq = vec![];
-                for i in &e.0 {
+                for i in &eqs {
                     let left = match latex_recurse(&i.0) {
                         Ok(s) => s,
                         Err(_) => return
@@ -188,41 +200,41 @@ pub fn export<S: Into<String>>(history: Vec<Step>, file_name: S, export_type: Ex
                     output_string += &format!("{} &= {} \\\\ \n", i.0, i.1);
                 }
                 output_string += "\\\\ \n";
-                if e.1.len() == 0 {
+                if results.len() == 0 {
                     output_string += &format!("&\\text{{No solutions found!}} \\tag{{{}}}\\label{{eq:{}}} \\\\ \\\\ \n", j+1, j+1);
                 }
-                for i in 0..e.1.len() {
-                    if e.2.is_some() {
-                        output_string += &format!("{}_{{{}}} &= {}", e.2.clone().unwrap(), i, e.1[i].latex_print());
+                for i in 0..results.len() {
+                    if variable_save.is_some() {
+                        output_string += &format!("{}_{{{}}} &= {}", variable_save.clone().unwrap(), i, results[i].latex_print());
                     } else {
-                        output_string += &format!("x_{{{}}} &= {}", i, e.1[i].latex_print());
+                        output_string += &format!("x_{{{}}} &= {}", i, results[i].latex_print());
                     }
-                    if i == (e.1.len() as f32/2.).floor() as usize {
+                    if i == (results.len() as f32/2.).floor() as usize {
                         output_string += &format!(" \\tag{{{}}}\\label{{eq:{}}} ", j+1, j+1);
                     }
-                    if i == e.1.len()-1{
+                    if i == results.len()-1{
                         output_string += "\\\\ \\\\ \n";
                     } else {
                         output_string += "\\\\ \n";
                     }
                 } 
             },
-            Step::Fun(f) => {
-                let recursed_fn = match latex_recurse(&f.0) {
+            Step::Fun{term, inputs, name} => {
+                let recursed_fn = match latex_recurse(&term) {
                     Ok(s) => s,
                     Err(_) => return
                 }; 
 
                 let mut inputs_str = String::new();
-                for (i, inp) in f.1.iter().enumerate() {
-                    if i != f.1.len()-1 {
+                for (i, inp) in inputs.iter().enumerate() {
+                    if i != inputs.len()-1 {
                         inputs_str += &format!("{}, ", inp);
                     } else {
                         inputs_str += &format!("{}", inp);
                     }
                 }
 
-                output_string += &format!("{}({}) &= {} \\\\ \n", f.2, inputs_str, recursed_fn);
+                output_string += &format!("{}({}) &= {} \\\\ \n", name, inputs_str, recursed_fn);
             }
         }
         j += 1;
