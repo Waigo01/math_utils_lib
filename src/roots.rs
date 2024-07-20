@@ -101,7 +101,7 @@ fn find_vars_in_expr(b: &Binary, mut ov: Vec<String>) -> Vec<String> {
     }
 }
 
-fn gauss_algorithm(mut v: Vec<Vec<f64>>) -> Result<Value, NewtonError> {
+fn gauss_algorithm(v: &mut Vec<Vec<f64>>) -> Result<Value, NewtonError> {
     if v.len()+1 != v[0].len() {
         return Err(NewtonError::UnderdeterminedSystem);
     }
@@ -160,10 +160,10 @@ fn gauss_algorithm(mut v: Vec<Vec<f64>>) -> Result<Value, NewtonError> {
     return Ok(Value::Vector(result_vec));
 }
 
-fn jacobi_and_gauss(search_expres: &Vec<Binary>, x: &Vec<Variable>, state: &mut Store, fx: Vec<f64>) -> Result<Vec<Variable>, NewtonError> {
+fn jacobi_and_gauss(search_expres: &[Binary], x: &[Variable], state: &mut Store, fx: &Vec<f64>) -> Result<Vec<Variable>, NewtonError> {
     let mut jacobi: Vec<Vec<f64>> = vec![];
 
-    let mut vars = state.vars.to_vec();
+    let mut vars: Vec<&Variable> = state.vars.iter().collect();
 
     for i in 0..search_expres.len() {
         let mut row = vec![];
@@ -171,11 +171,12 @@ fn jacobi_and_gauss(search_expres: &Vec<Binary>, x: &Vec<Variable>, state: &mut 
             let mut added_vars = 0;
             for k in 0..x.len() {
                 if j != k {
-                    vars.push(x[k].clone());
+                    vars.push(&x[k]);
                     added_vars += 1;
                 }
             }
-            row.push(calculate_derivative(&search_expres[i], x[j].name.clone(), x[j].value.clone(), Some(Value::Scalar(fx[i])), &Store::new(&vars, &state.funs))?.get_scalar().unwrap());
+            let derivative = calculate_derivative(&search_expres[i], &x[j].name, &x[j].value, Some(Value::Scalar(fx[i])), &Store::new(&vars.iter().map(|v| v.to_owned().to_owned()).collect::<Vec<Variable>>(), &state.funs))?.get_scalar().unwrap();
+            row.push(derivative);
             for _ in 0..added_vars {
                 vars.remove(state.vars.len()-1);
             }
@@ -190,7 +191,7 @@ fn jacobi_and_gauss(search_expres: &Vec<Binary>, x: &Vec<Variable>, state: &mut 
         augmented_matrix[i].push(-1. * fx[i]);
     }
 
-    let x_new_minus_x = gauss_algorithm(augmented_matrix)?;
+    let x_new_minus_x = gauss_algorithm(&mut augmented_matrix)?;
 
     let mut x_new = vec![];
 
@@ -208,12 +209,12 @@ enum NewtonReturn {
 
 fn newton(search_expres: &Vec<Binary>, check_expres: &Vec<Binary> , x: &Vec<Variable>, state: &mut Store) -> Result<NewtonReturn, NewtonError> {
     let mut fx = vec![];
-    let mut vars = state.vars.to_vec();
+    let mut vars: Vec<&Variable> = state.vars.iter().collect();
     for i in x {
-        vars.push(i.clone());
+        vars.push(i);
     }
     for i in search_expres {
-        fx.push(eval(i, &Store::new(&vars, &state.funs))?.get_scalar().unwrap());
+        fx.push(eval(i, &Store::new(&vars.iter().map(|v| v.to_owned().to_owned()).collect::<Vec<Variable>>(), &state.funs))?.get_scalar().unwrap());
     }
     for _ in x {
         vars.remove(state.vars.len()-1);
@@ -222,10 +223,10 @@ fn newton(search_expres: &Vec<Binary>, check_expres: &Vec<Binary> , x: &Vec<Vari
     if -10f64.powi(-PREC) < abs(Value::Vector(fx.clone()))?.get_scalar().unwrap() && abs(Value::Vector(fx.clone()))?.get_scalar().unwrap() < 10f64.powi(-PREC) {
         let mut check_results = vec![]; 
         for i in x {
-            vars.push(i.clone());
+            vars.push(i);
         }
         for i in check_expres {
-            check_results.push(eval(i, &Store::new(&vars, &state.funs))?.get_scalar().unwrap());
+            check_results.push(eval(i, &Store::new(&vars.iter().map(|v| v.to_owned().to_owned()).collect::<Vec<Variable>>(), &state.funs))?.get_scalar().unwrap());
         }
         for _ in x {
             vars.remove(vars.len()-1);
@@ -240,7 +241,7 @@ fn newton(search_expres: &Vec<Binary>, check_expres: &Vec<Binary> , x: &Vec<Vari
         } 
     }
 
-    let new_x = jacobi_and_gauss(search_expres, x, state, fx)?;
+    let new_x = jacobi_and_gauss(search_expres, x, state, &fx)?;
 
     for i in &new_x {
         if i.value.is_inf_or_nan() {

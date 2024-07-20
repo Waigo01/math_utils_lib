@@ -44,7 +44,7 @@ pub fn calculate_integral(expr: &Binary, in_terms_of: String, lower_bound: Value
 /// The function also takes an optional fx value, which is the value f(x). This can be used in
 /// order to increase performance by not having to calculate f(x) twice for an application such as
 /// newtons method.
-pub fn calculate_derivative(expr: &Binary, in_terms_of: String, at: Value, mut fx: Option<Value>, state: &Store) -> Result<Value, EvalError> {
+pub fn calculate_derivative(expr: &Binary, in_terms_of: &str, at: &Value, mut fx: Option<Value>, state: &Store) -> Result<Value, EvalError> {
     let mut mut_vars = state.vars.to_owned();
     for i in 0..mut_vars.len() {
         if mut_vars[i].name == in_terms_of {
@@ -55,7 +55,7 @@ pub fn calculate_derivative(expr: &Binary, in_terms_of: String, at: Value, mut f
     match at {
         Value::Scalar(s) => {
             if fx.is_none() {
-                mut_vars.push(Variable::new(&in_terms_of, at));
+                mut_vars.push(Variable::new(in_terms_of, at.clone()));
                 fx = Some(eval(expr, &Store::new(&mut_vars, &state.funs))?);
                 mut_vars.remove(mut_vars.len()-1);
             }

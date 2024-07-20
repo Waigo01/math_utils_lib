@@ -223,7 +223,7 @@ pub fn quick_solve<S: Into<String>>(expr: S, state: Store) -> Result<Vec<Value>,
     let mut parsed_equations = vec![];
 
     for i in equations {
-        if !expr.contains("=") {
+        if !i.contains("=") {
             return Err(QuickSolveError::NoEq);
         }
 

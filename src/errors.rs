@@ -97,6 +97,7 @@ impl Display for ParserError {
 pub enum EvalError {
     NonScalarInVector,
     NonScalarInMatrix,
+    RecursiveFunction,
     NoVariable(String),
     NoFunction(String),
     WrongNumberOfArgs((usize, usize)),
@@ -106,6 +107,7 @@ pub enum EvalError {
 impl EvalError {
     pub fn get_reason(&self) -> String {
         match self {
+            EvalError::RecursiveFunction => return "Can't call a recursive function!".to_string(),
             EvalError::NonScalarInVector => return "Vectors can only contain scalars!".to_string(),
             EvalError::NonScalarInMatrix => return "Matrices can only contain scalars!".to_string(),
             EvalError::NoVariable(s) => return format!("Could not find variable {}!", s),

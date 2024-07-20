@@ -111,7 +111,7 @@ impl Binary {
     }
     pub fn from_operation(val: Operation) -> Binary {
         return Binary::Operation(Box::new(val));
-    } 
+    }
 }
 
 ///used to specify an operation in a parsed string. It is used together with [Binary] to
@@ -510,12 +510,16 @@ pub fn parse<S: Into<String>>(expr: S) -> Result<Binary, ParserError> {
 ///
 ///If you are searching for a quick and easy way to evaluate an expression, have a look at [quick_eval()](fn@crate::quick_eval).
 pub fn eval(b: &Binary, state: &Store) -> Result<Value, EvalError> {
+    eval_rec(b, state, "")
+}
+
+fn eval_rec(b: &Binary, state: &Store, last_fn: &str) -> Result<Value, EvalError> {
     match b {
         Binary::Scalar(s) => return Ok(Value::Scalar(*s)),
         Binary::Vector(v) => {
             let mut evaled_scalars = vec![];
             for i in &**v {
-                evaled_scalars.push(match eval(i, state)?.get_scalar() {
+                evaled_scalars.push(match eval_rec(i, state, last_fn)?.get_scalar() {
                     Some(s) => s,
                     None => return Err(EvalError::NonScalarInVector)
                 });
@@ -527,7 +531,7 @@ pub fn eval(b: &Binary, state: &Store) -> Result<Value, EvalError> {
             for i in &**m {
                 let mut row = vec![];
                 for j in i {
-                    row.push(match eval(j, state)?.get_scalar() {
+                    row.push(match eval_rec(j, state, last_fn)?.get_scalar() {
                         Some(s) => s,
                         None => return Err(EvalError::NonScalarInMatrix)
                     });
@@ -546,6 +550,9 @@ pub fn eval(b: &Binary, state: &Store) -> Result<Value, EvalError> {
             return Err(EvalError::NoVariable(v.to_string()));
         },
         Binary::Function { name, inputs } => {
+            if last_fn == name {
+                return Err(EvalError::RecursiveFunction);
+            }
             let mut function = None;
             for i in state.funs.iter() {
                 if i.name == name.to_string() {
@@ -565,7 +572,7 @@ pub fn eval(b: &Binary, state: &Store) -> Result<Value, EvalError> {
 
             let mut eval_inputs = vec![];
             for i in inputs.iter() {
-                eval_inputs.push(eval(i, state)?);
+                eval_inputs.push(eval_rec(i, state, last_fn)?);
             }
 
             let mut f_vars = vec![];
@@ -579,13 +586,13 @@ pub fn eval(b: &Binary, state: &Store) -> Result<Value, EvalError> {
                 }
             }
 
-            return eval(&function.binary, &Store::new(&f_vars, &state.funs));
+            return eval_rec(&function.binary, &Store::new(&f_vars, &state.funs), name);
         },
         Binary::Operation(o) => {
             match &**o {
                 Operation::SimpleOperation {op_type, left, right} => {
-                    let lv = eval(&left, state)?;
-                    let rv = eval(&right, state)?; 
+                    let lv = eval_rec(&left, state, last_fn)?;
+                    let rv = eval_rec(&right, state, last_fn)?; 
                     match op_type {
                         SimpleOpType::Get => return Ok(maths::get(lv, rv)?),
                         SimpleOpType::Add => return Ok(maths::add(lv, rv)?),
@@ -611,15 +618,15 @@ pub fn eval(b: &Binary, state: &Store) -> Result<Value, EvalError> {
                 Operation::AdvancedOperation(a) => {
                     match a {
                         AdvancedOperation::Integral {expr, in_terms_of, lower_bound, upper_bound} => {
-                            let lb = eval(&lower_bound, state)?;
-                            let ub = eval(&upper_bound, state)?;
+                            let lb = eval_rec(&lower_bound, state, last_fn)?;
+                            let ub = eval_rec(&upper_bound, state, last_fn)?;
 
                             return Ok(maths::calculus::calculate_integral(&expr, in_terms_of.clone(), lb, ub, state)?);
                         },
                         AdvancedOperation::Derivative {expr, in_terms_of, at} => {
-                            let eat = eval(&at, state)?;
+                            let eat = eval_rec(&at, state, last_fn)?;
                             
-                            return Ok(maths::calculus::calculate_derivative(&expr, in_terms_of.clone(), eat, None, state)?);
+                            return Ok(maths::calculus::calculate_derivative(&expr, &in_terms_of, &eat, None, state)?);
                         }
                     }
                 }

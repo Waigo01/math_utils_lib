@@ -1,4 +1,4 @@
-use crate::{basetypes::Function, errors::{MathLibError, ParserError, QuickEvalError, QuickSolveError, SolveError}, parse, quick_eval, quick_solve, Store, Value, Variable};
+use crate::{basetypes::Function, errors::{EvalError, MathLibError, ParserError, QuickEvalError, QuickSolveError, SolveError}, parse, quick_eval, quick_solve, Store, Value, Variable};
 
 #[test]
 fn easy_eval1() -> Result<(), MathLibError> {
@@ -239,6 +239,30 @@ fn medium_eval21() -> Result<(), MathLibError> {
 }
 
 #[test]
+fn medium_eval22() -> Result<(), MathLibError> {
+    let function = parse("3*f(x)")?;
+    let function_var = Function::new("f", function, vec!["x"]);
+    
+    let res = quick_eval("f(5)", Store::new(vec![], vec![function_var]));
+
+    assert_eq!(res.err().unwrap(), QuickEvalError::EvalError(EvalError::RecursiveFunction));
+
+    Ok(())
+}
+
+#[test]
+fn medium_eval23() -> Result<(), MathLibError> {
+    let function = parse("3*x")?;
+    let function_var = Function::new("f", function, vec!["x"]);
+    
+    let res = quick_eval("f(f(6))", Store::new(vec![], vec![function_var]))?;
+
+    assert_eq!(res, Value::Scalar(54.));
+
+    Ok(())
+}
+
+#[test]
 fn calculus_eval1() -> Result<(), MathLibError> {
     let res = quick_eval("D(x^2, x, 3)", Store::empty())?;
 
@@ -267,16 +291,6 @@ fn hard_eval1() -> Result<(), MathLibError> {
 
     Ok(())
 }
-
-// #[test]
-// fn hard_eval2() -> Result<(), MathLibError> {
-//     let function = parse("4x+f(x)")?;
-//     let function_var = Variable::from_function("f", function, vec!["x"]);
-//
-//     let res = quick_eval("f(5)", vec![function_var])?;
-//
-//     panic!();
-// }
 
 #[test]
 fn easy_solve1() -> Result<(), MathLibError> {

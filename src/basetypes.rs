@@ -69,6 +69,22 @@ impl Store {
     pub fn from_funs<F: AsRef<[Function]>>(funs: F) -> Store {
         Store { vars: vec![], funs: funs.as_ref().to_vec() }
     }
+    pub fn add_var(&mut self, var: &Variable) {
+        self.vars = self.vars.iter()
+            .filter(|v| v.name != var.name)
+            .map(|v| v.to_owned())
+            .collect();
+
+        self.vars.push(var.to_owned());
+    }
+    pub fn add_fun(&mut self, fun: Function) {
+        self.funs = self.funs.iter()
+            .filter(|f| f.name != fun.name)
+            .map(|f| f.to_owned())
+            .collect();
+
+        self.funs.push(fun);
+    }
 }
 
 ///specifies a Value that can be a Matrix, Vector or a Scalar.
