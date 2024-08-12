@@ -102,7 +102,8 @@ pub mod maths;
 #[doc(hidden)]
 pub mod helpers;
 pub mod basetypes;
-pub mod latex_export;
+#[cfg(feature = "output")]
+pub mod latex;
 pub mod parser;
 pub mod errors;
 pub mod roots;
@@ -112,7 +113,8 @@ pub mod solver;
 mod tests;
 
 pub use basetypes::{Value, Variable};
-pub use latex_export::{export, ExportType, Step};
+#[cfg(feature = "output")]
+pub use latex::{export_history, ExportType, Step, image_from_latex};
 pub use parser::{parse, eval};
 pub use solver::solve;
 pub use errors::MathLibError;

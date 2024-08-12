@@ -1,147 +1,4 @@
-use crate::{basetypes::{Value, Variable}, errors::{EvalError, ParserError}, maths, Store};
-
-///specifies the type of operation for the [SimpleOperation](Operation::SimpleOperation) struct.
-///
-///This enum only contains simple mathematical operations with a left and right side or a maximum
-///of two arguments. For more advanced operations, see [AdvancedOpType].
-///
-///The order of the enum also represents the reverse order of the operation priority.
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub enum SimpleOpType { 
-    ///Add two scalars, vectors, or matrices (a+b)
-    Add,
-    ///Subtract two scalars, vectors, or matrices (a-b)
-    Sub,
-    ///Negate a scalar, vector or matrix or expression in parentheses (-(3*4))
-    Neg,
-    ///Multiply a scalar, vector or matrix with each other (Dotproduct, Matrix multiplication,
-    ///Scalar multiplication, ...) (a*b)
-    Mult,
-    ///Divide two scalars or a vector or matrix with a scalar (a/b)
-    Div,
-    ///Calculate the cross product using "#" (V1#V2), only works with dim(V) <= 3. When dim(V) < 3
-    ///the vector gets augmented with zeros
-    Cross,
-    ///Hidden multiplication between scalar and variable or parentheses (3a, 5(3+3), (3+5)(2+6))
-    HiddenMult,
-    ///Take a scalar to the power of another scalar using "^" (a^b)
-    Pow,
-    ///Index into vector using "?" ([3, 4, 5]?1 = 4)
-    Get,
-    ///Calculate the sin of a scalar (sin(a))
-    Sin,
-    ///Calculate the cos of a scalar (cos(a))
-    Cos,
-    ///Calculate the tan of a scalar (tan(a))
-    Tan,
-    ///Calculate the absolute value of a scalar or the length of a vector (abs(a))
-    Abs,
-    ///Calculate the square root of a scalar (sqrt(a))
-    Sqrt,
-    ///Calculate the natural log of a scalar (ln(a))
-    Ln,
-    ///Calculate the arcsin of a scalar (arcsin(a))
-    Arcsin,
-    ///Calculate the arccos of a scalar (arccos(a))
-    Arccos,
-    ///Calculate the arctan of a scalar (arctan(a))
-    Arctan, 
-    ///Prioritise expressions in parentheses (3*(5+5))
-    Parenths
-}
-
-/// specifies the type of operation for the [AdvancedOperation] struct.
-///
-/// This enum only contains advanced operations with more than 2 arguments. For simple operations,
-/// see [SimpleOpType].
-#[derive(Clone, Debug)]
-pub enum AdvancedOpType {
-    ///Calculate the derivative of a function f in respect to n at a value m (D(f, n, m))
-    Derivative,
-    ///Calculate the integral of a function f in respect to n with the bounds a and b (I(f, n, a, b))
-    Integral 
-}
-
-///used to construct a Binary Tree which is recursively evaluated by the [eval()] function.
-///
-///Binary can be a:
-///
-///- Value
-///- Variable
-///- Operation
-#[derive(Debug, Clone)]
-pub enum Binary {
-    Scalar(f64),
-    Vector(Box<Vec<Binary>>),
-    Matrix(Box<Vec<Vec<Binary>>>),
-    Variable(String),
-    Function {
-        name: String,
-        inputs: Box<Vec<Binary>>
-    },
-    Operation(Box<Operation>),
-}
-
-impl Binary {
-    pub fn from_value(val: Value) -> Binary {
-        match val {
-            Value::Scalar(s) => return Binary::Scalar(s),
-            Value::Vector(v) => {
-                let mut parsed_values = vec![];
-                for i in v {
-                    parsed_values.push(Binary::Scalar(i))
-                }
-                return Binary::Vector(Box::new(parsed_values))
-            },
-            Value::Matrix(m) => {
-                let mut parsed_rows = vec![];
-                for i in m {
-                    let mut row = vec![];
-                    for j in i {
-                        row.push(Binary::Scalar(j))
-                    }
-                    parsed_rows.push(row);
-                }
-                return Binary::Matrix(Box::new(parsed_rows));
-            }
-        }
-    }
-    pub fn from_variable<S: Into<String>>(val: S) -> Binary {
-        return Binary::Variable(val.into());
-    }
-    pub fn from_operation(val: Operation) -> Binary {
-        return Binary::Operation(Box::new(val));
-    }
-}
-
-///used to specify an operation in a parsed string. It is used together with [Binary] to
-///construct a Binary Tree from a mathematical expression.
-#[derive(Debug, Clone)]
-pub enum Operation {
-    SimpleOperation {
-        op_type: SimpleOpType,
-        left: Binary,
-        right: Binary,
-    },
-    AdvancedOperation(AdvancedOperation)
-}
-
-/// used to specify an advanced operation for more complex mathematical operatiors, such as
-/// functions with more than two inputs.
-#[derive(Debug, Clone)]
-pub enum AdvancedOperation{
-    Integral {
-        expr: Binary,
-        in_terms_of: String,
-        lower_bound: Binary,
-        upper_bound: Binary
-    },
-    Derivative {
-        expr: Binary,
-        in_terms_of: String,
-        at: Binary
-    }
-}
+use crate::{basetypes::{AdvancedOpType, AdvancedOperation, Operation, SimpleOpType, Value, Variable, AST}, errors::{EvalError, ParserError}, maths, Store};
 
 fn get_op_symbol(c: char) -> Option<SimpleOpType> {
     match c {
@@ -156,13 +13,13 @@ fn get_op_symbol(c: char) -> Option<SimpleOpType> {
     }
 }
 
-fn parse_value(s: String) -> Result<Binary, ParserError> {
+fn parse_value(s: String) -> Result<AST, ParserError> {
     if !s.contains(&"[") {
         let p = match s.parse::<f64>() {
             Ok(f) => f,
             Err(_) => return Err(ParserError::ParseValue(s))
         };
-        return Ok(Binary::Scalar(p));
+        return Ok(AST::Scalar(p));
     } else if s.len() > 2 {
         if s.len() > 4 && s[1..s.len()-1].contains(&"[") && s.chars().nth(1).unwrap() == '[' && s.chars().nth(s.len()-2).unwrap() == ']' {
             let mut output_m = vec![];
@@ -216,7 +73,9 @@ fn parse_value(s: String) -> Result<Binary, ParserError> {
                 return Err(ParserError::NotRectMatrix)
             }
             output_m.push(row);
+            #[cfg(feature = "column-major")]
             let mut col_matrix = vec![];
+            #[cfg(feature = "column-major")]
             for i in 0..output_m[0].len() {
                 let mut row = vec![];
                 for j in 0..output_m.len() {
@@ -224,7 +83,10 @@ fn parse_value(s: String) -> Result<Binary, ParserError> {
                 }
                 col_matrix.push(row);
             }
-            return Ok(Binary::Matrix(Box::new(col_matrix)));
+            #[cfg(feature = "column-major")]
+            return Ok(AST::Matrix(Box::new(col_matrix)));
+            #[cfg(not(feature = "column-major"))]
+            return Ok(AST::Matrix(Box::new(output_m)));
         } else if s.chars().nth(0).unwrap() == '[' && s.chars().nth(s.len()-1).unwrap() == ']' {
             let mut output_v = vec![];
             let mut n_buffer = String::new();
@@ -243,7 +105,7 @@ fn parse_value(s: String) -> Result<Binary, ParserError> {
                 return Err(ParserError::EmptyVec);
             }
             output_v.push(parse(n_buffer[0..n_buffer.len()-1].to_string())?);
-            return Ok(Binary::Vector(Box::new(output_v)));
+            return Ok(AST::Vector(Box::new(output_v)));
         } else {
             return Err(ParserError::MissingBracket)
         }
@@ -252,8 +114,8 @@ fn parse_value(s: String) -> Result<Binary, ParserError> {
     }
 }
 
-///used to construct a Binary Tree from a mathematical expression.
-pub fn parse<S: Into<String>>(expr: S) -> Result<Binary, ParserError> {
+///used to construct a AST Tree from a mathematical expression.
+pub fn parse<S: Into<String>>(expr: S) -> Result<AST, ParserError> {
     let expr = expr.into();
     if expr.is_empty() {
         return Err(ParserError::EmptyExpr);
@@ -283,10 +145,10 @@ pub fn parse<S: Into<String>>(expr: S) -> Result<Binary, ParserError> {
     if check_parenths {
         if expr_chars[0] == '(' && expr_chars[expr_chars.len()-1] == ')' {
             expr_chars = expr_chars[1..expr_chars.len()-1].iter().map(|c| *c).collect::<Vec<char>>();
-            return Ok(Binary::from_operation(Operation::SimpleOperation {
+            return Ok(AST::from_operation(Operation::SimpleOperation {
                 op_type: SimpleOpType::Parenths,
                 left: parse(expr_chars.iter().collect::<String>())?,
-                right: Binary::from_value(Value::Scalar(0.)) 
+                right: AST::from_value(Value::Scalar(0.)) 
             }));
         }
     }
@@ -360,7 +222,7 @@ pub fn parse<S: Into<String>>(expr: S) -> Result<Binary, ParserError> {
             if i.0 == o {
                 let left_b = parse(expr_chars[0..(i.1-i.2)].to_vec().iter().collect::<String>())?;
                 let right_b = parse(expr_chars[(i.1+i.3)..].to_vec().iter().collect::<String>())?; 
-                return Ok(Binary::from_operation(Operation::SimpleOperation {
+                return Ok(AST::from_operation(Operation::SimpleOperation {
                     op_type: i.0.clone(),
                     left: left_b,
                     right: right_b
@@ -372,10 +234,10 @@ pub fn parse<S: Into<String>>(expr: S) -> Result<Binary, ParserError> {
     // is it a negation?
 
     if expr_chars[0] == '-' {
-        return Ok(Binary::from_operation(Operation::SimpleOperation {
+        return Ok(AST::from_operation(Operation::SimpleOperation {
             op_type: SimpleOpType::Neg,
             left: parse(expr_chars[1..].to_vec().iter().collect::<String>())?,
-            right: Binary::from_value(Value::Scalar(0.))
+            right: AST::from_value(Value::Scalar(0.))
         }));
     }
 
@@ -386,10 +248,10 @@ pub fn parse<S: Into<String>>(expr: S) -> Result<Binary, ParserError> {
     for i in function_look_up {
         if expr_chars.iter().collect::<String>().starts_with(i.1) {
             let left_b = parse(expr_chars[i.1.len()..expr_chars.len()-1].to_vec().iter().collect::<String>())?;
-            return Ok(Binary::from_operation(Operation::SimpleOperation {
+            return Ok(AST::from_operation(Operation::SimpleOperation {
                 op_type: i.0,
                 left: left_b,
-                right: Binary::from_value(Value::Scalar(0.))
+                right: AST::from_value(Value::Scalar(0.))
             }));
         }
     }
@@ -426,7 +288,7 @@ pub fn parse<S: Into<String>>(expr: S) -> Result<Binary, ParserError> {
                     }
                     let parsed_function = parse(&args[0])?;
                     let parsed_value_at = parse(&args[2])?;
-                    return Ok(Binary::from_operation(Operation::AdvancedOperation(AdvancedOperation::Derivative {
+                    return Ok(AST::from_operation(Operation::AdvancedOperation(AdvancedOperation::Derivative {
                         expr: parsed_function,
                         in_terms_of: args[1].clone(),
                         at: parsed_value_at
@@ -457,7 +319,7 @@ pub fn parse<S: Into<String>>(expr: S) -> Result<Binary, ParserError> {
                     let parsed_function = parse(&args[0])?;
                     let parsed_lower_b = parse(&args[2])?;
                     let parsed_upper_b = parse(&args[3])?;
-                    return Ok(Binary::from_operation(Operation::AdvancedOperation(AdvancedOperation::Integral {
+                    return Ok(AST::from_operation(Operation::AdvancedOperation(AdvancedOperation::Integral {
                         expr: parsed_function,
                         in_terms_of: args[1].clone(),
                         lower_bound: parsed_lower_b,
@@ -490,13 +352,13 @@ pub fn parse<S: Into<String>>(expr: S) -> Result<Binary, ParserError> {
             }
         }
         inputs.push(parse(buffer)?);
-        return Ok(Binary::Function { name: expr.split("(").nth(0).unwrap().to_string(), inputs: Box::new(inputs) })
+        return Ok(AST::Function { name: expr.split("(").nth(0).unwrap().to_string(), inputs: Box::new(inputs) })
     }
     
     // is it a variable?
 
     if expr_chars[0].is_alphabetic() || expr_chars[0] == '\\' {
-        return Ok(Binary::from_variable(expr));
+        return Ok(AST::from_variable(expr));
     }
 
     let v = parse_value(expr_chars.iter().collect())?;
@@ -509,14 +371,14 @@ pub fn parse<S: Into<String>>(expr: S) -> Result<Binary, ParserError> {
 ///pi and e need to be provided as variables if used.
 ///
 ///If you are searching for a quick and easy way to evaluate an expression, have a look at [quick_eval()](fn@crate::quick_eval).
-pub fn eval(b: &Binary, state: &Store) -> Result<Value, EvalError> {
+pub fn eval(b: &AST, state: &Store) -> Result<Value, EvalError> {
     eval_rec(b, state, "")
 }
 
-fn eval_rec(b: &Binary, state: &Store, last_fn: &str) -> Result<Value, EvalError> {
+fn eval_rec(b: &AST, state: &Store, last_fn: &str) -> Result<Value, EvalError> {
     match b {
-        Binary::Scalar(s) => return Ok(Value::Scalar(*s)),
-        Binary::Vector(v) => {
+        AST::Scalar(s) => return Ok(Value::Scalar(*s)),
+        AST::Vector(v) => {
             let mut evaled_scalars = vec![];
             for i in &**v {
                 evaled_scalars.push(match eval_rec(i, state, last_fn)?.get_scalar() {
@@ -526,7 +388,7 @@ fn eval_rec(b: &Binary, state: &Store, last_fn: &str) -> Result<Value, EvalError
             }
             return Ok(Value::Vector(evaled_scalars))
         },
-        Binary::Matrix(m) => {
+        AST::Matrix(m) => {
             let mut evaled_rows = vec![];
             for i in &**m {
                 let mut row = vec![];
@@ -540,7 +402,7 @@ fn eval_rec(b: &Binary, state: &Store, last_fn: &str) -> Result<Value, EvalError
             }
             return Ok(Value::Matrix(evaled_rows))
         }, 
-        Binary::Variable(v) => {
+        AST::Variable(v) => {
             for i in state.vars.iter() {
                 if &i.name == v {
                     return Ok(i.value.clone());
@@ -549,7 +411,7 @@ fn eval_rec(b: &Binary, state: &Store, last_fn: &str) -> Result<Value, EvalError
 
             return Err(EvalError::NoVariable(v.to_string()));
         },
-        Binary::Function { name, inputs } => {
+        AST::Function { name, inputs } => {
             if last_fn == name {
                 return Err(EvalError::RecursiveFunction);
             }
@@ -588,7 +450,7 @@ fn eval_rec(b: &Binary, state: &Store, last_fn: &str) -> Result<Value, EvalError
 
             return eval_rec(&function.binary, &Store::new(&f_vars, &state.funs), name);
         },
-        Binary::Operation(o) => {
+        AST::Operation(o) => {
             match &**o {
                 Operation::SimpleOperation {op_type, left, right} => {
                     let lv = eval_rec(&left, state, last_fn)?;

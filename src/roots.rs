@@ -1,4 +1,4 @@
-use crate::{basetypes::{Value, Variable}, errors::{NewtonError, SolveError}, maths::{abs, calculus::calculate_derivative}, parser::{eval, AdvancedOperation, Binary, Operation}, Store, PREC};
+use crate::{basetypes::{AdvancedOperation, Operation, Value, Variable, AST}, errors::{NewtonError, SolveError}, maths::{abs, calculus::calculate_derivative}, parser::eval, Store, PREC};
 
 fn clean_results(res: Vec<Value>) -> Vec<Value> {
     if res.len() == 0 {
@@ -37,30 +37,30 @@ fn clean_results(res: Vec<Value>) -> Vec<Value> {
     return new_res;
 }
 
-fn find_vars_in_expr(b: &Binary, mut ov: Vec<String>) -> Vec<String> {
+fn find_vars_in_expr(b: &AST, mut ov: Vec<String>) -> Vec<String> {
     match b {
-        Binary::Variable(v) => {
+        AST::Variable(v) => {
             ov.push(v.to_string());
             return ov.to_owned();
         },
-        Binary::Function { inputs, .. } => {
+        AST::Function { inputs, .. } => {
             let mut found_vars = vec![];
             for i in &**inputs {
                 found_vars.append(&mut find_vars_in_expr(i, ov.clone()));
             }
             return found_vars;
         }
-        Binary::Scalar(_) => {
+        AST::Scalar(_) => {
             return ov.to_owned();
         },
-        Binary::Vector(v) => {
+        AST::Vector(v) => {
             let mut found_vars = vec![];
             for i in &**v {
                 found_vars.append(&mut find_vars_in_expr(i, ov.clone()));
             }
             return found_vars;
         },
-        Binary::Matrix(m) => {
+        AST::Matrix(m) => {
             let mut found_vars = vec![];
             for i in &**m {
                 for j in i {
@@ -69,7 +69,7 @@ fn find_vars_in_expr(b: &Binary, mut ov: Vec<String>) -> Vec<String> {
             }
             return found_vars;
         },
-        Binary::Operation(o) => {
+        AST::Operation(o) => {
             match &**o {
                 Operation::SimpleOperation { left, right, .. } => {
                     let mut lvars = find_vars_in_expr(left, ov.clone());
@@ -160,7 +160,7 @@ fn gauss_algorithm(v: &mut Vec<Vec<f64>>) -> Result<Value, NewtonError> {
     return Ok(Value::Vector(result_vec));
 }
 
-fn jacobi_and_gauss(search_expres: &[Binary], x: &[Variable], state: &mut Store, fx: &Vec<f64>) -> Result<Vec<Variable>, NewtonError> {
+fn jacobi_and_gauss(search_expres: &[AST], x: &[Variable], state: &mut Store, fx: &Vec<f64>) -> Result<Vec<Variable>, NewtonError> {
     let mut jacobi: Vec<Vec<f64>> = vec![];
 
     let mut vars: Vec<&Variable> = state.vars.iter().collect();
@@ -207,7 +207,7 @@ enum NewtonReturn {
     FinishedX(Vec<Variable>) 
 }
 
-fn newton(search_expres: &Vec<Binary>, check_expres: &Vec<Binary> , x: &Vec<Variable>, state: &mut Store) -> Result<NewtonReturn, NewtonError> {
+fn newton(search_expres: &Vec<AST>, check_expres: &Vec<AST> , x: &Vec<Variable>, state: &mut Store) -> Result<NewtonReturn, NewtonError> {
     let mut fx = vec![];
     let mut vars: Vec<&Variable> = state.vars.iter().collect();
     for i in x {
@@ -268,7 +268,7 @@ fn generate_combinations(arr: Vec<usize>, len: usize, prev_arr: Vec<usize>) -> V
 /// defines a root finder to find the roots of an expression/multiple expressions (system of equations).
 #[derive(Debug)]
 pub struct RootFinder {
-    expressions: Vec<Binary>,
+    expressions: Vec<AST>,
     combinations: Vec<Vec<usize>>,
     state: Store,
     search_vars_names: Vec<String>
@@ -281,19 +281,19 @@ impl RootFinder {
     ///
     /// If you want a simpler way of solving equations and systems of equations, have a look at
     /// [solve()](fn@crate::solver::solve) and [quick_solve()](fn@crate::quick_solve).
-    pub fn new(expressions: Vec<Binary>, state: Store) -> Result<RootFinder, SolveError> {
+    pub fn new(expressions: Vec<AST>, state: Store) -> Result<RootFinder, SolveError> {
         if expressions.len() == 0 {
             return Err(SolveError::NothingToDo);
         }
 
         for i in &expressions {
             match i {
-                Binary::Vector(_) => return Err(SolveError::NothingToDo),
-                Binary::Scalar(_) => return Err(SolveError::NothingToDo),
-                Binary::Matrix(_) => return Err(SolveError::NothingToDo),
-                Binary::Variable(_) => return Err(SolveError::NothingToDo),
-                Binary::Function {..} => return Err(SolveError::NothingToDo),
-                Binary::Operation(_) => {}
+                AST::Vector(_) => return Err(SolveError::NothingToDo),
+                AST::Scalar(_) => return Err(SolveError::NothingToDo),
+                AST::Matrix(_) => return Err(SolveError::NothingToDo),
+                AST::Variable(_) => return Err(SolveError::NothingToDo),
+                AST::Function {..} => return Err(SolveError::NothingToDo),
+                AST::Operation(_) => {}
             }
         }
 

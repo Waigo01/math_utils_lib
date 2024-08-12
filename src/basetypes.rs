@@ -1,5 +1,4 @@
 use crate::helpers::{center_in_string, round_and_format};
-use crate::parser::Binary;
 
 #[doc(hidden)]
 const VAR_SYMBOLS: [(&str, &str); 48] = [("\\alpha", "𝛼"), ("\\Alpha", "𝛢"), ("\\beta", "𝛽"), ("\\Beta", "𝛣"), ("\\gamma", "𝛾"), ("\\Gamma", "𝚪"),
@@ -40,12 +39,12 @@ impl Variable {
 #[derive(Debug, Clone)]
 pub struct Function {
     pub name: String,
-    pub binary: Binary,
+    pub binary: AST,
     pub inputs: Vec<String>
 }
 
 impl Function {
-    pub fn new<S: Into<String>>(name: S, binary: Binary, inputs: Vec<S>) -> Function {
+    pub fn new<S: Into<String>>(name: S, binary: AST, inputs: Vec<S>) -> Function {
         Function { name: name.into(), binary, inputs: inputs.into_iter().map(|s| s.into()).collect() }
     }
 }
@@ -84,6 +83,18 @@ impl Store {
             .collect();
 
         self.funs.push(fun);
+    }
+    pub fn remove_var<S: Into<String> + Clone>(&mut self, var_name: S) {
+        self.vars = self.vars.iter()
+            .filter(|v| v.name != var_name.clone().into())
+            .map(|v| v.to_owned())
+            .collect();
+    }
+    pub fn remove_fun<S: Into<String> + Clone>(&mut self, fun_name: S) {
+        self.funs = self.funs.iter()
+            .filter(|f| f.name != fun_name.clone().into())
+            .map(|f| f.to_owned())
+            .collect()
     }
 }
 
@@ -236,20 +247,20 @@ impl Value {
 
         return replace_string
     }
-    ///provides a more elegant way of converting a Value to a string using unicode
-    ///characters for matrices and vectors.
-    ///
-    ///This function also takes a var_name option which can be set to print the value with a
-    ///"<var_name> = " in front of it.
-    pub fn pretty_print(&self, mut var_name: Option<String>) -> String {
-        if let Some(ref v) = var_name {
-            for i in VAR_SYMBOLS {
-                if v == i.0 {
-                    var_name = Some(i.1.to_string());
-                    break;
-                }
+    pub fn to_unicode(&self) -> String {
+        self.pretty_print(None)
+    }
+    pub fn to_unicode_at_var<S: Into<String>>(&self, var_name: S) -> String {
+        let mut var_name_string = var_name.into();
+        for i in VAR_SYMBOLS {
+            if var_name_string == i.0 {
+                var_name_string = i.1.to_string();
+                break;
             }
         }
+        self.pretty_print(Some(var_name_string))
+    }
+    fn pretty_print(&self, var_name: Option<String>) -> String {
         match self {
             Value::Scalar(s) => {
                 let mut output_buffer = String::new();
@@ -367,9 +378,16 @@ impl Value {
             }
         }
     }
-    ///provides a way to print Values in LaTeX form, using amsmaths' pmatrix and
-    ///bmatrix for vectors and matrices.
-    pub fn latex_print(&self) -> String {
+    #[cfg(feature = "output")]
+    pub fn to_latex(&self) -> String {
+        self.latex_print()
+    }
+    #[cfg(feature = "output")]
+    pub fn to_latex_at_var<S: Into<String>>(&self, var_name: S) -> String{
+        format!("{} = {}", var_name.into(), self.latex_print())
+    }
+    #[cfg(feature = "output")]
+    fn latex_print(&self) -> String {
         match self {
             Value::Scalar(s) => return round_and_format(*s, true),
             Value::Vector(v) => {
@@ -401,5 +419,307 @@ impl Value {
                 return output_string;
             }
         }
+    }
+}
+
+///used to construct a AST Tree which is recursively evaluated by the [eval()] function.
+///
+///AST can be a:
+///
+///- Value
+///- Variable
+///- Operation
+#[derive(Debug, Clone)]
+pub enum AST {
+    Scalar(f64),
+    Vector(Box<Vec<AST>>),
+    Matrix(Box<Vec<Vec<AST>>>),
+    Variable(String),
+    Function {
+        name: String,
+        inputs: Box<Vec<AST>>
+    },
+    Operation(Box<Operation>),
+}
+
+impl AST {
+    pub fn from_value(val: Value) -> AST {
+        match val {
+            Value::Scalar(s) => return AST::Scalar(s),
+            Value::Vector(v) => {
+                let mut parsed_values = vec![];
+                for i in v {
+                    parsed_values.push(AST::Scalar(i))
+                }
+                return AST::Vector(Box::new(parsed_values))
+            },
+            Value::Matrix(m) => {
+                let mut parsed_rows = vec![];
+                for i in m {
+                    let mut row = vec![];
+                    for j in i {
+                        row.push(AST::Scalar(j))
+                    }
+                    parsed_rows.push(row);
+                }
+                return AST::Matrix(Box::new(parsed_rows));
+            }
+        }
+    }
+    pub fn from_variable<S: Into<String>>(val: S) -> AST {
+        return AST::Variable(val.into());
+    }
+    pub fn from_operation(val: Operation) -> AST {
+        return AST::Operation(Box::new(val));
+    }
+    pub fn to_string(&self) -> String {
+        match self {
+            AST::Scalar(s) => return round_and_format(*s, false),
+            AST::Vector(v) => return format!("[{}]", v.iter().map(|a| a.to_string()).collect::<Vec<String>>().join(", ")),
+            AST::Matrix(m) => return format!("[{}]", m.iter().map(|v| "[".to_string() + &v.iter().map(|v| v.to_string()).collect::<Vec<String>>().join(", ") + "]").collect::<Vec<String>>().join(", ")),
+            AST::Variable(v) => return v.to_string(),
+            AST::Function { name, inputs } => return format!("{}({})", name, inputs.iter().map(|i| i.to_string()).collect::<Vec<String>>().join(", ")),
+            AST::Operation(o) => {
+                match &**o  {
+                    Operation::SimpleOperation {op_type, left, right} => {
+                        let lv = &left.to_string();
+                        let rv = &right.to_string(); 
+                        match op_type {
+                            SimpleOpType::Get => return format!("{}_{}", lv, rv),
+                            SimpleOpType::Add => return format!("{} + {}", lv, rv),
+                            SimpleOpType::Sub => return format!("{} - {}", lv, rv),
+                            SimpleOpType::Mult => return format!("{} * {}", lv, rv),
+                            SimpleOpType::Neg => return format!("-{}", lv),
+                            SimpleOpType::Div => return format!("{} / {}", lv, rv),
+                            SimpleOpType::HiddenMult => return format!("{}{}", lv, rv),
+                            SimpleOpType::Pow => return format!("{}^({})", lv, rv),
+                            SimpleOpType::Cross => return format!("{}x{}", lv, rv),
+                            SimpleOpType::Abs => return format!("|{}|", lv),
+                            SimpleOpType::Sin => return format!("sin({})", lv),
+                            SimpleOpType::Cos => return format!("cos({})", lv),
+                            SimpleOpType::Tan => return format!("tan({})", lv),
+                            SimpleOpType::Sqrt => return format!("sqrt({})", lv),
+                            SimpleOpType::Ln => return format!("ln({})", lv),
+                            SimpleOpType::Arcsin => return format!("arcsin({})", lv),
+                            SimpleOpType::Arccos => return format!("arccos({})", lv),
+                            SimpleOpType::Arctan => return format!("arctan({})", lv),
+                            SimpleOpType::Parenths => return format!("({})", lv),
+                        }
+                    },
+                    Operation::AdvancedOperation(a) => {
+                        match a {
+                            AdvancedOperation::Integral {expr, in_terms_of, lower_bound, upper_bound} => {
+                                let eexpr = &expr.to_string();
+                                let elower_b = &lower_bound.to_string();
+                                let eupper_b = &upper_bound.to_string();
+                                return format!("\\I({}, {}, {}, {})", eexpr, in_terms_of, elower_b, eupper_b);
+                            },
+                            AdvancedOperation::Derivative {expr, in_terms_of, at} => {
+                                let eexpr = &expr.to_string();
+                                let eat = &at.to_string();
+                                return format!("D({}, {}, {})", eexpr, in_terms_of, eat);
+                            } 
+                        }
+                    }
+                } 
+            }
+        }
+    }
+    #[cfg(feature = "output")]
+    pub fn to_latex(&self) -> String {
+        self.latex_print()
+    }
+    #[cfg(feature = "output")]
+    pub fn to_latex_at_fun<S: Into<String>>(&self, fun_name: S, fun_inputs: Vec<S>) -> String {
+        format!("{}({}) = {}", fun_name.into(), fun_inputs.into_iter().map(|s| s.into()).collect::<Vec<String>>().join(", "), self.latex_print())
+    }
+    #[cfg(feature = "output")]
+    fn latex_print(&self) -> String {
+        match self {
+            AST::Scalar(s) => return round_and_format(*s, true),
+            AST::Vector(v) => {
+                let mut output_string = "\\begin{pmatrix}".to_string();
+                for i in 0..v.len() {
+                    let latex_vi = &v[i].latex_print();
+                    if i != v.len()-1 {
+                        output_string += &format!("{}\\\\ ", latex_vi);
+                    } else {
+                        output_string += &latex_vi;
+                    }
+                }
+                output_string += "\\end{pmatrix}";
+                output_string
+            },
+            AST::Matrix(m) => {
+                let mut output_string = "\\begin{bmatrix}".to_string();
+                for i in 0..m.len(){
+                    let mut row_string = "".to_string();
+                    for j in 0..m[i].len() {
+                        let matrix_mij = &m[i][j].latex_print();
+                        if j != m[i].len()-1 {
+                            row_string += &format!("{} & ", matrix_mij);
+                        } else {
+                            row_string += &format!("{} \\\\", matrix_mij);
+                        }
+                    }
+                    output_string += &row_string;
+                }
+                output_string += "\\end{bmatrix}";
+                return output_string;
+            },
+            AST::Variable(v) => {
+                if v == "pi" {
+                    return "\\pi".to_string();
+                }
+                return v.to_string()
+            },
+            AST::Function { name, inputs } => {
+                let mut inputs_str = String::new();
+                for (i, inp) in inputs.iter().enumerate() {
+                    let recursed = inp.latex_print();
+                    if i != inputs.len() - 1 {
+                        inputs_str += &format!("{}, ", recursed);
+                    } else {
+                        inputs_str += &format!("{}", recursed);
+                    }
+                }
+                return format!("{}({})", name, inputs_str);
+            }
+            AST::Operation(o) => {
+                match &**o  {
+                    Operation::SimpleOperation {op_type, left, right} => {
+                        let lv = &left.latex_print();
+                        let rv = &right.latex_print(); 
+                        match op_type {
+                            SimpleOpType::Get => return format!("{}_{{{}}}", lv, rv),
+                            SimpleOpType::Add => return format!("{}+{}", lv, rv),
+                            SimpleOpType::Sub => return format!("{}-{}", lv, rv),
+                            SimpleOpType::Mult => return format!("{}\\cdot {}", lv, rv),
+                            SimpleOpType::Neg => return format!("-{}", lv),
+                            SimpleOpType::Div => return format!("\\frac{{{}}}{{{}}}", lv, rv),
+                            SimpleOpType::HiddenMult => return format!("{}{}", lv, rv),
+                            SimpleOpType::Pow => return format!("{}^{{{}}}", lv, rv),
+                            SimpleOpType::Cross => return format!("{}\\times {}", lv, rv),
+                            SimpleOpType::Abs => return format!("|{}|", lv),
+                            SimpleOpType::Sin => return format!("\\sin{{({})}}", lv),
+                            SimpleOpType::Cos => return format!("\\cos{{({})}}", lv),
+                            SimpleOpType::Tan => return format!("\\tan{{({})}}", lv),
+                            SimpleOpType::Sqrt => return format!("\\sqrt{{{}}}", lv),
+                            SimpleOpType::Ln => return format!("\\ln{{({})}}", lv),
+                            SimpleOpType::Arcsin => return format!("\\arcsin{{({})}}", lv),
+                            SimpleOpType::Arccos => return format!("\\arccos{{({})}}", lv),
+                            SimpleOpType::Arctan => return format!("\\arctan{{({})}}", lv),
+                            SimpleOpType::Parenths => return format!("\\left({}\\right)", lv),
+                        }
+                    },
+                    Operation::AdvancedOperation(a) => {
+                        match a {
+                            AdvancedOperation::Integral {expr, in_terms_of, lower_bound, upper_bound} => {
+                                let eexpr = &expr.latex_print();
+                                let elower_b = &lower_bound.latex_print();
+                                let eupper_b = &upper_bound.latex_print();
+                                return format!("\\int_{{{}}}^{{{}}}{} d{}", elower_b, eupper_b, eexpr, in_terms_of);
+                            },
+                            AdvancedOperation::Derivative {expr, in_terms_of, at} => {
+                                let eexpr = &expr.latex_print();
+                                let eat = &at.latex_print();
+                                return format!("\\frac{{\\partial}}{{\\partial {}}}\\left({}\\right)_{{\\text{{at }}{} = {}}}", in_terms_of, eexpr, in_terms_of, eat);
+                            } 
+                        }
+                    }
+                } 
+            }
+        }
+    }
+}
+
+///specifies the type of operation for the [SimpleOperation](Operation::SimpleOperation) struct.
+///
+///This enum only contains simple mathematical operations with a left and right side or a maximum
+///of two arguments. For more advanced operations, see [AdvancedOpType].
+///
+///The order of the enum also represents the reverse order of the operation priority.
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum SimpleOpType { 
+    ///Add two scalars, vectors, or matrices (a+b)
+    Add,
+    ///Subtract two scalars, vectors, or matrices (a-b)
+    Sub,
+    ///Negate a scalar, vector or matrix or expression in parentheses (-(3*4))
+    Neg,
+    ///Multiply a scalar, vector or matrix with each other (Dotproduct, Matrix multiplication,
+    ///Scalar multiplication, ...) (a*b)
+    Mult,
+    ///Divide two scalars or a vector or matrix with a scalar (a/b)
+    Div,
+    ///Calculate the cross product using "#" (V1#V2), only works with dim(V) <= 3. When dim(V) < 3
+    ///the vector gets augmented with zeros
+    Cross,
+    ///Hidden multiplication between scalar and variable or parentheses (3a, 5(3+3), (3+5)(2+6))
+    HiddenMult,
+    ///Take a scalar to the power of another scalar using "^" (a^b)
+    Pow,
+    ///Index into vector using "?" ([3, 4, 5]?1 = 4)
+    Get,
+    ///Calculate the sin of a scalar (sin(a))
+    Sin,
+    ///Calculate the cos of a scalar (cos(a))
+    Cos,
+    ///Calculate the tan of a scalar (tan(a))
+    Tan,
+    ///Calculate the absolute value of a scalar or the length of a vector (abs(a))
+    Abs,
+    ///Calculate the square root of a scalar (sqrt(a))
+    Sqrt,
+    ///Calculate the natural log of a scalar (ln(a))
+    Ln,
+    ///Calculate the arcsin of a scalar (arcsin(a))
+    Arcsin,
+    ///Calculate the arccos of a scalar (arccos(a))
+    Arccos,
+    ///Calculate the arctan of a scalar (arctan(a))
+    Arctan, 
+    ///Prioritise expressions in parentheses (3*(5+5))
+    Parenths
+}
+
+/// specifies the type of operation for the [AdvancedOperation] struct.
+///
+/// This enum only contains advanced operations with more than 2 arguments. For simple operations,
+/// see [SimpleOpType].
+#[derive(Clone, Debug)]
+pub enum AdvancedOpType {
+    ///Calculate the derivative of a function f in respect to n at a value m (D(f, n, m))
+    Derivative,
+    ///Calculate the integral of a function f in respect to n with the bounds a and b (I(f, n, a, b))
+    Integral 
+}
+
+///used to specify an operation in a parsed string. It is used together with [AST] to
+///construct a AST Tree from a mathematical expression.
+#[derive(Debug, Clone)]
+pub enum Operation {
+    SimpleOperation {
+        op_type: SimpleOpType,
+        left: AST,
+        right: AST,
+    },
+    AdvancedOperation(AdvancedOperation)
+}
+
+/// used to specify an advanced operation for more complex mathematical operatiors, such as
+/// functions with more than two inputs.
+#[derive(Debug, Clone)]
+pub enum AdvancedOperation{
+    Integral {
+        expr: AST,
+        in_terms_of: String,
+        lower_bound: AST,
+        upper_bound: AST
+    },
+    Derivative {
+        expr: AST,
+        in_terms_of: String,
+        at: AST
     }
 }

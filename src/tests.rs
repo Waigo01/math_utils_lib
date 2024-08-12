@@ -431,3 +431,19 @@ fn hard_solve6() -> Result<(), MathLibError> {
 
     Ok(())
 }
+
+#[cfg(feature = "output")]
+#[test]
+fn output2() -> Result<(), MathLibError> {
+    use std::fs;
+
+    use crate::image_from_latex;
+
+    let res = quick_eval("3*3+6^5", Store::empty())?;
+
+    let png = image_from_latex(res.to_latex_at_var("H"), true)?;
+
+    let _ = fs::write("./test.png", png);
+
+    Ok(())
+}

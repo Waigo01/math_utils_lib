@@ -1,5 +1,10 @@
 use std::fmt::{self, Display};
 
+#[cfg(feature = "output")]
+use image::ImageError;
+#[cfg(feature = "output")]
+use mathjax::RenderError;
+
 ///provides an enum with the corresponding From implementations in order to use as a convenient return
 ///error type for this library.
 #[derive(Debug, PartialEq)]
@@ -9,6 +14,8 @@ pub enum MathLibError {
     SolveError(SolveError),
     QuickSolveError(QuickSolveError),
     QuickEvalError(QuickEvalError),
+    #[cfg(feature = "output")]
+    LatexError(LatexError),
     Other(String)
 }
 
@@ -21,6 +28,8 @@ impl MathLibError {
             MathLibError::SolveError(s) => return s.get_reason(),
             MathLibError::QuickEvalError(s) => return s.get_reason(),
             MathLibError::QuickSolveError(s) => return s.get_reason(),
+            #[cfg(feature = "output")]
+            MathLibError::LatexError(s) => return s.get_reason(),
             MathLibError::Other(s) => return s.to_string(),
         }
     }
@@ -53,6 +62,13 @@ impl From<QuickSolveError> for MathLibError {
 impl From<QuickEvalError> for MathLibError {
     fn from(value: QuickEvalError) -> Self {
         MathLibError::QuickEvalError(value)
+    }
+}
+
+#[cfg(feature = "output")]
+impl From<LatexError> for MathLibError {
+    fn from(value: LatexError) -> Self {
+        MathLibError::LatexError(value)
     }
 }
 
@@ -283,5 +299,43 @@ impl From<SolveError> for QuickSolveError {
 impl From<ParserError> for QuickSolveError {
     fn from(value: ParserError) -> Self {
         QuickSolveError::ParserError(value)
+    }
+}
+
+#[cfg(feature = "output")]
+#[derive(Debug, PartialEq)]
+pub enum LatexError {
+    LatexToPdfError(String),
+    LatexToImageError(String)
+}
+
+#[cfg(feature = "output")]
+impl LatexError {
+    pub fn get_reason(&self) -> String {
+        match self {
+            LatexError::LatexToPdfError(s) => return format!("Could not convert Latex to PDF: {}!", s),
+            LatexError::LatexToImageError(s) => return format!("Could not convert Pdf to Image: {}!", s)
+        }
+    }
+}
+
+#[cfg(feature = "output")]
+impl From<ImageError> for LatexError {
+    fn from(value: ImageError) -> Self {
+        LatexError::LatexToImageError(value.to_string())
+    }
+}
+
+#[cfg(feature = "output")]
+impl From<RenderError> for LatexError {
+    fn from(value: RenderError) -> Self {
+        LatexError::LatexToImageError(value.to_string())
+    }
+}
+
+#[cfg(feature = "output")]
+impl From<tectonic::Error> for LatexError {
+    fn from(value: tectonic::Error) -> Self {
+        LatexError::LatexToPdfError(value.to_string())
     }
 }

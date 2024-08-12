@@ -1,11 +1,11 @@
-use crate::{basetypes::Store, errors::EvalError, eval, parser::{Binary, Operation, SimpleOpType}, Value, Variable, PREC};
+use crate::{basetypes::{Operation, SimpleOpType, Store, AST}, errors::EvalError, eval, Value, Variable, PREC};
 
 use super::{add, mult};
 
 /// calculates the integral of an expression in terms of a variable with a lower and a upper bound.
 ///
 /// Only scalars are supported as lower and upper bounds.
-pub fn calculate_integral(expr: &Binary, in_terms_of: String, lower_bound: Value, upper_bound: Value, state: &Store) -> Result<Value, EvalError> {
+pub fn calculate_integral(expr: &AST, in_terms_of: String, lower_bound: Value, upper_bound: Value, state: &Store) -> Result<Value, EvalError> {
     let mut mut_vars = state.vars.to_owned();
     for i in 0..mut_vars.len() {
         if mut_vars[i].name == in_terms_of {
@@ -44,7 +44,7 @@ pub fn calculate_integral(expr: &Binary, in_terms_of: String, lower_bound: Value
 /// The function also takes an optional fx value, which is the value f(x). This can be used in
 /// order to increase performance by not having to calculate f(x) twice for an application such as
 /// newtons method.
-pub fn calculate_derivative(expr: &Binary, in_terms_of: &str, at: &Value, mut fx: Option<Value>, state: &Store) -> Result<Value, EvalError> {
+pub fn calculate_derivative(expr: &AST, in_terms_of: &str, at: &Value, mut fx: Option<Value>, state: &Store) -> Result<Value, EvalError> {
     let mut mut_vars = state.vars.to_owned();
     for i in 0..mut_vars.len() {
         if mut_vars[i].name == in_terms_of {
@@ -61,14 +61,14 @@ pub fn calculate_derivative(expr: &Binary, in_terms_of: &str, at: &Value, mut fx
             }
             mut_vars.push(Variable::new(in_terms_of, Value::Scalar(s+10f64.powi(-(PREC)))));
             let fxh = &eval(expr, &Store::new(&mut_vars, &state.funs))?;
-            let h = Binary::from_operation(Operation::SimpleOperation {
+            let h = AST::from_operation(Operation::SimpleOperation {
                 op_type: SimpleOpType::Div,
-                left: Binary::from_operation(Operation::SimpleOperation {
+                left: AST::from_operation(Operation::SimpleOperation {
                     op_type: SimpleOpType::Sub,
-                    left: Binary::from_value(fxh.clone()),
-                    right: Binary::from_value(fx.to_owned().unwrap())
+                    left: AST::from_value(fxh.clone()),
+                    right: AST::from_value(fx.to_owned().unwrap())
                 }),
-                right: Binary::from_value(Value::Scalar(10f64.powi(-(PREC))))
+                right: AST::from_value(Value::Scalar(10f64.powi(-(PREC))))
             });
             return Ok(eval(&h, &Store::new(&mut_vars, &state.funs))?);
         } 
