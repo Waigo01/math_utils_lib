@@ -56,6 +56,12 @@ pub struct Store {
 }
 
 impl Store {
+    pub fn default() -> Self {
+        Store::from_vars(vec![
+            Variable::new("pi", Value::Scalar(std::f64::consts::PI)),
+            Variable::new("e", Value::Scalar(std::f64::consts::E))
+        ])
+    }
     pub fn new<V: AsRef<[Variable]>, F: AsRef<[Function]>>(vars: V, funs: F) -> Store {
         Store {vars: vars.as_ref().to_vec(), funs: funs.as_ref().to_vec()}
     }

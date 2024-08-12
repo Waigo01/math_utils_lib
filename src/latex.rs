@@ -4,10 +4,10 @@ use mathjax::MathJax;
 use crate::{basetypes::{Value, AST}, errors::LatexError};
 use std::io::Cursor;
 
-pub fn image_from_latex(latex: String, invert_colors: bool) -> Result<Vec<u8>, LatexError> {
+pub fn image_from_latex(latex: String, invert_colors: bool, scale: f32) -> Result<Vec<u8>, LatexError> {
     let renderer = MathJax::new().unwrap();
     let result = renderer.render(latex)?;
-    let mut image = result.into_image(10.0)?;
+    let mut image = result.into_image(scale)?;
 
     if invert_colors {
         image.invert();
