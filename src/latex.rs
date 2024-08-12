@@ -115,7 +115,7 @@ pub fn export_history(history: Vec<Step>, export_type: ExportType) -> Result<Vec
                     }
                 } 
             },
-            Step::Fun{term, inputs, name} => output_string += &term.to_latex_at_fun(name, inputs)
+            Step::Fun{term, inputs, name} => output_string += &term.to_latex_at_fun(name, inputs, true)
         }
         j += 1;
     }

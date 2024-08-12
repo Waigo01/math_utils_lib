@@ -389,8 +389,14 @@ impl Value {
         self.latex_print()
     }
     #[cfg(feature = "output")]
-    pub fn to_latex_at_var<S: Into<String>>(&self, var_name: S) -> String{
-        format!("{} = {}", var_name.into(), self.latex_print())
+    pub fn to_latex_at_var<S: Into<String>>(&self, var_name: S, add_aligner: bool) -> String{
+        let aligner;
+        if add_aligner {
+            aligner = "&".to_string();
+        } else {
+            aligner = String::new();
+        }
+        format!("{} {}= {}", var_name.into(), aligner, self.latex_print())
     }
     #[cfg(feature = "output")]
     fn latex_print(&self) -> String {
@@ -536,8 +542,14 @@ impl AST {
         self.latex_print()
     }
     #[cfg(feature = "output")]
-    pub fn to_latex_at_fun<S: Into<String>>(&self, fun_name: S, fun_inputs: Vec<S>) -> String {
-        format!("{}({}) = {}", fun_name.into(), fun_inputs.into_iter().map(|s| s.into()).collect::<Vec<String>>().join(", "), self.latex_print())
+    pub fn to_latex_at_fun<S: Into<String>>(&self, fun_name: S, fun_inputs: Vec<S>, add_aligner: bool) -> String {
+        let aligner;
+        if add_aligner {
+            aligner = "&".to_string();
+        } else {
+            aligner = String::new();
+        }
+        format!("{}({}) {}= {}", fun_name.into(), fun_inputs.into_iter().map(|s| s.into()).collect::<Vec<String>>().join(", "), aligner, self.latex_print())
     }
     #[cfg(feature = "output")]
     fn latex_print(&self) -> String {

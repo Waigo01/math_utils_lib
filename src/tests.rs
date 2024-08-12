@@ -441,7 +441,7 @@ fn output2() -> Result<(), MathLibError> {
 
     let res = quick_eval("3*3+6^5", Store::empty())?;
 
-    let png = image_from_latex(res.to_latex_at_var("H"), true, 2.0)?;
+    let png = image_from_latex(res.to_latex_at_var("H", false), true, 2.0)?;
 
     let _ = fs::write("./test.png", png);
 
