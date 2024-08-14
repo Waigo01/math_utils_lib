@@ -114,7 +114,7 @@ mod tests;
 
 pub use basetypes::{Value, Variable};
 #[cfg(feature = "output")]
-pub use latex::{export_history, ExportType, Step, image_from_latex};
+pub use latex::{export_history, ExportType, Step, png_from_latex, svg_from_latex};
 pub use parser::{parse, eval};
 pub use solver::solve;
 pub use errors::MathLibError;
