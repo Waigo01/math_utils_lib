@@ -4,7 +4,7 @@ use mathjax::MathJax;
 use crate::{basetypes::{Value, AST}, errors::LatexError};
 use std::io::Cursor;
 
-pub fn image_from_latex(latex: String, invert_colors: bool, scale: f32) -> Result<Vec<u8>, LatexError> {
+pub fn png_from_latex(latex: String, invert_colors: bool, scale: f32) -> Result<Vec<u8>, LatexError> {
     let renderer = MathJax::new().unwrap();
     let result = renderer.render(latex)?;
     let mut image = result.into_image(scale)?;
@@ -18,6 +18,13 @@ pub fn image_from_latex(latex: String, invert_colors: bool, scale: f32) -> Resul
     image.write_to(&mut buffer, ImageFormat::Png)?;
 
     Ok(buffer.into_inner())
+}
+
+pub fn svg_from_latex(latex: String) -> Result<String, LatexError> {
+    let renderer = MathJax::new().unwrap();
+    let result = renderer.render(latex)?;
+    
+    Ok(result.into_raw())
 }
 
 ///provides a way of saving a step. A step can either be a: 

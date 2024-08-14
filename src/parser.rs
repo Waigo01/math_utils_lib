@@ -429,7 +429,7 @@ fn eval_rec(b: &AST, state: &Store, last_fn: &str) -> Result<Value, EvalError> {
             let function = function.unwrap();
             
             if inputs.len() != function.inputs.len() {
-                return Err(EvalError::WrongNumberOfArgs((inputs.len(), function.inputs.len())));
+                return Err(EvalError::WrongNumberOfArgs((function.inputs.len(), inputs.len())));
             }
 
             let mut eval_inputs = vec![];
