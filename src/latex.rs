@@ -4,14 +4,12 @@ use mathjax::MathJax;
 use crate::{basetypes::{Value, AST}, errors::LatexError};
 use std::io::Cursor;
 
-pub fn png_from_latex(latex: String, invert_colors: bool, scale: f32) -> Result<Vec<u8>, LatexError> {
+pub fn png_from_latex<S: Into<String>>(latex: String, scale: f32, line_color: S) -> Result<Vec<u8>, LatexError> {
     let renderer = MathJax::new().unwrap();
-    let result = renderer.render(latex)?;
-    let mut image = result.into_image(scale)?;
+    let mut result = renderer.render(latex)?;
+    result.set_color(&line_color.into());
 
-    if invert_colors {
-        image.invert();
-    }
+    let image = result.into_image(scale)?;
 
     let mut buffer: Cursor<Vec<u8>> = Cursor::new(vec![]);
 
@@ -20,9 +18,10 @@ pub fn png_from_latex(latex: String, invert_colors: bool, scale: f32) -> Result<
     Ok(buffer.into_inner())
 }
 
-pub fn svg_from_latex(latex: String) -> Result<String, LatexError> {
+pub fn svg_from_latex<S: Into<String>>(latex: String, line_color: S) -> Result<String, LatexError> {
     let renderer = MathJax::new().unwrap();
-    let result = renderer.render(latex)?;
+    let mut result = renderer.render(latex)?;
+    result.set_color(&line_color.into());
     
     Ok(result.into_raw())
 }
