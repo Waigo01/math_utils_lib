@@ -58,6 +58,122 @@ pub enum Step {
     }
 }
 
+impl Step {
+    pub fn to_latex_with_tag(&self, equation_number: i32) -> String {
+        match self {
+            Step::Calc{term, result, variable_save} => {
+                let mut aligner = "&";
+                let mut latex = "".to_string();
+                if variable_save.is_some() {
+                    latex += &format!("{} &= ", variable_save.clone().unwrap());
+                    aligner = "";
+                }
+                let expression = term.to_latex();
+                let res = result.to_latex();
+
+                if expression != res {
+                    latex += &format!("{} {}= {} \\tag{{{}}}\\label{{eq:{}}} \\\\ \\\\ \n", expression, aligner, res, equation_number, equation_number);
+                } else {
+                    latex += &format!("{} \\tag{{{}}}\\label{{eq:{}}} \\\\ \\\\ \n", expression, equation_number, equation_number);
+                }
+
+                return latex;
+            }, 
+            Step::Equ{eqs, results, variable_save} => {
+                let mut recursed_eq = vec![];
+                let mut latex = "".to_string();
+                for i in eqs {
+                    let left = i.0.to_latex();
+                    let right = i.1.to_latex();
+
+                    recursed_eq.push((left, right));
+                }
+                for i in recursed_eq {
+                    latex += &format!("{} &= {} \\\\ \n", i.0, i.1);
+                }
+                latex += "\\\\ \n";
+                if results.len() == 0 {
+                    latex += &format!("&\\text{{No solutions found!}} \\tag{{{}}}\\label{{eq:{}}} \\\\ \\\\ \n", equation_number, equation_number);
+                }
+                for i in 0..results.len() {
+                    if variable_save.is_some() {
+                        latex += &format!("{}_{{{}}} &= {}", variable_save.clone().unwrap(), i, results[i].to_latex());
+                    } else {
+                        latex += &format!("x_{{{}}} &= {}", i, results[i].to_latex());
+                    }
+                    if i == (results.len() as f32/2.).floor() as usize {
+                        latex += &format!(" \\tag{{{}}}\\label{{eq:{}}} ", equation_number, equation_number);
+                    }
+                    if i == results.len()-1{
+                        latex += "\\\\ \\\\ \n";
+                    } else {
+                        latex += "\\\\ \n";
+                    }
+                }
+
+                return latex;
+            },
+            Step::Fun{term, inputs, name} => {
+                return term.to_latex_at_fun(name, inputs.iter().collect(), true) + &format!(" \\tag{{{}}}\\label{{eq:{}}} \\\\ \\\\ \n", equation_number, equation_number);
+            }
+        }
+    }
+    pub fn to_latex(&self) -> String {
+        match self {
+            Step::Calc{term, result, variable_save} => {
+                let mut aligner = "&";
+                let mut latex = "".to_string();
+                if variable_save.is_some() {
+                    latex += &format!("{} &= ", variable_save.clone().unwrap());
+                    aligner = "";
+                }
+                let expression = term.to_latex();
+                let res = result.to_latex();
+
+                if expression != res {
+                    latex += &format!("{} {}= {}", expression, aligner, res);
+                } else {
+                    latex += &format!("{}", expression);
+                }
+
+                return latex;
+            }, 
+            Step::Equ{eqs, results, variable_save} => {
+                let mut recursed_eq = vec![];
+                let mut latex = "".to_string();
+                for i in eqs {
+                    let left = i.0.to_latex();
+                    let right = i.1.to_latex();
+
+                    recursed_eq.push((left, right));
+                }
+                for i in recursed_eq {
+                    latex += &format!("{} &= {} \\\\ \n", i.0, i.1);
+                }
+                latex += "\\\\ \n";
+                if results.len() == 0 {
+                    latex += &format!("&\\text{{No solutions found!}}");
+                }
+                for i in 0..results.len() {
+                    if variable_save.is_some() {
+                        latex += &format!("{}_{{{}}} &= {}", variable_save.clone().unwrap(), i, results[i].to_latex());
+                    } else {
+                        latex += &format!("x_{{{}}} &= {}", i, results[i].to_latex());
+                    }
+                    if i == results.len()-1{
+                        latex += "\\\\ \\\\ \n";
+                    } else {
+                        latex += "\\\\ \n";
+                    }
+                }
+
+                return latex;
+            },
+            Step::Fun{term, inputs, name} => return term.to_latex_at_fun(name, inputs.iter().collect(), true)
+        }
+    }
+}
+
 ///describes the type of export done by the [export()] function:
 ///
 ///- Pdf: Save as one pdf file.
@@ -72,58 +188,8 @@ pub enum ExportType {
 ///by export_type (see [ExportType] for further details).
 pub fn export_history(history: Vec<Step>, export_type: ExportType) -> Result<Vec<u8>, LatexError> {
     let mut output_string = "\\documentclass[12pt, letterpaper]{article}\n\\usepackage{amsmath}\n\\usepackage[margin=1in]{geometry}\n\\allowdisplaybreaks\n\\begin{document}\n\\begin{align*}\n".to_string();
-    let mut j = 0;
-    for s in history {
-        match s {
-            Step::Calc{term, result, variable_save} => {
-                let mut aligner = "&";
-                if variable_save.is_some() {
-                    output_string += &format!("{} &= ", variable_save.unwrap());
-                    aligner = "";
-                }
-                let expression = term.to_latex();
-                let res = result.to_latex();
-
-                if expression != res {
-                    output_string += &format!("{} {}= {} \\tag{{{}}}\\label{{eq:{}}} \\\\ \\\\ \n", expression, aligner, res, j+1, j+1);
-                } else {
-                    output_string += &format!("{} \\tag{{{}}}\\label{{eq:{}}} \\\\ \\\\ \n", expression, j+1, j+1);
-                }
-            }, 
-            Step::Equ{eqs, results, variable_save} => {
-                let mut recursed_eq = vec![];
-                for i in &eqs {
-                    let left = i.0.to_latex();
-                    let right = i.1.to_latex();
-
-                    recursed_eq.push((left, right));
-                }
-                for i in recursed_eq {
-                    output_string += &format!("{} &= {} \\\\ \n", i.0, i.1);
-                }
-                output_string += "\\\\ \n";
-                if results.len() == 0 {
-                    output_string += &format!("&\\text{{No solutions found!}} \\tag{{{}}}\\label{{eq:{}}} \\\\ \\\\ \n", j+1, j+1);
-                }
-                for i in 0..results.len() {
-                    if variable_save.is_some() {
-                        output_string += &format!("{}_{{{}}} &= {}", variable_save.clone().unwrap(), i, results[i].to_latex());
-                    } else {
-                        output_string += &format!("x_{{{}}} &= {}", i, results[i].to_latex());
-                    }
-                    if i == (results.len() as f32/2.).floor() as usize {
-                        output_string += &format!(" \\tag{{{}}}\\label{{eq:{}}} ", j+1, j+1);
-                    }
-                    if i == results.len()-1{
-                        output_string += "\\\\ \\\\ \n";
-                    } else {
-                        output_string += "\\\\ \n";
-                    }
-                } 
-            },
-            Step::Fun{term, inputs, name} => output_string += &term.to_latex_at_fun(name, inputs, true)
-        }
-        j += 1;
+    for (i, s) in history.iter().enumerate() {
+        output_string += &s.to_latex_with_tag(i as i32+1);
     }
     output_string += "\\end{align*}\n\\end{document}";
 
