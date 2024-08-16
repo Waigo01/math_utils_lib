@@ -434,7 +434,7 @@ fn hard_solve6() -> Result<(), MathLibError> {
 
 #[cfg(feature = "output")]
 #[test]
-fn output2() -> Result<(), MathLibError> {
+fn output1() -> Result<(), MathLibError> {
     use std::fs;
 
     use crate::png_from_latex;

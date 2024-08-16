@@ -39,13 +39,13 @@ impl Variable {
 #[derive(Debug, Clone)]
 pub struct Function {
     pub name: String,
-    pub binary: AST,
+    pub ast: AST,
     pub inputs: Vec<String>
 }
 
 impl Function {
-    pub fn new<S: Into<String>>(name: S, binary: AST, inputs: Vec<S>) -> Function {
-        Function { name: name.into(), binary, inputs: inputs.into_iter().map(|s| s.into()).collect() }
+    pub fn new<S: Into<String>>(name: S, ast: AST, inputs: Vec<S>) -> Function {
+        Function { name: name.into(), ast, inputs: inputs.into_iter().map(|s| s.into()).collect() }
     }
 }
 
@@ -478,7 +478,7 @@ impl AST {
             }
         }
     }
-    pub fn from_variable<S: Into<String>>(val: S) -> AST {
+    pub fn from_variable_name<S: Into<String>>(val: S) -> AST {
         return AST::Variable(val.into());
     }
     pub fn from_operation(val: Operation) -> AST {

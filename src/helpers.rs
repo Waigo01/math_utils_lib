@@ -32,6 +32,9 @@ pub fn center_in_string(f: String, n: i32) -> String {
 }
 
 #[doc(hidden)]
+
+
+#[doc(hidden)]
 pub fn round_and_format(x: f64, latex: bool) -> String {
     if (x*10f64.powi(PREC-2)).round()/10f64.powi(PREC-2) == 0. && !latex && x != 0. {
         let mut scientific = format!("{:+e}", x);

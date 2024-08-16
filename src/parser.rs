@@ -13,6 +13,39 @@ fn get_op_symbol(c: char) -> Option<SimpleOpType> {
     }
 }
 
+pub fn check_var_name(var: String) -> bool {
+    let var_chars: Vec<char> = var.chars().collect();
+    if !var_chars[0].is_alphabetic() && var_chars[0] != '\\' {
+        return false;
+    }
+    let mut parenths_open = 0;
+    let mut previous_char = '\\';
+    for i in var_chars {
+        if i == '{' {
+            parenths_open += 1;
+        }
+        if i == '}' {
+            parenths_open -= 1;
+        }
+        if (i == '?'
+            || i == '+'
+            || i == '-'
+            || i == '*'
+            || i == '/'
+            || i == '^'
+            || i == '#' 
+            || i == '=')
+            && parenths_open == 0{
+            return false
+        }
+        if i.is_numeric() && parenths_open == 0 && previous_char != '_' {
+            return false;
+        }
+        previous_char = i;
+    }
+    return true;
+}
+
 fn parse_value(s: String) -> Result<AST, ParserError> {
     if !s.contains(&"[") {
         let p = match s.parse::<f64>() {
@@ -351,14 +384,24 @@ pub fn parse<S: Into<String>>(expr: S) -> Result<AST, ParserError> {
                 buffer.push(*i);
             }
         }
+
+        let func_name = expr.split("(").nth(0).unwrap().to_string(); 
+
+        if check_var_name(func_name.clone()) == false {
+            return Err(ParserError::InvalidFunctionName(func_name));
+        }
         inputs.push(parse(buffer)?);
-        return Ok(AST::Function { name: expr.split("(").nth(0).unwrap().to_string(), inputs: Box::new(inputs) })
+        return Ok(AST::Function { name: func_name, inputs: Box::new(inputs) })
     }
     
     // is it a variable?
 
     if expr_chars[0].is_alphabetic() || expr_chars[0] == '\\' {
-        return Ok(AST::from_variable(expr));
+        if check_var_name(expr.clone()) == false {
+            return Err(ParserError::InvalidVariableName(expr));
+        }
+
+        return Ok(AST::from_variable_name(expr));
     }
 
     let v = parse_value(expr_chars.iter().collect())?;
@@ -448,7 +491,7 @@ fn eval_rec(b: &AST, state: &Store, last_fn: &str) -> Result<Value, EvalError> {
                 }
             }
 
-            return eval_rec(&function.binary, &Store::new(&f_vars, &state.funs), name);
+            return eval_rec(&function.ast, &Store::new(&f_vars, &state.funs), name);
         },
         AST::Operation(o) => {
             match &**o {

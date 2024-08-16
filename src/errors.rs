@@ -83,6 +83,8 @@ pub enum ParserError {
     UnmatchedCloseDelimiter,
     EquationWithoutEqual,
     TooManyEquals,
+    InvalidVariableName(String),
+    InvalidFunctionName(String),
     WrongNumberOfArgs(String)
 }
 
@@ -98,6 +100,8 @@ impl ParserError {
             ParserError::UnmatchedCloseDelimiter => return "Unmatched closing delimiter!".to_string(),
             ParserError::EquationWithoutEqual => return "Must have = in equation!".to_string(),
             ParserError::TooManyEquals => return "Too many = in equation. If you want to specify a system of equations please seperate each equation with a ','.".to_string(),
+            ParserError::InvalidVariableName(s) => return format!("Found invalid variable name: {}!", s),
+            ParserError::InvalidFunctionName(s) => return format!("Found invalid function name: {}!", s),
             ParserError::WrongNumberOfArgs(s) => return format!("Wrong number of arguments for {} operation!", s)
         }
     } 
