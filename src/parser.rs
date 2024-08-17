@@ -13,7 +13,7 @@ fn get_op_symbol(c: char) -> Option<SimpleOpType> {
     }
 }
 
-pub fn check_var_name(var: String) -> bool {
+pub fn is_valid_var_name(var: String) -> bool {
     let var_chars: Vec<char> = var.chars().collect();
     if !var_chars[0].is_alphabetic() && var_chars[0] != '\\' {
         return false;
@@ -387,7 +387,7 @@ pub fn parse<S: Into<String>>(expr: S) -> Result<AST, ParserError> {
 
         let func_name = expr.split("(").nth(0).unwrap().to_string(); 
 
-        if check_var_name(func_name.clone()) == false {
+        if is_valid_var_name(func_name.clone()) == false {
             return Err(ParserError::InvalidFunctionName(func_name));
         }
         inputs.push(parse(buffer)?);
@@ -397,7 +397,7 @@ pub fn parse<S: Into<String>>(expr: S) -> Result<AST, ParserError> {
     // is it a variable?
 
     if expr_chars[0].is_alphabetic() || expr_chars[0] == '\\' {
-        if check_var_name(expr.clone()) == false {
+        if is_valid_var_name(expr.clone()) == false {
             return Err(ParserError::InvalidVariableName(expr));
         }
 

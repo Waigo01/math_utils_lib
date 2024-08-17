@@ -23,7 +23,7 @@ const VAR_SYMBOLS: [(&str, &str); 48] = [("\\alpha", "𝛼"), ("\\Alpha", "𝛢"
 ///     Variable::new("pi".to_string(), Value::Scalar(3.14159)),
 ///];
 ///```
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Variable {
     pub name: String,
     pub value: Value
@@ -36,7 +36,7 @@ impl Variable {
     } 
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Function {
     pub name: String,
     pub ast: AST,
@@ -49,7 +49,7 @@ impl Function {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Store {
     pub vars: Vec<Variable>,
     pub funs: Vec<Function>
@@ -441,7 +441,7 @@ impl Value {
 ///- Value
 ///- Variable
 ///- Operation
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum AST {
     Scalar(f64),
     Vector(Box<Vec<AST>>),
@@ -657,7 +657,7 @@ impl AST {
 ///of two arguments. For more advanced operations, see [AdvancedOpType].
 ///
 ///The order of the enum also represents the reverse order of the operation priority.
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum SimpleOpType { 
     ///Add two scalars, vectors, or matrices (a+b)
     Add,
@@ -705,7 +705,7 @@ pub enum SimpleOpType {
 ///
 /// This enum only contains advanced operations with more than 2 arguments. For simple operations,
 /// see [SimpleOpType].
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum AdvancedOpType {
     ///Calculate the derivative of a function f in respect to n at a value m (D(f, n, m))
     Derivative,
@@ -715,7 +715,7 @@ pub enum AdvancedOpType {
 
 ///used to specify an operation in a parsed string. It is used together with [AST] to
 ///construct a AST Tree from a mathematical expression.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Operation {
     SimpleOperation {
         op_type: SimpleOpType,
@@ -727,7 +727,7 @@ pub enum Operation {
 
 /// used to specify an advanced operation for more complex mathematical operatiors, such as
 /// functions with more than two inputs.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum AdvancedOperation{
     Integral {
         expr: AST,

@@ -7,7 +7,7 @@ use mathjax::RenderError;
 
 ///provides an enum with the corresponding From implementations in order to use as a convenient return
 ///error type for this library.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum MathLibError {
     ParserError(ParserError),
     EvalError(EvalError),
@@ -72,7 +72,7 @@ impl From<LatexError> for MathLibError {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum ParserError {
     ParseValue(String),
     MissingBracket,
@@ -113,7 +113,7 @@ impl Display for ParserError {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum EvalError {
     NonScalarInVector,
     NonScalarInMatrix,
@@ -150,7 +150,7 @@ impl From<String> for EvalError {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum SolveError {
     VectorInEq,
     MatrixInEq,
@@ -195,7 +195,7 @@ impl From<NewtonError> for SolveError {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum NewtonError {
     UnderdeterminedSystem,
     InfiniteSolutions,
@@ -234,7 +234,7 @@ impl From<String> for NewtonError {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum QuickEvalError {
     DuplicateVars,
     ParserError(ParserError),
@@ -269,7 +269,7 @@ impl From<ParserError> for QuickEvalError {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum QuickSolveError {
     DuplicateVars,
     NoEq,
@@ -307,7 +307,7 @@ impl From<ParserError> for QuickSolveError {
 }
 
 #[cfg(feature = "output")]
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum LatexError {
     LatexToPdfError(String),
     LatexToImageError(String)
