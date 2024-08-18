@@ -1,29 +1,38 @@
-use image::ImageFormat;
-use mathjax::MathJax;
+#[cfg(feature = "output")]
+use gdk_pixbuf::{gio::{Cancellable, MemoryInputStream}, glib::Bytes, Pixbuf};
+#[cfg(feature = "output")]
+use mathjax_svg::convert_to_svg;
+#[cfg(feature = "output")]
+use usvg::{Options, Tree};
 
-use crate::{basetypes::{Value, AST}, errors::LatexError};
-use std::io::Cursor;
+#[cfg(feature = "output")]
+use crate::errors::LatexError;
 
+use crate::basetypes::{Value, AST};
+
+#[cfg(feature = "output")]
 pub fn png_from_latex<S: Into<String>>(latex: String, scale: f32, line_color: S) -> Result<Vec<u8>, LatexError> {
-    let renderer = MathJax::new().unwrap();
-    let mut result = renderer.render(latex)?;
-    result.set_color(&line_color.into());
+    let svg = svg_from_latex(latex, line_color)?;
 
-    let image = result.into_image(scale)?;
+    let tree = Tree::from_str(&svg, &Options::default())?;
 
-    let mut buffer: Cursor<Vec<u8>> = Cursor::new(vec![]);
+    let dest_width = tree.size().width() * scale;
+    let dest_height = tree.size().height() * scale;
 
-    image.write_to(&mut buffer, ImageFormat::Png)?;
+    let input_stream = MemoryInputStream::from_bytes(&Bytes::from_owned(svg));
 
-    Ok(buffer.into_inner())
+    let pixbuf = Pixbuf::from_stream_at_scale(&input_stream, dest_width as i32, dest_height as i32, true, None::<&Cancellable>)?;
+
+    Ok(pixbuf.save_to_bufferv("png", &[])?)
 }
 
+#[cfg(feature = "output")]
 pub fn svg_from_latex<S: Into<String>>(latex: String, line_color: S) -> Result<String, LatexError> {
-    let renderer = MathJax::new().unwrap();
-    let mut result = renderer.render(latex)?;
-    result.set_color(&line_color.into());
+    let mut svg = convert_to_svg(latex)?;
+
+    svg = svg.replace("currentColor", &line_color.into());
     
-    Ok(result.into_raw())
+    Ok(svg)
 }
 
 ///provides a way of saving a step. A step can either be a: 
@@ -179,6 +188,7 @@ impl Step {
 ///- Pdf: Save as one pdf file.
 ///- Png: Save as consecutive .png images (one image per page).
 ///- Tex: Save as the generated .tex file.
+#[cfg(feature = "output")]
 pub enum ExportType {
     Pdf,
     Tex
@@ -186,6 +196,7 @@ pub enum ExportType {
 
 ///exports a history of [Step] to a file named <file_name> with the file type defined
 ///by export_type (see [ExportType] for further details).
+#[cfg(feature = "output")]
 pub fn export_history(history: Vec<Step>, export_type: ExportType) -> Result<Vec<u8>, LatexError> {
     let mut output_string = "\\documentclass[12pt, letterpaper]{article}\n\\usepackage{amsmath}\n\\usepackage[margin=1in]{geometry}\n\\allowdisplaybreaks\n\\begin{document}\n\\begin{align*}\n".to_string();
     for (i, s) in history.iter().enumerate() {

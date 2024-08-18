@@ -435,9 +435,22 @@ fn hard_solve6() -> Result<(), MathLibError> {
 #[cfg(feature = "output")]
 #[test]
 fn output1() -> Result<(), MathLibError> {
-    use std::fs;
+    use crate::svg_from_latex;
 
+    let res = quick_eval("3*3+6^5", Store::empty())?;
+
+    let svg = svg_from_latex(res.to_latex_at_var("H", false), "#FFFFFF")?;
+
+    println!("{}", svg);
+
+    Ok(())
+}
+
+#[cfg(feature = "output")]
+#[test]
+fn output2() -> Result<(), MathLibError> {
     use crate::png_from_latex;
+    use std::fs;
 
     let res = quick_eval("3*3+6^5", Store::empty())?;
 

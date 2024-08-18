@@ -1,10 +1,5 @@
 use std::fmt::{self, Display};
 
-#[cfg(feature = "output")]
-use image::ImageError;
-#[cfg(feature = "output")]
-use mathjax::RenderError;
-
 ///provides an enum with the corresponding From implementations in order to use as a convenient return
 ///error type for this library.
 #[derive(Debug, PartialEq, Clone)]
@@ -310,7 +305,8 @@ impl From<ParserError> for QuickSolveError {
 #[derive(Debug, PartialEq, Clone)]
 pub enum LatexError {
     LatexToPdfError(String),
-    LatexToImageError(String)
+    LatexToImageError(String),
+    LatexToSvgError(String)
 }
 
 #[cfg(feature = "output")]
@@ -318,21 +314,29 @@ impl LatexError {
     pub fn get_reason(&self) -> String {
         match self {
             LatexError::LatexToPdfError(s) => return format!("Could not convert Latex to PDF: {}!", s),
-            LatexError::LatexToImageError(s) => return format!("Could not convert Pdf to Image: {}!", s)
+            LatexError::LatexToImageError(s) => return format!("Could not convert Latex to Image: {}!", s),
+            LatexError::LatexToSvgError(s) => return format!("Could not convert Latex to SVG: {}!", s)
         }
     }
 }
 
 #[cfg(feature = "output")]
-impl From<ImageError> for LatexError {
-    fn from(value: ImageError) -> Self {
+impl From<gdk_pixbuf::glib::Error> for LatexError {
+    fn from(value: gdk_pixbuf::glib::Error) -> Self {
         LatexError::LatexToImageError(value.to_string())
     }
 }
 
 #[cfg(feature = "output")]
-impl From<RenderError> for LatexError {
-    fn from(value: RenderError) -> Self {
+impl From<mathjax_svg::Error> for LatexError {
+    fn from(value: mathjax_svg::Error) -> Self {
+        LatexError::LatexToSvgError(value.to_string())
+    }
+}
+
+#[cfg(feature = "output")]
+impl From<usvg::Error> for LatexError {
+    fn from(value: usvg::Error) -> Self {
         LatexError::LatexToImageError(value.to_string())
     }
 }

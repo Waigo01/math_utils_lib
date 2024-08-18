@@ -384,11 +384,9 @@ impl Value {
             }
         }
     }
-    #[cfg(feature = "output")]
     pub fn to_latex(&self) -> String {
         self.latex_print()
     }
-    #[cfg(feature = "output")]
     pub fn to_latex_at_var<S: Into<String>>(&self, var_name: S, add_aligner: bool) -> String{
         let aligner;
         if add_aligner {
@@ -398,7 +396,6 @@ impl Value {
         }
         format!("{} {}= {}", var_name.into(), aligner, self.latex_print())
     }
-    #[cfg(feature = "output")]
     fn latex_print(&self) -> String {
         match self {
             Value::Scalar(s) => return round_and_format(*s, true),
@@ -537,11 +534,9 @@ impl AST {
             }
         }
     }
-    #[cfg(feature = "output")]
     pub fn to_latex(&self) -> String {
         self.latex_print()
     }
-    #[cfg(feature = "output")]
     pub fn to_latex_at_fun<S: Into<String>>(&self, fun_name: S, fun_inputs: Vec<S>, add_aligner: bool) -> String {
         let aligner;
         if add_aligner {
@@ -551,7 +546,6 @@ impl AST {
         }
         format!("{}({}) {}= {}", fun_name.into(), fun_inputs.into_iter().map(|s| s.into()).collect::<Vec<String>>().join(", "), aligner, self.latex_print())
     }
-    #[cfg(feature = "output")]
     fn latex_print(&self) -> String {
         match self {
             AST::Scalar(s) => return round_and_format(*s, true),
