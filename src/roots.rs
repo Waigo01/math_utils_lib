@@ -1,4 +1,4 @@
-use crate::{basetypes::{AdvancedOperation, Operation, Value, Variable, AST}, errors::{NewtonError, SolveError}, maths::{abs, calculus::calculate_derivative}, parser::eval, Store, PREC};
+use crate::{basetypes::{AdvancedOperation, Operation, Value, Variable, AST}, errors::EvalError, maths::{abs, calculus::calculate_derivative}, parser::eval, Store, PREC};
 
 fn clean_results(res: Vec<Value>) -> Vec<Value> {
     if res.len() == 0 {
@@ -93,7 +93,17 @@ fn find_vars_in_expr(b: &AST, mut ov: Vec<String>) -> Vec<String> {
                         },
                         AdvancedOperation::Derivative { at, .. } => {
                             return find_vars_in_expr(at, ov);
-                        } 
+                        },
+                        AdvancedOperation::Equation { equations } => {
+                            let vars: Vec<(Vec<String>, Vec<String>)> = equations.iter().map(|e| (find_vars_in_expr(&e.0, ov.clone()), find_vars_in_expr(&e.1, ov.clone()))).collect();
+                            let mut found_vars: Vec<String> = vec![];
+                            for mut i in vars {
+                                found_vars.append(&mut i.0);
+                                found_vars.append(&mut i.1);
+                            }
+
+                            found_vars
+                        }
                     }
                 }
             }
@@ -101,9 +111,9 @@ fn find_vars_in_expr(b: &AST, mut ov: Vec<String>) -> Vec<String> {
     }
 }
 
-fn gauss_algorithm(v: &mut Vec<Vec<f64>>) -> Result<Value, NewtonError> {
+fn gauss_algorithm(v: &mut Vec<Vec<f64>>) -> Result<Value, EvalError> {
     if v.len()+1 != v[0].len() {
-        return Err(NewtonError::UnderdeterminedSystem);
+        return Err(EvalError::UnderdeterminedSystem);
     }
 
     for i in 0..v.len() - 1 {
@@ -117,7 +127,7 @@ fn gauss_algorithm(v: &mut Vec<Vec<f64>>) -> Result<Value, NewtonError> {
                 }
             }
             if zero_line {
-                return Err(NewtonError::InfiniteSolutions);
+                return Err(EvalError::InfiniteSolutions);
             }
         }
     } 
@@ -144,7 +154,7 @@ fn gauss_algorithm(v: &mut Vec<Vec<f64>>) -> Result<Value, NewtonError> {
                 }
             }
             if zero_line {
-                return Err(NewtonError::InfiniteSolutions);
+                return Err(EvalError::InfiniteSolutions);
             }
         }
     } 
@@ -160,7 +170,7 @@ fn gauss_algorithm(v: &mut Vec<Vec<f64>>) -> Result<Value, NewtonError> {
     return Ok(Value::Vector(result_vec));
 }
 
-fn jacobi_and_gauss(search_expres: &[AST], x: &[Variable], state: &mut Store, fx: &Vec<f64>) -> Result<Vec<Variable>, NewtonError> {
+fn jacobi_and_gauss(search_expres: &[AST], x: &[Variable], state: &mut Store, fx: &Vec<f64>) -> Result<Vec<Variable>, EvalError> {
     let mut jacobi: Vec<Vec<f64>> = vec![];
 
     let mut vars: Vec<&Variable> = state.vars.iter().collect();
@@ -207,7 +217,7 @@ enum NewtonReturn {
     FinishedX(Vec<Variable>) 
 }
 
-fn newton(search_expres: &Vec<AST>, check_expres: &Vec<AST> , x: &Vec<Variable>, state: &mut Store) -> Result<NewtonReturn, NewtonError> {
+fn newton(search_expres: &Vec<AST>, check_expres: &Vec<AST> , x: &Vec<Variable>, state: &mut Store) -> Result<NewtonReturn, EvalError> {
     let mut fx = vec![];
     let mut vars: Vec<&Variable> = state.vars.iter().collect();
     for i in x {
@@ -237,7 +247,7 @@ fn newton(search_expres: &Vec<AST>, check_expres: &Vec<AST> , x: &Vec<Variable>,
         if -10f64.powi(-PREC) < abs(Value::Vector(check_results.clone()))?.get_scalar().unwrap() && abs(Value::Vector(check_results))?.get_scalar().unwrap() < 10f64.powi(-PREC) {
             return Ok(NewtonReturn::FinishedX(x.to_vec()));
         } else {
-            return Err(NewtonError::ExpressionCheckFailed);
+            return Err(EvalError::ExpressionCheckFailed);
         } 
     }
 
@@ -245,7 +255,7 @@ fn newton(search_expres: &Vec<AST>, check_expres: &Vec<AST> , x: &Vec<Variable>,
 
     for i in &new_x {
         if i.value.is_inf_or_nan() {
-            return Err(NewtonError::NaNOrInf);
+            return Err(EvalError::NaNOrInf);
         }
     }
 
@@ -281,18 +291,18 @@ impl RootFinder {
     ///
     /// If you want a simpler way of solving equations and systems of equations, have a look at
     /// [solve()](fn@crate::solver::solve) and [quick_solve()](fn@crate::quick_solve).
-    pub fn new(expressions: Vec<AST>, state: Store) -> Result<RootFinder, SolveError> {
+    pub fn new(expressions: Vec<AST>, state: Store) -> Result<RootFinder, EvalError> {
         if expressions.len() == 0 {
-            return Err(SolveError::NothingToDo);
+            return Err(EvalError::NothingToDoEq);
         }
 
         for i in &expressions {
             match i {
-                AST::Vector(_) => return Err(SolveError::NothingToDo),
-                AST::Scalar(_) => return Err(SolveError::NothingToDo),
-                AST::Matrix(_) => return Err(SolveError::NothingToDo),
-                AST::Variable(_) => return Err(SolveError::NothingToDo),
-                AST::Function {..} => return Err(SolveError::NothingToDo),
+                AST::Vector(_) => return Err(EvalError::NothingToDoEq),
+                AST::Scalar(_) => return Err(EvalError::NothingToDoEq),
+                AST::Matrix(_) => return Err(EvalError::NothingToDoEq),
+                AST::Variable(_) => return Err(EvalError::NothingToDoEq),
+                AST::Function {..} => return Err(EvalError::NothingToDoEq),
                 AST::Operation(_) => {}
             }
         }
@@ -324,7 +334,7 @@ impl RootFinder {
         let mut vars = state.vars.to_vec();
 
         if search_vars_names.len() > expressions.len() {
-            return Err(NewtonError::UnderdeterminedSystem.into());
+            return Err(EvalError::UnderdeterminedSystem.into());
         }
 
         for i in &search_vars_names {
@@ -339,8 +349,8 @@ impl RootFinder {
 
         match initial_res {
             Value::Scalar(_) => {},
-            Value::Vector(_) => return Err(SolveError::VectorInEq),
-            Value::Matrix(_) => return Err(SolveError::MatrixInEq)
+            Value::Vector(_) => return Err(EvalError::VectorInEq),
+            Value::Matrix(_) => return Err(EvalError::MatrixInEq)
         }
 
         let combs;
@@ -359,7 +369,7 @@ impl RootFinder {
     /// 
     /// In the case of a system of equations results will be represented as a vector with the order
     /// being that of the variables in the expressions.
-    pub fn find_roots(&self) -> Result<Vec<Value>, SolveError> {
+    pub fn find_roots(&self) -> Result<Vec<Value>, EvalError> {
         for i in &self.combinations {
             let mut search_expres = vec![];
             let mut check_expres = self.expressions.clone();
@@ -399,9 +409,9 @@ impl RootFinder {
                         },
                         Err(e) => {
                             match e {
-                                NewtonError::InfiniteSolutions => break 'solve_loop_0,
-                                NewtonError::NaNOrInf => break 'solve_loop_1,
-                                NewtonError::ExpressionCheckFailed => break 'solve_loop_1,
+                                EvalError::InfiniteSolutions => break 'solve_loop_0,
+                                EvalError::NaNOrInf => break 'solve_loop_1,
+                                EvalError::ExpressionCheckFailed => break 'solve_loop_1,
                                 _ => return Err(e.into())
                             }
                         }

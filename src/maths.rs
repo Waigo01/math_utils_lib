@@ -6,7 +6,7 @@ pub mod cross_pow;
 pub mod calculus;
 
 #[doc(hidden)]
-pub fn add(lv: Value, rv: Value) -> Result<Value, String> {
+pub fn add(lv: &Value, rv: &Value) -> Result<Value, String> {
     match (lv, rv) {
         (Value::Scalar(a), Value::Scalar(b)) => return add_sub::sadd(a, b),
         (Value::Vector(a), Value::Vector(b)) => return add_sub::vadd(a, b),
@@ -21,9 +21,9 @@ pub fn add(lv: Value, rv: Value) -> Result<Value, String> {
 }
 
 #[doc(hidden)]
-pub fn sub(lv: Value, rv: Value) -> Result<Value, String> {
+pub fn sub(lv: &Value, rv: &Value) -> Result<Value, String> {
     match (lv, rv) {
-        (Value::Scalar(a), Value::Scalar(b)) => return add_sub::sadd(a, b * (-1.)),
+        (Value::Scalar(a), Value::Scalar(b)) => return add_sub::sadd(a, &(b * (-1.))),
         (Value::Vector(a), Value::Vector(b)) => return add_sub::vsub(a, b),
         (Value::Matrix(a), Value::Matrix(b)) => return add_sub::msub(a, b),
         (Value::Vector(_), Value::Scalar(_)) => return Err("Can't subtract scalar from vector!".to_string()),
@@ -36,7 +36,7 @@ pub fn sub(lv: Value, rv: Value) -> Result<Value, String> {
 }
 
 #[doc(hidden)]
-pub fn mult(lv: Value, rv: Value) -> Result<Value, String> {
+pub fn mult(lv: &Value, rv: &Value) -> Result<Value, String> {
     match (lv, rv) {
         (Value::Scalar(a), Value::Scalar(b)) => return mult_div::ssmult(a, b),
         (Value::Vector(a), Value::Scalar(b)) => return mult_div::svmult(b, a),
@@ -51,7 +51,7 @@ pub fn mult(lv: Value, rv: Value) -> Result<Value, String> {
 }
 
 #[doc(hidden)]
-pub fn neg(lv: Value) -> Result<Value, String> {
+pub fn neg(lv: &Value) -> Result<Value, String> {
     match lv {
         Value::Scalar(a) => return Ok(Value::Scalar(-1.*a)),
         Value::Vector(a) => return Ok(Value::Vector(a.iter().map(|x| -1.*x).collect())),
@@ -60,7 +60,7 @@ pub fn neg(lv: Value) -> Result<Value, String> {
 }
 
 #[doc(hidden)]
-pub fn div(lv: Value, rv: Value) -> Result<Value, String> {
+pub fn div(lv: &Value, rv: &Value) -> Result<Value, String> {
     match(lv, rv) {
         (Value::Scalar(a), Value::Scalar(b)) => return mult_div::ssdiv(a, b),
         (Value::Vector(a), Value::Scalar(b)) => return mult_div::vsdiv(a, b),
@@ -75,7 +75,7 @@ pub fn div(lv: Value, rv: Value) -> Result<Value, String> {
 }
 
 #[doc(hidden)]
-pub fn cross(lv: Value, rv: Value) -> Result<Value, String> {
+pub fn cross(lv: &Value, rv: &Value) -> Result<Value, String> {
     match (lv, rv){
         (Value::Vector(a), Value::Vector(b)) => return cross_pow::vcross(a, b),
         _ => return Err("Cross product can only be computed between two vectors!".to_string())
@@ -83,23 +83,23 @@ pub fn cross(lv: Value, rv: Value) -> Result<Value, String> {
 }
 
 #[doc(hidden)]
-pub fn get(lv: Value, rv: Value) -> Result<Value, String> {
+pub fn get(lv: &Value, rv: &Value) -> Result<Value, String> {
     match (lv, rv) {
         (Value::Vector(a), Value::Scalar(b)) => {
             if b % 1. != 0. || b.is_sign_negative() {
                 return Err("Index must be a positive Integer!".to_string());
             }
-            if b as usize > a.len() - 1 {
+            if *b as usize > a.len() - 1 {
                 return Err("Index out of bounds for vector!".to_string());
             }
-            return Ok(Value::Scalar(a[b as usize]));
+            return Ok(Value::Scalar(a[*b as usize]));
         },
         _ => return Err("Can only index vector with scalar!".to_string())
     }
 }
 
 #[doc(hidden)]
-pub fn pow(lv: Value, rv: Value) -> Result<Value, String> {
+pub fn pow(lv: &Value, rv: &Value) -> Result<Value, String> {
     match (lv, rv) {
         (Value::Scalar(a), Value::Scalar(b)) => return cross_pow::sspow(a, b),
         _ => return Err("Can only raise scalar to the power of scalar!".to_string())
@@ -107,7 +107,7 @@ pub fn pow(lv: Value, rv: Value) -> Result<Value, String> {
 }
 
 #[doc(hidden)]
-pub fn sin(lv: Value) -> Result<Value, String> {
+pub fn sin(lv: &Value) -> Result<Value, String> {
     match lv {
         Value::Scalar(a) => return Ok(Value::Scalar(a.sin())),
         Value::Vector(_) => return Err("Can't take sin of vector!".to_string()),
@@ -116,7 +116,7 @@ pub fn sin(lv: Value) -> Result<Value, String> {
 }
 
 #[doc(hidden)]
-pub fn cos(lv: Value) -> Result<Value, String> {
+pub fn cos(lv: &Value) -> Result<Value, String> {
     match lv {
         Value::Scalar(a) => return Ok(Value::Scalar(a.cos())),
         Value::Vector(_) => return Err("Can't take cos of vector!".to_string()),
@@ -125,7 +125,7 @@ pub fn cos(lv: Value) -> Result<Value, String> {
 }
 
 #[doc(hidden)]
-pub fn tan(lv: Value) -> Result<Value, String> {
+pub fn tan(lv: &Value) -> Result<Value, String> {
     match lv {
         Value::Scalar(a) => return Ok(Value::Scalar(a.tan())),
         Value::Vector(_) => return Err("Can't take tan of vector!".to_string()),
@@ -134,7 +134,7 @@ pub fn tan(lv: Value) -> Result<Value, String> {
 }
 
 #[doc(hidden)]
-pub fn arcsin(lv: Value) -> Result<Value, String> {
+pub fn arcsin(lv: &Value) -> Result<Value, String> {
     match lv {
         Value::Scalar(a) => return Ok(Value::Scalar(a.asin())),
         Value::Vector(_) => return Err("Can't take arcsin of vector!".to_string()),
@@ -143,7 +143,7 @@ pub fn arcsin(lv: Value) -> Result<Value, String> {
 }
 
 #[doc(hidden)]
-pub fn arccos(lv: Value) -> Result<Value, String> {
+pub fn arccos(lv: &Value) -> Result<Value, String> {
     match lv {
         Value::Scalar(a) => return Ok(Value::Scalar(a.acos())),
         Value::Vector(_) => return Err("Can't take arccos of vector!".to_string()),
@@ -152,7 +152,7 @@ pub fn arccos(lv: Value) -> Result<Value, String> {
 }
 
 #[doc(hidden)]
-pub fn arctan(lv: Value) -> Result<Value, String> {
+pub fn arctan(lv: &Value) -> Result<Value, String> {
     match lv {
         Value::Scalar(a) => return Ok(Value::Scalar(a.atan())),
         Value::Vector(_) => return Err("Can't take arctan of vector!".to_string()),
@@ -161,11 +161,11 @@ pub fn arctan(lv: Value) -> Result<Value, String> {
 }
 
 #[doc(hidden)]
-pub fn abs(lv: Value) -> Result<Value, String> {
+pub fn abs(lv: &Value) -> Result<Value, String> {
     match lv {
         Value::Scalar(a) => {
-            if a < 0. {return Ok(Value::Scalar(a*(-1.)));}
-            else {return Ok(Value::Scalar(a));}
+            if *a < 0. {return Ok(Value::Scalar(a*(-1.)));}
+            else {return Ok(Value::Scalar(*a));}
         },
         Value::Vector(a) => {
             let mut sum = 0.;
@@ -179,7 +179,7 @@ pub fn abs(lv: Value) -> Result<Value, String> {
 }
 
 #[doc(hidden)]
-pub fn sqrt(lv: Value) -> Result<Value, String> {
+pub fn sqrt(lv: &Value) -> Result<Value, String> {
     match lv {
         Value::Scalar(a) => return Ok(Value::Scalar(a.sqrt())),
         Value::Vector(_) => return Err("Can't take sqrt of vector!".to_string()),
@@ -188,7 +188,7 @@ pub fn sqrt(lv: Value) -> Result<Value, String> {
 }
 
 #[doc(hidden)]
-pub fn ln(lv: Value) -> Result<Value, String> {
+pub fn ln(lv: &Value) -> Result<Value, String> {
     match lv {
         Value::Scalar(a) => return Ok(Value::Scalar(a.ln())),
         Value::Vector(_) => return Err("Can't take ln of vector!".to_string()),

@@ -1,7 +1,7 @@
 use crate::basetypes::Value;
 
 #[doc(hidden)]
-pub fn vcross(a: Vec<f64>, b: Vec<f64>) -> Result<Value, String> {
+pub fn vcross(a: &Vec<f64>, b: &Vec<f64>) -> Result<Value, String> {
     if a.len() != b.len() {
         return Err("Vectors have different dimensions!".to_string());
     }
@@ -30,6 +30,6 @@ pub fn vcross(a: Vec<f64>, b: Vec<f64>) -> Result<Value, String> {
 }
 
 #[doc(hidden)]
-pub fn sspow(a: f64, b: f64) -> Result<Value, String> {
-    return Ok(Value::Scalar(a.powf(b)));
+pub fn sspow(a: &f64, b: &f64) -> Result<Value, String> {
+    return Ok(Value::Scalar(a.powf(*b)));
 }

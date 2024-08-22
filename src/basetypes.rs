@@ -388,13 +388,17 @@ impl Value {
         self.latex_print()
     }
     pub fn to_latex_at_var<S: Into<String>>(&self, var_name: S, add_aligner: bool) -> String{
+        let mut var_name = var_name.into();
+        if var_name == "pi" {
+            var_name = "\\pi".to_string();
+        }
         let aligner;
         if add_aligner {
             aligner = "&".to_string();
         } else {
             aligner = String::new();
         }
-        format!("{} {}= {}", var_name.into(), aligner, self.latex_print())
+        format!("{} {}= {}", var_name, aligner, self.latex_print())
     }
     fn latex_print(&self) -> String {
         match self {
@@ -429,6 +433,13 @@ impl Value {
             }
         }
     }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Values(Vec<Value>);
+
+impl Values {
+
 }
 
 ///used to construct a AST Tree which is recursively evaluated by the [eval()] function.
@@ -521,13 +532,17 @@ impl AST {
                                 let eexpr = &expr.to_string();
                                 let elower_b = &lower_bound.to_string();
                                 let eupper_b = &upper_bound.to_string();
-                                return format!("\\I({}, {}, {}, {})", eexpr, in_terms_of, elower_b, eupper_b);
+                                return format!("I({}, {}, {}, {})", eexpr, in_terms_of, elower_b, eupper_b);
                             },
                             AdvancedOperation::Derivative {expr, in_terms_of, at} => {
                                 let eexpr = &expr.to_string();
                                 let eat = &at.to_string();
                                 return format!("D({}, {}, {})", eexpr, in_terms_of, eat);
-                            } 
+                            },
+                            AdvancedOperation::Equation { equations } => {
+                                let eqs: Vec<String> = equations.iter().map(|e| format!("{}={}", e.0.to_string(), e.1.to_string())).collect();
+                                return format!("eq({})", eqs.join(","));
+                            }
                         }
                     }
                 } 
@@ -636,7 +651,11 @@ impl AST {
                                 let eexpr = &expr.latex_print();
                                 let eat = &at.latex_print();
                                 return format!("\\frac{{\\partial}}{{\\partial {}}}\\left({}\\right)_{{\\text{{at }}{} = {}}}", in_terms_of, eexpr, in_terms_of, eat);
-                            } 
+                            },
+                            AdvancedOperation::Equation { equations } => {
+                                let eqs: Vec<String> = equations.iter().map(|e| format!("{}&={}", e.0.to_latex(), e.1.to_latex())).collect();
+                                return format!("\\left\\{{ \\begin{{align}}{}\\end{{align}}\\right.", eqs.join("\\"))
+                            }
                         }
                     }
                 } 
@@ -704,7 +723,9 @@ pub enum AdvancedOpType {
     ///Calculate the derivative of a function f in respect to n at a value m (D(f, n, m))
     Derivative,
     ///Calculate the integral of a function f in respect to n with the bounds a and b (I(f, n, a, b))
-    Integral 
+    Integral,
+    ///Solve the given equation(s) (eq(e_1, e_2, e_3, ...))
+    Equation,
 }
 
 ///used to specify an operation in a parsed string. It is used together with [AST] to
@@ -733,5 +754,8 @@ pub enum AdvancedOperation{
         expr: AST,
         in_terms_of: String,
         at: AST
+    },
+    Equation {
+        equations: Vec<(AST, AST)>
     }
 }

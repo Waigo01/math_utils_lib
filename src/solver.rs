@@ -1,4 +1,4 @@
-use crate::{basetypes::{Operation, SimpleOpType, AST}, errors::SolveError, roots::RootFinder, Store, Value};
+use crate::{basetypes::{Operation, SimpleOpType, AST}, errors::EvalError, roots::RootFinder, Store, Value};
 
 /// used to solve an equation or a system of equations.
 ///
@@ -9,7 +9,7 @@ use crate::{basetypes::{Operation, SimpleOpType, AST}, errors::SolveError, roots
 ///
 /// If you are searching for an easy way of directly solving equations, have a look at
 /// [quick_solve()](fn@crate::quick_solve)
-pub fn solve(equations: Vec<(AST, AST)>, state: &Store) -> Result<Vec<Value>, SolveError> {
+pub fn solve(equations: Vec<(AST, AST)>, state: &Store) -> Result<Vec<Value>, EvalError> {
     let mut final_expressions = vec![];
 
     for i in &equations {
