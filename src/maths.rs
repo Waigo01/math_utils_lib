@@ -179,11 +179,25 @@ pub fn abs(lv: &Value) -> Result<Value, String> {
 }
 
 #[doc(hidden)]
-pub fn sqrt(lv: &Value) -> Result<Value, String> {
+pub fn sqrt(lv: &Value) -> Result<Vec<Value>, String> {
     match lv {
-        Value::Scalar(a) => return Ok(Value::Scalar(a.sqrt())),
+        Value::Scalar(a) => return Ok(vec![Value::Scalar(a.sqrt()), Value::Scalar(-1. * a.sqrt())]),
         Value::Vector(_) => return Err("Can't take sqrt of vector!".to_string()),
         Value::Matrix(_) => return Err("Can't take sqrt of matrix!".to_string())
+    }
+}
+
+#[doc(hidden)]
+pub fn root(lv: &Value, rv: &Value) -> Result<Vec<Value>, String> {
+    match (lv, rv) {
+        (Value::Scalar(a), Value::Scalar(b)) => {
+            if b % 2. == 0. {
+                return Ok(vec![Value::Scalar(a.powf(1./b)), Value::Scalar(-1. * a.powf(1./b))]);
+            } else {
+                return Ok(vec![Value::Scalar(a.powf(1./b))]);
+            }
+        },
+        _ => return Err("Can only take root of a scalar!".to_string())
     }
 }
 

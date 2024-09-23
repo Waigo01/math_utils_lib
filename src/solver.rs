@@ -9,7 +9,7 @@ use crate::{basetypes::{Operation, SimpleOpType, AST}, errors::EvalError, roots:
 ///
 /// If you are searching for an easy way of directly solving equations, have a look at
 /// [quick_solve()](fn@crate::quick_solve)
-pub fn solve(equations: Vec<(AST, AST)>, state: &Store) -> Result<Vec<Value>, EvalError> {
+pub fn solve(equations: Vec<(AST, AST)>, state: &Store, search_vars: Vec<String>) -> Result<Vec<Value>, EvalError> {
     let mut final_expressions = vec![];
 
     for i in &equations {
@@ -21,6 +21,6 @@ pub fn solve(equations: Vec<(AST, AST)>, state: &Store) -> Result<Vec<Value>, Ev
 
         final_expressions.push(root_b);
     }
-    let root_finder = RootFinder::new(final_expressions, state.to_owned())?;
+    let root_finder = RootFinder::new(final_expressions, state.to_owned(), search_vars)?;
     return root_finder.find_roots();
 }

@@ -1,4 +1,4 @@
-use crate::{basetypes::{AdvancedOpType, AdvancedOperation, Operation, SimpleOpType, Value, Variable, AST}, errors::{EvalError, ParserError}, maths, solve, Store};
+use crate::{basetypes::{AdvancedOpType, AdvancedOperation, Operation, SimpleOpType, Value, Variable, AST}, errors::{EvalError, ParserError}, helpers::cart_prod, maths, solve, Store};
 
 fn get_op_symbol(c: char) -> Option<SimpleOpType> {
     match c {
@@ -276,16 +276,49 @@ pub fn parse<S: Into<String>>(expr: S) -> Result<AST, ParserError> {
 
     // is it a function?
 
-    let function_look_up = vec![(SimpleOpType::Sin, "sin("), (SimpleOpType::Cos, "cos("), (SimpleOpType::Tan, "tan("), (SimpleOpType::Abs, "abs("), (SimpleOpType::Sqrt, "sqrt("), (SimpleOpType::Ln, "ln("), (SimpleOpType::Arcsin, "arcsin("), (SimpleOpType::Arccos, "arccos("), (SimpleOpType::Arctan, "arctan(")];
+    let function_look_up = vec![(SimpleOpType::Sin, "sin("), (SimpleOpType::Cos, "cos("), (SimpleOpType::Tan, "tan("), (SimpleOpType::Abs, "abs("), (SimpleOpType::Sqrt, "sqrt("), (SimpleOpType::Root, "root("), (SimpleOpType::Ln, "ln("), (SimpleOpType::Arcsin, "arcsin("), (SimpleOpType::Arccos, "arccos("), (SimpleOpType::Arctan, "arctan(")];
     
     for i in function_look_up {
         if expr_chars.iter().collect::<String>().starts_with(i.1) {
-            let left_b = parse(expr_chars[i.1.len()..expr_chars.len()-1].to_vec().iter().collect::<String>())?;
-            return Ok(AST::from_operation(Operation::SimpleOperation {
-                op_type: i.0,
-                left: left_b,
-                right: AST::from_value(Value::Scalar(0.))
-            }));
+            if i.0 == SimpleOpType::Root {
+                let mut args = vec![];
+                parenths_open = 0;
+                let mut buffer = String::new();
+                for j in expr_chars[i.1.len()..expr_chars.len()-1].to_vec() {
+                    if parenths_open == 0 && j == ',' {
+                        args.push(buffer.clone());
+                        buffer.clear();
+                    } else {
+                        buffer.push(j);
+                    }
+                    if j == '(' || j == '[' || j == '{' {
+                        parenths_open += 1;
+                    } else if j == ')' || j == ']' || j == '}' {
+                        parenths_open -= 1;
+                    } 
+                }
+                args.push(buffer);
+
+                if args.len() != 2 {
+                    return Err(ParserError::WrongNumberOfArgs("root".to_string()));
+                } else {
+                    let left_b = parse(args[0].clone())?;
+                    let right_b = parse(args[1].clone())?;
+
+                    return Ok(AST::from_operation(Operation::SimpleOperation { 
+                        op_type: i.0,
+                        left: left_b,
+                        right: right_b
+                    }));
+                }
+            } else {
+                let left_b = parse(expr_chars[i.1.len()..expr_chars.len()-1].to_vec().iter().collect::<String>())?;
+                return Ok(AST::from_operation(Operation::SimpleOperation {
+                    op_type: i.0,
+                    left: left_b,
+                    right: AST::from_value(Value::Scalar(0.))
+                }));
+            }
         }
     }
 
@@ -362,13 +395,13 @@ pub fn parse<S: Into<String>>(expr: S) -> Result<AST, ParserError> {
                 AdvancedOpType::Equation => {
                     let aop_string = expr_chars[i.1.len()..expr_chars.len()-1].to_vec().iter().collect::<String>();
 
-                    let mut equations = vec![];
+                    let mut entries = vec![];
                     let mut parenths_open = 0;
                     let mut buffer = String::new();
 
                     for i in aop_string.chars() {
                         if parenths_open == 0 && i == ',' {
-                            equations.push(buffer.clone());
+                            entries.push(buffer.clone());
                             buffer.clear();
                         } else {
                             buffer.push(i);
@@ -380,13 +413,15 @@ pub fn parse<S: Into<String>>(expr: S) -> Result<AST, ParserError> {
                             parenths_open -= 1;
                         }
                     }
-                    equations.push(buffer);
+                    entries.push(buffer);
 
                     let mut parsed_equations = vec![];
+                    let mut search_vars = vec![];
 
-                    for i in equations {
+                    for i in entries {
                         if !i.contains("=") {
-                            return Err(ParserError::NoEquation);
+                            search_vars.push(i.clone());
+                            continue;
                         }
 
                         let left = i.split("=").nth(0).unwrap().to_string();
@@ -405,7 +440,7 @@ pub fn parse<S: Into<String>>(expr: S) -> Result<AST, ParserError> {
                         parsed_equations.push((left_b, right_b));
                     }
 
-                    return Ok(AST::from_operation(Operation::AdvancedOperation(AdvancedOperation::Equation { equations: parsed_equations })));
+                    return Ok(AST::from_operation(Operation::AdvancedOperation(AdvancedOperation::Equation { equations: parsed_equations, search_vars })));
                 }
             }
         }
@@ -480,22 +515,10 @@ fn eval_rec(b: &AST, state: &Store, last_fn: &str) -> Result<Vec<Value>, EvalErr
                 }
                 evaled_fields.push(values.iter().map(|v| v.get_scalar().unwrap()).collect());
             }
-            let mut permuts: Vec<Vec<f64>> = vec![];
-            for (i, f) in evaled_fields.iter().enumerate() {
-                if i == 0 {
-                    for j in f {
-                        permuts.push(vec![*j]);
-                    }
-                } else {
-                    for p in &mut permuts {
-                        for j in f {
-                            p.push(*j);
-                        }
-                    }
-                }
-            }
 
-            Ok(permuts.iter().map(|p| Value::Vector(p.to_vec())).collect())
+            let permuts: Vec<Vec<f64>> = cart_prod(&evaled_fields);
+
+            return Ok(permuts.iter().map(|p| Value::Vector(p.to_vec())).collect());
         },
         AST::Matrix(m) => {
             let mut evaled_rows: Vec<Vec<Vec<f64>>> = vec![];
@@ -512,34 +535,12 @@ fn eval_rec(b: &AST, state: &Store, last_fn: &str) -> Result<Vec<Value>, EvalErr
                 }
                 evaled_rows.push(row);
             }
-            let mut permuts: Vec<Vec<Vec<f64>>> = vec![];
-            for (i, r) in evaled_rows.iter().enumerate() {
-                let mut row_permuts: Vec<Vec<f64>> = vec![];
-                for (j, c) in r.iter().enumerate() {
-                    if j == 0 {
-                        for k in c {
-                            row_permuts.push(vec![*k]);
-                        }
-                    } else {
-                        for p in &mut row_permuts {
-                            for k in c {
-                                p.push(*k);
-                            }
-                        }
-                    }
-                }
-                if i == 0 {
-                    for k in row_permuts {
-                        permuts.push(vec![k]);
-                    }
-                } else {
-                    for p in &mut permuts {
-                        for k in &row_permuts {
-                            p.push(k.to_vec());
-                        }
-                    }
-                }
+            let mut permuts_row: Vec<Vec<Vec<f64>>> = vec![];
+            for i in evaled_rows {
+                permuts_row.push(cart_prod(&i));
             }
+
+            let permuts = cart_prod(&permuts_row);
             
             Ok(permuts.iter().map(|m| Value::Matrix(m.to_vec())).collect())
         }, 
@@ -578,20 +579,7 @@ fn eval_rec(b: &AST, state: &Store, last_fn: &str) -> Result<Vec<Value>, EvalErr
                 eval_inputs.push(eval_rec(i, state, last_fn)?);
             }
 
-            let mut permuts = vec![];
-            for (i, ei) in eval_inputs.iter().enumerate() {
-                if i == 0 {
-                    for j in ei {
-                        permuts.push(vec![j]);
-                    }
-                } else {
-                    for j in &mut permuts {
-                        for k in ei {
-                            j.push(k);
-                        }
-                    }
-                }
-            }
+            let permuts = cart_prod(&eval_inputs);
 
             let mut res = vec![];
 
@@ -637,7 +625,8 @@ fn eval_rec(b: &AST, state: &Store, last_fn: &str) -> Result<Vec<Value>, EvalErr
                                 SimpleOpType::Cos => res.push(maths::cos(&i)?),
                                 SimpleOpType::Tan => res.push(maths::tan(&i)?),
                                 SimpleOpType::Abs => res.push(maths::abs(&i)?),
-                                SimpleOpType::Sqrt => res.push(maths::sqrt(&i)?),
+                                SimpleOpType::Sqrt => res.append(&mut maths::sqrt(&i)?),
+                                SimpleOpType::Root => res.append(&mut maths::root(&i, &j)?),
                                 SimpleOpType::Ln => res.push(maths::ln(&i)?),
                                 SimpleOpType::Arcsin => res.push(maths::arcsin(&i)?),
                                 SimpleOpType::Arccos => res.push(maths::arccos(&i)?),
@@ -671,13 +660,14 @@ fn eval_rec(b: &AST, state: &Store, last_fn: &str) -> Result<Vec<Value>, EvalErr
                             let mut res = vec![];
 
                             for i in eat {
-                                res.push(maths::calculus::calculate_derivative(&expr, &in_terms_of, &i, None, state)?);
+                                let mut new_state = state.to_owned();
+                                res.push(maths::calculus::calculate_derivative(&expr, &in_terms_of, &i, &mut new_state)?);
                             }
 
                             return Ok(res.into_iter().flatten().collect());
                         },
-                        AdvancedOperation::Equation { equations } => {
-                            return Ok(solve(equations.to_vec(), state)?);
+                        AdvancedOperation::Equation { equations, search_vars } => {
+                            return Ok(solve(equations.to_vec(), state, search_vars.to_vec())?);
                         }
                     }
                 }

@@ -435,13 +435,6 @@ impl Value {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct Values(Vec<Value>);
-
-impl Values {
-
-}
-
 ///used to construct a AST Tree which is recursively evaluated by the [eval()] function.
 ///
 ///AST can be a:
@@ -519,6 +512,7 @@ impl AST {
                             SimpleOpType::Cos => return format!("cos({})", lv),
                             SimpleOpType::Tan => return format!("tan({})", lv),
                             SimpleOpType::Sqrt => return format!("sqrt({})", lv),
+                            SimpleOpType::Root => return format!("root({}, {})", lv, rv),
                             SimpleOpType::Ln => return format!("ln({})", lv),
                             SimpleOpType::Arcsin => return format!("arcsin({})", lv),
                             SimpleOpType::Arccos => return format!("arccos({})", lv),
@@ -539,7 +533,7 @@ impl AST {
                                 let eat = &at.to_string();
                                 return format!("D({}, {}, {})", eexpr, in_terms_of, eat);
                             },
-                            AdvancedOperation::Equation { equations } => {
+                            AdvancedOperation::Equation { equations, .. } => {
                                 let eqs: Vec<String> = equations.iter().map(|e| format!("{}={}", e.0.to_string(), e.1.to_string())).collect();
                                 return format!("eq({})", eqs.join(","));
                             }
@@ -632,6 +626,7 @@ impl AST {
                             SimpleOpType::Cos => return format!("\\cos{{({})}}", lv),
                             SimpleOpType::Tan => return format!("\\tan{{({})}}", lv),
                             SimpleOpType::Sqrt => return format!("\\sqrt{{{}}}", lv),
+                            SimpleOpType::Root => return format!("\\sqrt[{}]{{{}}}", rv, lv),
                             SimpleOpType::Ln => return format!("\\ln{{({})}}", lv),
                             SimpleOpType::Arcsin => return format!("\\arcsin{{({})}}", lv),
                             SimpleOpType::Arccos => return format!("\\arccos{{({})}}", lv),
@@ -652,7 +647,7 @@ impl AST {
                                 let eat = &at.latex_print();
                                 return format!("\\frac{{\\partial}}{{\\partial {}}}\\left({}\\right)_{{\\text{{at }}{} = {}}}", in_terms_of, eexpr, in_terms_of, eat);
                             },
-                            AdvancedOperation::Equation { equations } => {
+                            AdvancedOperation::Equation { equations, .. } => {
                                 let eqs: Vec<String> = equations.iter().map(|e| format!("{}&={}", e.0.to_latex(), e.1.to_latex())).collect();
                                 return format!("\\left\\{{ \\begin{{align}}{}\\end{{align}}\\right.", eqs.join("\\"))
                             }
@@ -703,6 +698,7 @@ pub enum SimpleOpType {
     ///Calculate the square root of a scalar (sqrt(a))
     Sqrt,
     ///Calculate the natural log of a scalar (ln(a))
+    Root,
     Ln,
     ///Calculate the arcsin of a scalar (arcsin(a))
     Arcsin,
@@ -756,6 +752,7 @@ pub enum AdvancedOperation{
         at: AST
     },
     Equation {
-        equations: Vec<(AST, AST)>
+        equations: Vec<(AST, AST)>,
+        search_vars: Vec<String>
     }
 }

@@ -6,7 +6,6 @@ use std::fmt::{self, Display};
 pub enum MathLibError {
     ParserError(ParserError),
     EvalError(EvalError),
-    QuickSolveError(QuickSolveError),
     QuickEvalError(QuickEvalError),
     #[cfg(feature = "output")]
     LatexError(LatexError),
@@ -20,7 +19,6 @@ impl MathLibError {
             MathLibError::ParserError(s) => return s.get_reason(),
             MathLibError::EvalError(s) => return s.get_reason(),
             MathLibError::QuickEvalError(s) => return s.get_reason(),
-            MathLibError::QuickSolveError(s) => return s.get_reason(),
             #[cfg(feature = "output")]
             MathLibError::LatexError(s) => return s.get_reason(),
             MathLibError::Other(s) => return s.to_string(),
@@ -37,12 +35,6 @@ impl From<ParserError> for MathLibError {
 impl From<EvalError> for MathLibError {
     fn from(value: EvalError) -> Self {
         MathLibError::EvalError(value)
-    }
-}
-
-impl From<QuickSolveError> for MathLibError {
-    fn from(value: QuickSolveError) -> Self {
-        MathLibError::QuickSolveError(value)
     }
 }
 
@@ -114,6 +106,7 @@ pub enum EvalError {
     InfiniteSolutions,
     NaNOrInf,
     ExpressionCheckFailed,
+    SearchVarsInVars,
     NoVariable(String),
     NoFunction(String),
     WrongNumberOfArgs((usize, usize)),
@@ -133,6 +126,7 @@ impl EvalError {
             EvalError::InfiniteSolutions => return "Infinite Solutions!".to_string(),
             EvalError::NaNOrInf => return "NaN or Inf".to_string(),
             EvalError::ExpressionCheckFailed => return "Expression Check Failed!".to_string(),
+            EvalError::SearchVarsInVars => return "The given solve variables already exist in the context!".to_string(),
             EvalError::NoVariable(s) => return format!("Could not find variable {}!", s),
             EvalError::NoFunction(s) => return format!("Could not find function {}!", s),
             EvalError::WrongNumberOfArgs((e, g)) => return format!("Wrong number of arguments! Expected {} arguments, {} were given!", e, g),
@@ -185,35 +179,6 @@ impl From<EvalError> for QuickEvalError {
 impl From<ParserError> for QuickEvalError {
     fn from(value: ParserError) -> Self {
         QuickEvalError::ParserError(value)
-    }
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub enum QuickSolveError {
-    DuplicateVars,
-    NoEq,
-    ParserError(ParserError),
-}
-
-impl QuickSolveError {
-    pub fn get_reason(&self) -> String {
-        match self {
-            QuickSolveError::DuplicateVars => return "Can't specify e and pi twice!".to_string(),
-            QuickSolveError::NoEq => return "No \"=\" in equation!".to_string(),
-            QuickSolveError::ParserError(e) => return e.get_reason(),
-        }
-    }
-}
-
-impl Display for QuickSolveError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.get_reason())
-    }
-}
-
-impl From<ParserError> for QuickSolveError {
-    fn from(value: ParserError) -> Self {
-        QuickSolveError::ParserError(value)
     }
 }
 

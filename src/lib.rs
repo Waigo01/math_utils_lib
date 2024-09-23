@@ -95,7 +95,7 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //!
 //! ![LaTeX][latex-export]
 
-use errors::{QuickEvalError, QuickSolveError};
+use errors::QuickEvalError;
 
 #[doc(hidden)]
 pub mod maths;
@@ -144,23 +144,11 @@ pub const PREC: i32 = 8;
 ///
 /// assert_eq!(res, Value::Scalar(9.));
 /// ```
-pub fn quick_eval<S: Into<String>>(expr: S, state: Store) -> Result<Value, QuickEvalError> {
+pub fn quick_eval<S: Into<String>>(expr: S, state: Store) -> Result<Vec<Value>, QuickEvalError> {
     let mut expr = expr.into();
-    let mut context_vars = vec![
-        Variable::new("e".to_string(), Value::Scalar(std::f64::consts::E)),
-        Variable::new("pi".to_string(), Value::Scalar(std::f64::consts::PI))
-    ];
-    if !state.vars.is_empty() {
-        if state.vars.iter().filter(|x| x.name == "e".to_string() || x.name == "pi".to_string()).collect::<Vec<&Variable>>().len() > 0 {
-            return Err(QuickEvalError::DuplicateVars);
-        }
-        for i in state.vars {
-            context_vars.push(i.clone());
-        }
-    }
     expr = expr.trim().split(" ").filter(|s| !s.is_empty()).collect();
 
     let b_tree = parse(expr)?;
     
-    Ok(eval(&b_tree, &Store::new(&context_vars, &state.funs))?)
+    Ok(eval(&b_tree, &state)?)
 }
