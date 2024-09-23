@@ -118,7 +118,7 @@ pub use latex::{export_history, ExportType, png_from_latex, svg_from_latex};
 pub use parser::{parse, eval};
 pub use solver::solve;
 pub use errors::MathLibError;
-pub use basetypes::Store;
+pub use basetypes::Context;
 
 ///defines the precision used by the equation solver and the printing precision, which is PREC-2.
 #[cfg(feature = "high-prec")]
@@ -144,11 +144,11 @@ pub const PREC: i32 = 8;
 ///
 /// assert_eq!(res, Value::Scalar(9.));
 /// ```
-pub fn quick_eval<S: Into<String>>(expr: S, state: Store) -> Result<Vec<Value>, QuickEvalError> {
+pub fn quick_eval<S: Into<String>>(expr: S, context: Context) -> Result<Vec<Value>, QuickEvalError> {
     let mut expr = expr.into();
     expr = expr.trim().split(" ").filter(|s| !s.is_empty()).collect();
 
     let b_tree = parse(expr)?;
     
-    Ok(eval(&b_tree, &state)?)
+    Ok(eval(&b_tree, &context)?)
 }

@@ -50,29 +50,29 @@ impl Function {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Store {
+pub struct Context {
     pub vars: Vec<Variable>,
     pub funs: Vec<Function>
 }
 
-impl Store {
+impl Context {
     pub fn default() -> Self {
-        Store::from_vars(vec![
+        Context::from_vars(vec![
             Variable::new("pi", Value::Scalar(std::f64::consts::PI)),
             Variable::new("e", Value::Scalar(std::f64::consts::E))
         ])
     }
-    pub fn new<V: AsRef<[Variable]>, F: AsRef<[Function]>>(vars: V, funs: F) -> Store {
-        Store {vars: vars.as_ref().to_vec(), funs: funs.as_ref().to_vec()}
+    pub fn new<V: AsRef<[Variable]>, F: AsRef<[Function]>>(vars: V, funs: F) -> Context {
+        Context {vars: vars.as_ref().to_vec(), funs: funs.as_ref().to_vec()}
     }
-    pub fn empty() -> Store {
-        Store { vars: vec![], funs: vec![] }
+    pub fn empty() -> Context {
+        Context { vars: vec![], funs: vec![] }
     }
-    pub fn from_vars<V: AsRef<[Variable]>>(vars: V) -> Store {
-        Store { vars: vars.as_ref().to_vec(), funs: vec![] }
+    pub fn from_vars<V: AsRef<[Variable]>>(vars: V) -> Context {
+        Context { vars: vars.as_ref().to_vec(), funs: vec![] }
     }
-    pub fn from_funs<F: AsRef<[Function]>>(funs: F) -> Store {
-        Store { vars: vec![], funs: funs.as_ref().to_vec() }
+    pub fn from_funs<F: AsRef<[Function]>>(funs: F) -> Context {
+        Context { vars: vec![], funs: funs.as_ref().to_vec() }
     }
     pub fn add_var(&mut self, var: &Variable) {
         self.vars = self.vars.iter()

@@ -1,11 +1,11 @@
-use crate::{basetypes::{Value, Variable, AST}, errors::EvalError, maths::{abs, calculus::calculate_derivative_newton}, parser::eval, Store, PREC};
+use crate::{basetypes::{Value, Variable, AST}, errors::EvalError, maths::calculus::calculate_derivative_newton, parser::eval, Context, PREC};
 
-fn clean_results(res: Vec<Value>) -> Vec<Value> {
+fn clean_results(res: &[Value]) -> Vec<Value> {
     if res.len() == 0 {
         return vec![];
     }
     let mut new_res: Vec<Value> = vec![];
-    for i in &res {
+    for i in res {
         let mut found = false;
         for j in &new_res {
             if i.round(PREC-2) == j.round(PREC-2) {
@@ -96,10 +96,10 @@ fn gauss_algorithm(v: &mut Vec<Vec<f64>>) -> Result<Value, EvalError> {
     return Ok(Value::Vector(result_vec));
 }
 
-fn jacobi_and_gauss(search_expres: &[AST], x: &[Variable], state: &mut Store, fx: &Vec<f64>) -> Result<Vec<Variable>, EvalError> {
+fn jacobi_and_gauss(search_expres: &[AST], x: &[Variable], context: &mut Context, fx: &Vec<f64>) -> Result<Vec<Variable>, EvalError> {
     let mut jacobi: Vec<Vec<f64>> = vec![];
 
-    let mut vars: Vec<&Variable> = state.vars.iter().collect();
+    let mut vars: Vec<&Variable> = context.vars.iter().collect();
 
     for i in 0..search_expres.len() {
         let mut row = vec![];
@@ -111,7 +111,7 @@ fn jacobi_and_gauss(search_expres: &[AST], x: &[Variable], state: &mut Store, fx
                     added_vars += 1;
                 }
             }
-            let derivative = calculate_derivative_newton(&search_expres[i], &x[j].name, &x[j].value, Some(Value::Scalar(fx[i])), &mut Store::new(&vars.iter().map(|v| v.to_owned().to_owned()).collect::<Vec<Variable>>(), &state.funs))?.get_scalar().unwrap();
+            let derivative = calculate_derivative_newton(&search_expres[i], &x[j].name, &x[j].value, Some(Value::Scalar(fx[i])), &mut Context::new(&vars.iter().map(|v| v.to_owned().to_owned()).collect::<Vec<Variable>>(), &context.funs))?.get_scalar().unwrap();
             row.push(derivative);
             for _ in 0..added_vars {
                 vars.remove(vars.len()-1);
@@ -120,14 +120,11 @@ fn jacobi_and_gauss(search_expres: &[AST], x: &[Variable], state: &mut Store, fx
         jacobi.push(row);
     } 
 
-    let mut augmented_matrix = vec![];
-
     for i in 0..jacobi.len() {
-        augmented_matrix.push(jacobi[i].clone());
-        augmented_matrix[i].push(-1. * fx[i]);
+        jacobi[i].push(-1. * fx[i]);
     }
 
-    let x_new_minus_x = gauss_algorithm(&mut augmented_matrix)?;
+    let x_new_minus_x = gauss_algorithm(&mut jacobi)?;
 
     let mut x_new = vec![];
 
@@ -143,40 +140,40 @@ enum NewtonReturn {
     FinishedX(Vec<Variable>) 
 }
 
-fn newton(search_expres: &Vec<AST>, check_expres: &Vec<AST> , x: &Vec<Variable>, state: &mut Store) -> Result<NewtonReturn, EvalError> {
+fn newton(search_expres: &Vec<AST>, check_expres: &Vec<AST> , x: &Vec<Variable>, context: &mut Context) -> Result<NewtonReturn, EvalError> {
     let mut fx = vec![];
     for i in x {
-        state.add_var(i);
+        context.add_var(i);
     }
     for i in search_expres {
-        fx.push(eval(i, state)?[0].get_scalar().unwrap());
+        fx.push(eval(i, context)?[0].get_scalar().unwrap());
     }
     for i in x {
-        state.remove_var(&i.name);
+        context.remove_var(&i.name);
     }
 
-    if -10f64.powi(-PREC) < abs(&Value::Vector(fx.clone()))?.get_scalar().unwrap() && abs(&Value::Vector(fx.clone()))?.get_scalar().unwrap() < 10f64.powi(-PREC) {
+    if -10f64.powi(-PREC) < fx.iter().map(|f| f.powi(2)).sum::<f64>().sqrt() && fx.iter().map(|f| f.powi(2)).sum::<f64>().sqrt() < 10f64.powi(-PREC) {
         let mut check_results = vec![]; 
         for i in x {
-            state.add_var(i);
+            context.add_var(i);
         }
         for i in check_expres {
-            check_results.push(eval(i, state)?[0].get_scalar().unwrap());
+            check_results.push(eval(i, context)?[0].get_scalar().unwrap());
         }
         for i in x {
-            state.remove_var(&i.name);
+            context.remove_var(&i.name);
         }
         if check_results.is_empty() {
             return Ok(NewtonReturn::FinishedX(x.to_vec()));
         }
-        if -10f64.powi(-PREC) < abs(&Value::Vector(check_results.clone()))?.get_scalar().unwrap() && abs(&Value::Vector(check_results))?.get_scalar().unwrap() < 10f64.powi(-PREC) {
+        if -10f64.powi(-PREC) < check_results.iter().map(|f| f.powi(2)).sum::<f64>().sqrt() && check_results.iter().map(|f| f.powi(2)).sum::<f64>().sqrt() < 10f64.powi(-PREC) {
             return Ok(NewtonReturn::FinishedX(x.to_vec()));
         } else {
             return Err(EvalError::ExpressionCheckFailed);
         } 
     }
 
-    let new_x = jacobi_and_gauss(search_expres, x, state, &fx)?;
+    let new_x = jacobi_and_gauss(search_expres, x, context, &fx)?;
 
     for i in &new_x {
         if i.value.is_inf_or_nan() {
@@ -205,7 +202,7 @@ fn generate_combinations(arr: Vec<usize>, len: usize, prev_arr: Vec<usize>) -> V
 pub struct RootFinder {
     expressions: Vec<AST>,
     combinations: Vec<Vec<usize>>,
-    state: Store,
+    context: Context,
     search_vars_names: Vec<String>
 }
 
@@ -216,7 +213,7 @@ impl RootFinder {
     ///
     /// If you want a simpler way of solving equations and systems of equations, have a look at
     /// [solve()](fn@crate::solver::solve) and [quick_solve()](fn@crate::quick_solve).
-    pub fn new(expressions: Vec<AST>, mut state: Store, search_vars_names: Vec<String>) -> Result<RootFinder, EvalError> {
+    pub fn new(expressions: Vec<AST>, mut context: Context, search_vars_names: Vec<String>) -> Result<RootFinder, EvalError> {
         if expressions.len() == 0 {
             return Err(EvalError::NothingToDoEq);
         }
@@ -233,7 +230,7 @@ impl RootFinder {
         }
 
         for i in &search_vars_names {
-            if state.vars.iter().map(|v| v.name.clone()).collect::<Vec<String>>().contains(&i) {
+            if context.vars.iter().map(|v| v.name.clone()).collect::<Vec<String>>().contains(&i) {
                 return Err(EvalError::SearchVarsInVars);
             }
         }
@@ -243,13 +240,13 @@ impl RootFinder {
         }
 
         for i in &search_vars_names {
-            state.add_var(&Variable::new(i, Value::Scalar(8.21785)));
+            context.add_var(&Variable::new(i, Value::Scalar(8.21785)));
         }
 
-        let initial_res = eval(&expressions[0], &state)?;
+        let initial_res = eval(&expressions[0], &context)?;
 
         for i in &search_vars_names {
-            state.remove_var(i);
+            context.remove_var(i);
         }
 
         match initial_res[0] {
@@ -266,7 +263,7 @@ impl RootFinder {
             combs = vec![(0..expressions.len()).collect::<Vec<usize>>()];
         }
 
-        return Ok(RootFinder { expressions, combinations: combs, state, search_vars_names });
+        return Ok(RootFinder { expressions, combinations: combs, context, search_vars_names });
     }
     /// starts the root finding process. It will always search for roots in terms of variables that
     /// have not yet been defined in the global variables passed in
@@ -283,7 +280,7 @@ impl RootFinder {
                 search_expres.push(check_expres.remove(*j-removed));
                 removed += 1;
             } 
-            let mut local_state = self.state.clone();
+            let mut local_context = self.context.clone();
             let mut results = vec![];
             'solve_loop_0: for j in -1000..1000 {
                 let mut x = vec![];
@@ -292,7 +289,7 @@ impl RootFinder {
                 }
 
                 'solve_loop_1: for _ in 0..1000 {
-                    let newton_result = newton(&search_expres, &check_expres, &x, &mut local_state);
+                    let newton_result = newton(&search_expres, &check_expres, &x, &mut local_context);
 
                     match newton_result {
                         Ok(o) => {
@@ -324,7 +321,7 @@ impl RootFinder {
                 }
             }
 
-            let cleaned_results = clean_results(results);
+            let cleaned_results = clean_results(&results);
 
             if !cleaned_results.is_empty() {
                 return Ok(cleaned_results);

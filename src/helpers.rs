@@ -76,3 +76,25 @@ pub fn cart_prod<T: Clone>(arr: &Vec<Vec<T>>) -> Vec<Vec<T>> {
 
     return results;
 }
+
+#[doc(hidden)]
+pub fn get_args(chars: &[char]) -> Vec<String> {
+    let mut args = vec![];
+    let mut parenths_open = 0;
+    let mut buffer = String::new();
+    for j in chars.into_iter() {
+        if parenths_open == 0 && *j == ',' {
+            args.push(buffer.clone());
+            buffer.clear();
+        } else {
+            buffer.push(*j);
+        }
+        if *j == '(' || *j == '[' || *j == '{' {
+            parenths_open += 1;
+        } else if *j == ')' || *j == ']' || *j == '}' {
+            parenths_open -= 1;
+        }
+    }
+    args.push(buffer);
+    args
+}

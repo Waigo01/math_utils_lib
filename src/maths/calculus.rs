@@ -1,12 +1,12 @@
-use crate::{basetypes::{Operation, SimpleOpType, Store, AST}, errors::EvalError, eval, Value, Variable, PREC};
+use crate::{basetypes::{Operation, SimpleOpType, Context, AST}, errors::EvalError, eval, Value, Variable, PREC};
 
 use super::{add, mult};
 
 /// calculates the integral of an expression in terms of a variable with a lower and a upper bound.
 ///
 /// Only scalars are supported as lower and upper bounds.
-pub fn calculate_integral(expr: &AST, in_terms_of: String, lower_bound: Value, upper_bound: Value, state: &Store) -> Result<Vec<Value>, EvalError> {
-    let mut mut_vars = state.vars.to_owned();
+pub fn calculate_integral(expr: &AST, in_terms_of: String, lower_bound: Value, upper_bound: Value, context: &Context) -> Result<Vec<Value>, EvalError> {
+    let mut mut_vars = context.vars.to_owned();
     for i in 0..mut_vars.len() {
         if mut_vars[i].name == in_terms_of {
             mut_vars.remove(i);
@@ -28,7 +28,7 @@ pub fn calculate_integral(expr: &AST, in_terms_of: String, lower_bound: Value, u
             let mut b = lb;
             while b < ub {
                 mut_vars.push(Variable::new(&in_terms_of, Value::Scalar(b)));
-                let evals = eval(expr, &Store::new(&mut_vars, &state.funs))?;
+                let evals = eval(expr, &Context::new(&mut_vars, &context.funs))?;
                 for (i, e) in evals.iter().enumerate() {
                     if sums.len() <= i {
                         sums.push(e.clone());
@@ -55,20 +55,20 @@ pub fn calculate_integral(expr: &AST, in_terms_of: String, lower_bound: Value, u
 /// The function also takes an optional fx value, which is the value f(x). This can be used in
 /// order to increase performance by not having to calculate f(x) twice for an application such as
 /// newtons method.
-pub fn calculate_derivative(expr: &AST, in_terms_of: &str, at: &Value, state: &mut Store) -> Result<Vec<Value>, EvalError> {
-    for i in &state.vars {
+pub fn calculate_derivative(expr: &AST, in_terms_of: &str, at: &Value, context: &mut Context) -> Result<Vec<Value>, EvalError> {
+    for i in &context.vars {
         if i.name == in_terms_of {
-            state.remove_var(i.name.clone());
+            context.remove_var(i.name.clone());
             break;
         }
     }
     match at {
         Value::Scalar(s) => {
-            state.add_var(&Variable::new(in_terms_of, at.clone()));
-            let fxs = eval(expr, state)?;
-            state.remove_var(in_terms_of);
-            state.add_var(&Variable::new(in_terms_of, Value::Scalar(s+10f64.powi(-(PREC)))));
-            let fxhs = &eval(expr, state)?;
+            context.add_var(&Variable::new(in_terms_of, at.clone()));
+            let fxs = eval(expr, context)?;
+            context.remove_var(in_terms_of);
+            context.add_var(&Variable::new(in_terms_of, Value::Scalar(s+10f64.powi(-(PREC)))));
+            let fxhs = &eval(expr, context)?;
             if fxs.len() != fxhs.len() {
                 return Err(EvalError::MathError("Amount of solutions for f(x) and f(x+h) are different!".to_string()));
             }
@@ -83,10 +83,10 @@ pub fn calculate_derivative(expr: &AST, in_terms_of: &str, at: &Value, state: &m
                     }),
                     right: AST::from_value(Value::Scalar(10f64.powi(-(PREC))))
                 });
-                res.push(eval(&h, &state)?);
+                res.push(eval(&h, &context)?);
             }
 
-            state.remove_var(in_terms_of);
+            context.remove_var(in_terms_of);
 
             return Ok(res.into_iter().flatten().collect()); 
         } 
@@ -94,22 +94,22 @@ pub fn calculate_derivative(expr: &AST, in_terms_of: &str, at: &Value, state: &m
     }
 }
 
-pub fn calculate_derivative_newton(expr: &AST, in_terms_of: &str, at: &Value, mut fx: Option<Value>, state: &mut Store) -> Result<Value, EvalError> {
-    for i in &state.vars {
+pub fn calculate_derivative_newton(expr: &AST, in_terms_of: &str, at: &Value, mut fx: Option<Value>, context: &mut Context) -> Result<Value, EvalError> {
+    for i in &context.vars {
         if i.name == in_terms_of {
-            state.remove_var(in_terms_of);
+            context.remove_var(in_terms_of);
             break;
         }
     }
     match at {
         Value::Scalar(s) => {
             if fx.is_none() {
-                state.add_var(&Variable::new(in_terms_of, at.clone()));
-                fx = Some(eval(expr, state)?[0].clone());
-                state.remove_var(in_terms_of);
+                context.add_var(&Variable::new(in_terms_of, at.clone()));
+                fx = Some(eval(expr, context)?[0].clone());
+                context.remove_var(in_terms_of);
             }
-            state.add_var(&Variable::new(in_terms_of, Value::Scalar(s+10f64.powi(-(PREC)))));
-            let fxh = &eval(expr, state)?[0];
+            context.add_var(&Variable::new(in_terms_of, Value::Scalar(s+10f64.powi(-(PREC)))));
+            let fxh = &eval(expr, context)?[0];
             let h = AST::from_operation(Operation::SimpleOperation {
                 op_type: SimpleOpType::Div,
                 left: AST::from_operation(Operation::SimpleOperation {
@@ -119,8 +119,8 @@ pub fn calculate_derivative_newton(expr: &AST, in_terms_of: &str, at: &Value, mu
                 }),
                 right: AST::from_value(Value::Scalar(10f64.powi(-(PREC))))
             });
-            let res = eval(&h, state)?[0].clone();
-            state.remove_var(in_terms_of);
+            let res = eval(&h, context)?[0].clone();
+            context.remove_var(in_terms_of);
             return Ok(res);
         } 
         _ => {return Err(EvalError::MathError("Only scalar values are allowed!".to_string()))}
