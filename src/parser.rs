@@ -1,4 +1,4 @@
-use crate::{basetypes::{AdvancedOpType, AdvancedOperation, Operation, SimpleOpType, Value, Variable, AST}, errors::{EvalError, ParserError}, helpers::{cart_prod, get_args}, maths, solve, Context};
+use crate::{basetypes::{AdvancedOpType, AdvancedOperation, Operation, SimpleOpType, Value, Variable, AST}, errors::{EvalError, ParserError}, helpers::{cart_prod, get_args}, maths, solve, Context, Values};
 
 fn get_op_symbol(c: char) -> Option<SimpleOpType> {
     match c {
@@ -414,8 +414,8 @@ pub fn parse<S: Into<String>>(expr: S) -> Result<AST, ParserError> {
 ///pi and e need to be provided as variables if used.
 ///
 ///If you are searching for a quick and easy way to evaluate an expression, have a look at [quick_eval()](fn@crate::quick_eval).
-pub fn eval(b: &AST, context: &Context) -> Result<Vec<Value>, EvalError> {
-    eval_rec(b, context, "")
+pub fn eval(b: &AST, context: &Context) -> Result<Values, EvalError> {
+   Ok(Values::from_vec(eval_rec(b, context, "")?))
 }
 
 fn eval_rec(b: &AST, context: &Context, last_fn: &str) -> Result<Vec<Value>, EvalError> {
@@ -464,7 +464,7 @@ fn eval_rec(b: &AST, context: &Context, last_fn: &str) -> Result<Vec<Value>, Eva
         AST::Variable(v) => {
             for i in context.vars.iter() {
                 if &i.name == v {
-                    return Ok(vec![i.value.clone()]);
+                    return Ok(i.values.clone().to_vec());
                 }
             }
 
@@ -503,7 +503,7 @@ fn eval_rec(b: &AST, context: &Context, last_fn: &str) -> Result<Vec<Value>, Eva
             for p in permuts {
                 let mut f_vars = vec![];
                 for i in 0..inputs.len() {
-                    f_vars.push(Variable::new(&function.inputs[i], p[i].clone()));
+                    f_vars.push(Variable::new(&function.inputs[i], vec![p[i].clone()]));
                 }
 
                 for i in context.vars.iter() {

@@ -27,9 +27,9 @@ pub fn calculate_integral(expr: &AST, in_terms_of: String, lower_bound: Value, u
             let mut sums = vec![];
             let mut b = lb;
             while b < ub {
-                mut_vars.push(Variable::new(&in_terms_of, Value::Scalar(b)));
+                mut_vars.push(Variable::new(&in_terms_of, vec![Value::Scalar(b)]));
                 let evals = eval(expr, &Context::new(&mut_vars, &context.funs))?;
-                for (i, e) in evals.iter().enumerate() {
+                for (i, e) in evals.to_vec().iter().enumerate() {
                     if sums.len() <= i {
                         sums.push(e.clone());
                     } else {
@@ -64,11 +64,11 @@ pub fn calculate_derivative(expr: &AST, in_terms_of: &str, at: &Value, context: 
     }
     match at {
         Value::Scalar(s) => {
-            context.add_var(&Variable::new(in_terms_of, at.clone()));
-            let fxs = eval(expr, context)?;
+            context.add_var(&Variable::new(in_terms_of, vec![at.clone()]));
+            let fxs = eval(expr, context)?.to_vec();
             context.remove_var(in_terms_of);
-            context.add_var(&Variable::new(in_terms_of, Value::Scalar(s+10f64.powi(-(PREC)))));
-            let fxhs = &eval(expr, context)?;
+            context.add_var(&Variable::new(in_terms_of, vec![Value::Scalar(s+10f64.powi(-(PREC)))]));
+            let fxhs = &eval(expr, context)?.to_vec();
             if fxs.len() != fxhs.len() {
                 return Err(EvalError::MathError("Amount of solutions for f(x) and f(x+h) are different!".to_string()));
             }
@@ -83,7 +83,7 @@ pub fn calculate_derivative(expr: &AST, in_terms_of: &str, at: &Value, context: 
                     }),
                     right: AST::from_value(Value::Scalar(10f64.powi(-(PREC))))
                 });
-                res.push(eval(&h, &context)?);
+                res.push(eval(&h, &context)?.to_vec());
             }
 
             context.remove_var(in_terms_of);
@@ -104,12 +104,12 @@ pub fn calculate_derivative_newton(expr: &AST, in_terms_of: &str, at: &Value, mu
     match at {
         Value::Scalar(s) => {
             if fx.is_none() {
-                context.add_var(&Variable::new(in_terms_of, at.clone()));
-                fx = Some(eval(expr, context)?[0].clone());
+                context.add_var(&Variable::new(in_terms_of, vec![at.clone()]));
+                fx = Some(eval(expr, context)?.get(0).unwrap().clone());
                 context.remove_var(in_terms_of);
             }
-            context.add_var(&Variable::new(in_terms_of, Value::Scalar(s+10f64.powi(-(PREC)))));
-            let fxh = &eval(expr, context)?[0];
+            context.add_var(&Variable::new(in_terms_of, vec![Value::Scalar(s+10f64.powi(-(PREC)))]));
+            let fxh = &eval(expr, context)?.get(0).unwrap().clone();
             let h = AST::from_operation(Operation::SimpleOperation {
                 op_type: SimpleOpType::Div,
                 left: AST::from_operation(Operation::SimpleOperation {
@@ -119,7 +119,7 @@ pub fn calculate_derivative_newton(expr: &AST, in_terms_of: &str, at: &Value, mu
                 }),
                 right: AST::from_value(Value::Scalar(10f64.powi(-(PREC))))
             });
-            let res = eval(&h, context)?[0].clone();
+            let res = eval(&h, context)?.get(0).unwrap().clone();
             context.remove_var(in_terms_of);
             return Ok(res);
         } 

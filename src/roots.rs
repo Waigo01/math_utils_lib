@@ -111,7 +111,7 @@ fn jacobi_and_gauss(search_expres: &[AST], x: &[Variable], context: &mut Context
                     added_vars += 1;
                 }
             }
-            let derivative = calculate_derivative_newton(&search_expres[i], &x[j].name, &x[j].value, Some(Value::Scalar(fx[i])), &mut Context::new(&vars.iter().map(|v| v.to_owned().to_owned()).collect::<Vec<Variable>>(), &context.funs))?.get_scalar().unwrap();
+            let derivative = calculate_derivative_newton(&search_expres[i], &x[j].name, x[j].values.get(0).unwrap(), Some(Value::Scalar(fx[i])), &mut Context::new(&vars.iter().map(|v| v.to_owned().to_owned()).collect::<Vec<Variable>>(), &context.funs))?.get_scalar().unwrap();
             row.push(derivative);
             for _ in 0..added_vars {
                 vars.remove(vars.len()-1);
@@ -129,7 +129,7 @@ fn jacobi_and_gauss(search_expres: &[AST], x: &[Variable], context: &mut Context
     let mut x_new = vec![];
 
     for i in 0..x.len() {
-        x_new.push(Variable::new(&x[i].name, Value::Scalar(x_new_minus_x.get_vector().unwrap()[i] + x[i].value.get_scalar().unwrap())));
+        x_new.push(Variable::new(&x[i].name, vec![Value::Scalar(x_new_minus_x.get_vector().unwrap()[i] + x[i].values.get(0).unwrap().get_scalar().unwrap())]));
     }
 
     return Ok(x_new);
@@ -146,7 +146,7 @@ fn newton(search_expres: &Vec<AST>, check_expres: &Vec<AST> , x: &Vec<Variable>,
         context.add_var(i);
     }
     for i in search_expres {
-        fx.push(eval(i, context)?[0].get_scalar().unwrap());
+        fx.push(eval(i, context)?.get(0).unwrap().get_scalar().unwrap());
     }
     for i in x {
         context.remove_var(&i.name);
@@ -158,7 +158,7 @@ fn newton(search_expres: &Vec<AST>, check_expres: &Vec<AST> , x: &Vec<Variable>,
             context.add_var(i);
         }
         for i in check_expres {
-            check_results.push(eval(i, context)?[0].get_scalar().unwrap());
+            check_results.push(eval(i, context)?.get(0).unwrap().get_scalar().unwrap());
         }
         for i in x {
             context.remove_var(&i.name);
@@ -176,7 +176,7 @@ fn newton(search_expres: &Vec<AST>, check_expres: &Vec<AST> , x: &Vec<Variable>,
     let new_x = jacobi_and_gauss(search_expres, x, context, &fx)?;
 
     for i in &new_x {
-        if i.value.is_inf_or_nan() {
+        if i.values.get(0).unwrap().is_inf_or_nan() {
             return Err(EvalError::NaNOrInf);
         }
     }
@@ -240,7 +240,7 @@ impl RootFinder {
         }
 
         for i in &search_vars_names {
-            context.add_var(&Variable::new(i, Value::Scalar(8.21785)));
+            context.add_var(&Variable::new(i, vec![Value::Scalar(8.21785)]));
         }
 
         let initial_res = eval(&expressions[0], &context)?;
@@ -249,7 +249,7 @@ impl RootFinder {
             context.remove_var(i);
         }
 
-        match initial_res[0] {
+        match initial_res.get(0).unwrap() {
             Value::Scalar(_) => {},
             Value::Vector(_) => return Err(EvalError::VectorInEq),
             Value::Matrix(_) => return Err(EvalError::MatrixInEq)
@@ -285,7 +285,7 @@ impl RootFinder {
             'solve_loop_0: for j in -1000..1000 {
                 let mut x = vec![];
                 for k in &self.search_vars_names {
-                    x.push(Variable::new(k, Value::Scalar(j as f64)));
+                    x.push(Variable::new(k, vec![Value::Scalar(j as f64)]));
                 }
 
                 'solve_loop_1: for _ in 0..1000 {
@@ -298,7 +298,7 @@ impl RootFinder {
                                 NewtonReturn::FinishedX(fin_x) => {
                                     let mut result_vec = vec![];
                                     for i in fin_x {
-                                        result_vec.push(i.value.get_scalar().unwrap());
+                                        result_vec.push(i.values.get(0).unwrap().get_scalar().unwrap());
                                     }
                                     if result_vec.len() == 1 {
                                         results.push(Value::Scalar(result_vec[0].clone()));

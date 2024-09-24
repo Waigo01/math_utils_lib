@@ -26,14 +26,14 @@ const VAR_SYMBOLS: [(&str, &str); 48] = [("\\alpha", "𝛼"), ("\\Alpha", "𝛢"
 #[derive(Debug, Clone, PartialEq)]
 pub struct Variable {
     pub name: String,
-    pub value: Value
+    pub values: Values
 }
 
 impl Variable {
     /// creates a new [Variable] from a [Value].
-    pub fn new<S: Into<String>>(name: S, value: Value) -> Variable {
-        Variable { name: name.into(), value}
-    } 
+    pub fn new<S: Into<String>>(name: S, values: Vec<Value>) -> Variable {
+        Variable { name: name.into(), values: Values::from_vec(values)}
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -58,8 +58,8 @@ pub struct Context {
 impl Context {
     pub fn default() -> Self {
         Context::from_vars(vec![
-            Variable::new("pi", Value::Scalar(std::f64::consts::PI)),
-            Variable::new("e", Value::Scalar(std::f64::consts::E))
+            Variable::new("pi", vec![Value::Scalar(std::f64::consts::PI)]),
+            Variable::new("e", vec![Value::Scalar(std::f64::consts::E)])
         ])
     }
     pub fn new<V: AsRef<[Variable]>, F: AsRef<[Function]>>(vars: V, funs: F) -> Context {
@@ -435,6 +435,21 @@ impl Value {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct Values(Vec<Value>);
+
+impl Values {
+    pub fn from_vec(values: Vec<Value>) -> Self {
+        return Values(values);
+    }
+    pub fn to_vec(self) -> Vec<Value> {
+        return self.0;
+    }
+    pub fn get(&self, i: usize) -> Option<&Value> {
+        self.0.iter().nth(i)
+    }
+}
+
 ///used to construct a AST Tree which is recursively evaluated by the [eval()] function.
 ///
 ///AST can be a:
@@ -649,7 +664,7 @@ impl AST {
                             },
                             AdvancedOperation::Equation { equations, .. } => {
                                 let eqs: Vec<String> = equations.iter().map(|e| format!("{}&={}", e.0.to_latex(), e.1.to_latex())).collect();
-                                return format!("\\left\\{{ \\begin{{align}}{}\\end{{align}}\\right.", eqs.join("\\"))
+                                return format!("\\left\\{{ \\begin{{align}}{}\\end{{align}}\\right\\}}.", eqs.join("\\"))
                             }
                         }
                     }
