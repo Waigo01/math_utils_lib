@@ -8,7 +8,7 @@ use usvg::{Options, Tree};
 #[cfg(feature = "output")]
 use crate::errors::LatexError;
 
-use crate::basetypes::{Value, AST};
+use crate::{basetypes::AST, Values};
 
 #[cfg(feature = "output")]
 pub fn png_from_latex<S: Into<String>>(latex: String, scale: f32, line_color: S) -> Result<Vec<u8>, LatexError> {
@@ -52,12 +52,7 @@ pub fn svg_from_latex<S: Into<String>>(latex: String, line_color: S) -> Result<S
 pub enum Step {
     Calc{
         term: AST,
-        result: Value,
-        variable_save: Option<String>
-    },
-    Equ{
-        eqs: Vec<(AST, AST)>,
-        results: Vec<Value>,
+        result: Values,
         variable_save: Option<String>
     },
     Fun{
@@ -88,40 +83,6 @@ impl Step {
 
                 return latex;
             }, 
-            Step::Equ{eqs, results, variable_save} => {
-                let mut recursed_eq = vec![];
-                let mut latex = "".to_string();
-                for i in eqs {
-                    let left = i.0.to_latex();
-                    let right = i.1.to_latex();
-
-                    recursed_eq.push((left, right));
-                }
-                for i in recursed_eq {
-                    latex += &format!("{} &= {} \\\\ \n", i.0, i.1);
-                }
-                latex += "\\\\ \n";
-                if results.len() == 0 {
-                    latex += &format!("&\\text{{No solutions found!}} \\tag{{{}}}\\label{{eq:{}}} \\\\ \\\\ \n", equation_number, equation_number);
-                }
-                for i in 0..results.len() {
-                    if variable_save.is_some() {
-                        latex += &format!("{}_{{{}}} &= {}", variable_save.clone().unwrap(), i, results[i].to_latex());
-                    } else {
-                        latex += &format!("x_{{{}}} &= {}", i, results[i].to_latex());
-                    }
-                    if i == (results.len() as f32/2.).floor() as usize {
-                        latex += &format!(" \\tag{{{}}}\\label{{eq:{}}} ", equation_number, equation_number);
-                    }
-                    if i == results.len()-1{
-                        latex += "\\\\ \\\\ \n";
-                    } else {
-                        latex += "\\\\ \n";
-                    }
-                }
-
-                return latex;
-            },
             Step::Fun{term, inputs, name} => {
                 return term.to_latex_at_fun(name, inputs.iter().collect(), true) + &format!(" \\tag{{{}}}\\label{{eq:{}}} \\\\ \\\\ \n", equation_number, equation_number);
             }
@@ -143,37 +104,6 @@ impl Step {
                     latex += &format!("{} {}= {}", expression, aligner, res);
                 } else {
                     latex += &format!("{}", expression);
-                }
-
-                return latex;
-            }, 
-            Step::Equ{eqs, results, variable_save} => {
-                let mut recursed_eq = vec![];
-                let mut latex = "".to_string();
-                for i in eqs {
-                    let left = i.0.to_latex();
-                    let right = i.1.to_latex();
-
-                    recursed_eq.push((left, right));
-                }
-                for i in recursed_eq {
-                    latex += &format!("{} &= {} \\\\ \n", i.0, i.1);
-                }
-                latex += "\\\\ \n";
-                if results.len() == 0 {
-                    latex += &format!("&\\text{{No solutions found!}}");
-                }
-                for i in 0..results.len() {
-                    if variable_save.is_some() {
-                        latex += &format!("{}_{{{}}} &= {}", variable_save.clone().unwrap(), i, results[i].to_latex());
-                    } else {
-                        latex += &format!("x_{{{}}} &= {}", i, results[i].to_latex());
-                    }
-                    if i == results.len()-1{
-                        latex += "\\\\ \\\\ \n";
-                    } else {
-                        latex += "\\\\ \n";
-                    }
                 }
 
                 return latex;

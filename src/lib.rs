@@ -95,7 +95,7 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //!
 //! ![LaTeX][latex-export]
 
-use errors::{QuickEvalError, QuickSolveError};
+use errors::QuickEvalError;
 
 #[doc(hidden)]
 pub mod maths;
@@ -111,14 +111,14 @@ pub mod solver;
 #[cfg(test)]
 mod tests;
 
-pub use basetypes::{Value, Variable};
+pub use basetypes::{Value, Values, Variable};
 pub use latex::Step;
 #[cfg(feature = "output")]
 pub use latex::{export_history, ExportType, png_from_latex, svg_from_latex};
 pub use parser::{parse, eval};
 pub use solver::solve;
 pub use errors::MathLibError;
-pub use basetypes::Store;
+pub use basetypes::Context;
 
 ///defines the precision used by the equation solver and the printing precision, which is PREC-2.
 #[cfg(feature = "high-prec")]
@@ -144,108 +144,11 @@ pub const PREC: i32 = 8;
 ///
 /// assert_eq!(res, Value::Scalar(9.));
 /// ```
-pub fn quick_eval<S: Into<String>>(expr: S, state: Store) -> Result<Value, QuickEvalError> {
+pub fn quick_eval<S: Into<String>>(expr: S, context: Context) -> Result<Values, QuickEvalError> {
     let mut expr = expr.into();
-    let mut context_vars = vec![
-        Variable::new("e".to_string(), Value::Scalar(std::f64::consts::E)),
-        Variable::new("pi".to_string(), Value::Scalar(std::f64::consts::PI))
-    ];
-    if !state.vars.is_empty() {
-        if state.vars.iter().filter(|x| x.name == "e".to_string() || x.name == "pi".to_string()).collect::<Vec<&Variable>>().len() > 0 {
-            return Err(QuickEvalError::DuplicateVars);
-        }
-        for i in state.vars {
-            context_vars.push(i.clone());
-        }
-    }
     expr = expr.trim().split(" ").filter(|s| !s.is_empty()).collect();
 
     let b_tree = parse(expr)?;
     
-    Ok(eval(&b_tree, &Store::new(&context_vars, &state.funs))?)
-}
-
-/// solves an equation or a system of equations towards the variables not yet specified in vars. It can additionaly be
-/// provided with other variables. If you just want to solve equations with parsed left and right
-/// hand side binaries, have a look at [solve()](fn@solver::solve).
-///
-/// # Example
-/// ```
-/// let equation = "x^2=9".to_string();
-///
-/// let res = quick_solve(equation, "x".to_string(), vec![])?;
-/// let res_rounded = res.iter().map(|x| x.round(3)).collect::<Vec<Value>>();
-///
-/// assert_eq!(res_rounded, vec![Value::Scalar(3.), Value::Scalar(-3.)]);
-/// ```
-/// ```
-/// let equation = "400-100g=600-100k, -600-100g=-400-100k, 1000-100g=100k".to_string();
-///
-/// let res = quick_solve(equation, vec![])?;
-/// let res_rounded = res.iter().map(|x| x.round(3)).collect::<Vec<Value>>();
-///
-/// assert_eq!(res_rounded, vec![Value::Vector(vec![4., 6.])]);
-/// ```
-pub fn quick_solve<S: Into<String>>(expr: S, state: Store) -> Result<Vec<Value>, QuickSolveError> {
-    let mut expr = expr.into();
-    let mut context_vars = vec![
-        Variable::new("e".to_string(), Value::Scalar(std::f64::consts::E)),
-        Variable::new("pi".to_string(), Value::Scalar(std::f64::consts::PI))
-    ];
-    if !state.vars.is_empty() {
-        if state.vars.iter().filter(|x| x.name == "e".to_string() || x.name == "pi".to_string()).collect::<Vec<&Variable>>().len() > 0 {
-            return Err(QuickSolveError::DuplicateVars);
-        }
-        for i in state.vars {
-            context_vars.push(i.clone());
-        }
-    }
-    expr = expr.trim().split(" ").filter(|s| !s.is_empty()).collect();
-
-    let mut equations = vec![];
-    let mut parenths_open = 0;
-    let mut buffer = String::new();
-
-    for i in expr.chars() {
-        if parenths_open == 0 && i == ',' {
-            equations.push(buffer.clone());
-            buffer.clear();
-        } else {
-            buffer.push(i);
-        }
-
-        if i == '(' || i == '[' || i == '{' {
-            parenths_open += 1;
-        } else if i == ')' || i == ']' || i == '}' {
-            parenths_open -= 1;
-        }
-    }
-    equations.push(buffer);
-
-    let mut parsed_equations = vec![];
-
-    for i in equations {
-        if !i.contains("=") {
-            return Err(QuickSolveError::NoEq);
-        }
-
-        let left = i.split("=").nth(0).unwrap().to_string();
-        let right = i.split("=").nth(1).unwrap().to_string();
-
-        let left_b;
-        let right_b;
-        if left.len() >= right.len() {
-            left_b = parse(left)?;
-            right_b = parse(right)?;
-        } else {
-            left_b = parse(right)?;
-            right_b = parse(left)?;
-        }
-
-        parsed_equations.push((left_b, right_b));
-    }
-
-    let roots = solve(parsed_equations, &Store::new(&context_vars, &state.funs))?;
-
-    Ok(roots)
+    Ok(eval(&b_tree, &context)?)
 }

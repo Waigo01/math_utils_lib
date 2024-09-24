@@ -1,11 +1,11 @@
-use crate::{basetypes::{AdvancedOperation, Operation, Value, Variable, AST}, errors::{NewtonError, SolveError}, maths::{abs, calculus::calculate_derivative}, parser::eval, Store, PREC};
+use crate::{basetypes::{Value, Variable, AST}, errors::EvalError, maths::calculus::calculate_derivative_newton, parser::eval, Context, PREC};
 
-fn clean_results(res: Vec<Value>) -> Vec<Value> {
+fn clean_results(res: &[Value]) -> Vec<Value> {
     if res.len() == 0 {
         return vec![];
     }
     let mut new_res: Vec<Value> = vec![];
-    for i in &res {
+    for i in res {
         let mut found = false;
         for j in &new_res {
             if i.round(PREC-2) == j.round(PREC-2) {
@@ -37,73 +37,9 @@ fn clean_results(res: Vec<Value>) -> Vec<Value> {
     return new_res;
 }
 
-fn find_vars_in_expr(b: &AST, mut ov: Vec<String>) -> Vec<String> {
-    match b {
-        AST::Variable(v) => {
-            ov.push(v.to_string());
-            return ov.to_owned();
-        },
-        AST::Function { inputs, .. } => {
-            let mut found_vars = vec![];
-            for i in &**inputs {
-                found_vars.append(&mut find_vars_in_expr(i, ov.clone()));
-            }
-            return found_vars;
-        }
-        AST::Scalar(_) => {
-            return ov.to_owned();
-        },
-        AST::Vector(v) => {
-            let mut found_vars = vec![];
-            for i in &**v {
-                found_vars.append(&mut find_vars_in_expr(i, ov.clone()));
-            }
-            return found_vars;
-        },
-        AST::Matrix(m) => {
-            let mut found_vars = vec![];
-            for i in &**m {
-                for j in i {
-                    found_vars.append(&mut find_vars_in_expr(j, ov.clone()));
-                }
-            }
-            return found_vars;
-        },
-        AST::Operation(o) => {
-            match &**o {
-                Operation::SimpleOperation { left, right, .. } => {
-                    let mut lvars = find_vars_in_expr(left, ov.clone());
-                    let mut rvars = find_vars_in_expr(right, ov);
-                    lvars.append(&mut rvars);
-                    return lvars;
-                },
-                Operation::AdvancedOperation(ao) => {
-                    match ao {
-                        AdvancedOperation::Integral { upper_bound, lower_bound, .. } => {
-                            let mut found_vars = vec![];
-                            let upper_bound_recurse = find_vars_in_expr(upper_bound, ov.clone());
-                            for i in upper_bound_recurse {
-                                found_vars.push(i);
-                            }
-                            let lower_bound_recurse = find_vars_in_expr(lower_bound, ov);
-                            for i in lower_bound_recurse {
-                                found_vars.push(i);
-                            }
-                            return found_vars;
-                        },
-                        AdvancedOperation::Derivative { at, .. } => {
-                            return find_vars_in_expr(at, ov);
-                        } 
-                    }
-                }
-            }
-        }
-    }
-}
-
-fn gauss_algorithm(v: &mut Vec<Vec<f64>>) -> Result<Value, NewtonError> {
+fn gauss_algorithm(v: &mut Vec<Vec<f64>>) -> Result<Value, EvalError> {
     if v.len()+1 != v[0].len() {
-        return Err(NewtonError::UnderdeterminedSystem);
+        return Err(EvalError::UnderdeterminedSystem);
     }
 
     for i in 0..v.len() - 1 {
@@ -117,7 +53,7 @@ fn gauss_algorithm(v: &mut Vec<Vec<f64>>) -> Result<Value, NewtonError> {
                 }
             }
             if zero_line {
-                return Err(NewtonError::InfiniteSolutions);
+                return Err(EvalError::InfiniteSolutions);
             }
         }
     } 
@@ -144,7 +80,7 @@ fn gauss_algorithm(v: &mut Vec<Vec<f64>>) -> Result<Value, NewtonError> {
                 }
             }
             if zero_line {
-                return Err(NewtonError::InfiniteSolutions);
+                return Err(EvalError::InfiniteSolutions);
             }
         }
     } 
@@ -160,10 +96,10 @@ fn gauss_algorithm(v: &mut Vec<Vec<f64>>) -> Result<Value, NewtonError> {
     return Ok(Value::Vector(result_vec));
 }
 
-fn jacobi_and_gauss(search_expres: &[AST], x: &[Variable], state: &mut Store, fx: &Vec<f64>) -> Result<Vec<Variable>, NewtonError> {
+fn jacobi_and_gauss(search_expres: &[AST], x: &[Variable], context: &mut Context, fx: &Vec<f64>) -> Result<Vec<Variable>, EvalError> {
     let mut jacobi: Vec<Vec<f64>> = vec![];
 
-    let mut vars: Vec<&Variable> = state.vars.iter().collect();
+    let mut vars: Vec<&Variable> = context.vars.iter().collect();
 
     for i in 0..search_expres.len() {
         let mut row = vec![];
@@ -175,28 +111,25 @@ fn jacobi_and_gauss(search_expres: &[AST], x: &[Variable], state: &mut Store, fx
                     added_vars += 1;
                 }
             }
-            let derivative = calculate_derivative(&search_expres[i], &x[j].name, &x[j].value, Some(Value::Scalar(fx[i])), &Store::new(&vars.iter().map(|v| v.to_owned().to_owned()).collect::<Vec<Variable>>(), &state.funs))?.get_scalar().unwrap();
+            let derivative = calculate_derivative_newton(&search_expres[i], &x[j].name, x[j].values.get(0).unwrap(), Some(Value::Scalar(fx[i])), &mut Context::new(&vars.iter().map(|v| v.to_owned().to_owned()).collect::<Vec<Variable>>(), &context.funs))?.get_scalar().unwrap();
             row.push(derivative);
             for _ in 0..added_vars {
-                vars.remove(state.vars.len()-1);
+                vars.remove(vars.len()-1);
             }
         }
         jacobi.push(row);
     } 
 
-    let mut augmented_matrix = vec![];
-
     for i in 0..jacobi.len() {
-        augmented_matrix.push(jacobi[i].clone());
-        augmented_matrix[i].push(-1. * fx[i]);
+        jacobi[i].push(-1. * fx[i]);
     }
 
-    let x_new_minus_x = gauss_algorithm(&mut augmented_matrix)?;
+    let x_new_minus_x = gauss_algorithm(&mut jacobi)?;
 
     let mut x_new = vec![];
 
     for i in 0..x.len() {
-        x_new.push(Variable::new(&x[i].name, Value::Scalar(x_new_minus_x.get_vector().unwrap()[i] + x[i].value.get_scalar().unwrap())));
+        x_new.push(Variable::new(&x[i].name, vec![Value::Scalar(x_new_minus_x.get_vector().unwrap()[i] + x[i].values.get(0).unwrap().get_scalar().unwrap())]));
     }
 
     return Ok(x_new);
@@ -207,45 +140,44 @@ enum NewtonReturn {
     FinishedX(Vec<Variable>) 
 }
 
-fn newton(search_expres: &Vec<AST>, check_expres: &Vec<AST> , x: &Vec<Variable>, state: &mut Store) -> Result<NewtonReturn, NewtonError> {
+fn newton(search_expres: &Vec<AST>, check_expres: &Vec<AST> , x: &Vec<Variable>, context: &mut Context) -> Result<NewtonReturn, EvalError> {
     let mut fx = vec![];
-    let mut vars: Vec<&Variable> = state.vars.iter().collect();
     for i in x {
-        vars.push(i);
+        context.add_var(i);
     }
     for i in search_expres {
-        fx.push(eval(i, &Store::new(&vars.iter().map(|v| v.to_owned().to_owned()).collect::<Vec<Variable>>(), &state.funs))?.get_scalar().unwrap());
+        fx.push(eval(i, context)?.get(0).unwrap().get_scalar().unwrap());
     }
-    for _ in x {
-        vars.remove(state.vars.len()-1);
+    for i in x {
+        context.remove_var(&i.name);
     }
 
-    if -10f64.powi(-PREC) < abs(Value::Vector(fx.clone()))?.get_scalar().unwrap() && abs(Value::Vector(fx.clone()))?.get_scalar().unwrap() < 10f64.powi(-PREC) {
+    if -10f64.powi(-PREC) < fx.iter().map(|f| f.powi(2)).sum::<f64>().sqrt() && fx.iter().map(|f| f.powi(2)).sum::<f64>().sqrt() < 10f64.powi(-PREC) {
         let mut check_results = vec![]; 
         for i in x {
-            vars.push(i);
+            context.add_var(i);
         }
         for i in check_expres {
-            check_results.push(eval(i, &Store::new(&vars.iter().map(|v| v.to_owned().to_owned()).collect::<Vec<Variable>>(), &state.funs))?.get_scalar().unwrap());
+            check_results.push(eval(i, context)?.get(0).unwrap().get_scalar().unwrap());
         }
-        for _ in x {
-            vars.remove(vars.len()-1);
+        for i in x {
+            context.remove_var(&i.name);
         }
         if check_results.is_empty() {
             return Ok(NewtonReturn::FinishedX(x.to_vec()));
         }
-        if -10f64.powi(-PREC) < abs(Value::Vector(check_results.clone()))?.get_scalar().unwrap() && abs(Value::Vector(check_results))?.get_scalar().unwrap() < 10f64.powi(-PREC) {
+        if -10f64.powi(-PREC) < check_results.iter().map(|f| f.powi(2)).sum::<f64>().sqrt() && check_results.iter().map(|f| f.powi(2)).sum::<f64>().sqrt() < 10f64.powi(-PREC) {
             return Ok(NewtonReturn::FinishedX(x.to_vec()));
         } else {
-            return Err(NewtonError::ExpressionCheckFailed);
+            return Err(EvalError::ExpressionCheckFailed);
         } 
     }
 
-    let new_x = jacobi_and_gauss(search_expres, x, state, &fx)?;
+    let new_x = jacobi_and_gauss(search_expres, x, context, &fx)?;
 
     for i in &new_x {
-        if i.value.is_inf_or_nan() {
-            return Err(NewtonError::NaNOrInf);
+        if i.values.get(0).unwrap().is_inf_or_nan() {
+            return Err(EvalError::NaNOrInf);
         }
     }
 
@@ -270,7 +202,7 @@ fn generate_combinations(arr: Vec<usize>, len: usize, prev_arr: Vec<usize>) -> V
 pub struct RootFinder {
     expressions: Vec<AST>,
     combinations: Vec<Vec<usize>>,
-    state: Store,
+    context: Context,
     search_vars_names: Vec<String>
 }
 
@@ -281,66 +213,47 @@ impl RootFinder {
     ///
     /// If you want a simpler way of solving equations and systems of equations, have a look at
     /// [solve()](fn@crate::solver::solve) and [quick_solve()](fn@crate::quick_solve).
-    pub fn new(expressions: Vec<AST>, state: Store) -> Result<RootFinder, SolveError> {
+    pub fn new(expressions: Vec<AST>, mut context: Context, search_vars_names: Vec<String>) -> Result<RootFinder, EvalError> {
         if expressions.len() == 0 {
-            return Err(SolveError::NothingToDo);
+            return Err(EvalError::NothingToDoEq);
         }
 
         for i in &expressions {
             match i {
-                AST::Vector(_) => return Err(SolveError::NothingToDo),
-                AST::Scalar(_) => return Err(SolveError::NothingToDo),
-                AST::Matrix(_) => return Err(SolveError::NothingToDo),
-                AST::Variable(_) => return Err(SolveError::NothingToDo),
-                AST::Function {..} => return Err(SolveError::NothingToDo),
+                AST::Vector(_) => return Err(EvalError::NothingToDoEq),
+                AST::Scalar(_) => return Err(EvalError::NothingToDoEq),
+                AST::Matrix(_) => return Err(EvalError::NothingToDoEq),
+                AST::List(_) => return Err(EvalError::NothingToDoEq),
+                AST::Variable(_) => return Err(EvalError::NothingToDoEq),
+                AST::Function {..} => return Err(EvalError::NothingToDoEq),
                 AST::Operation(_) => {}
             }
         }
 
-        let mut search_vars_names = vec![];
-
-        for i in &expressions {
-            let vars_in_expr = find_vars_in_expr(i, vec![]);
-
-            let mut var_names = vec![];
-
-            for var in &state.vars {
-                var_names.push(var.name.clone());
-            }
-
-            for (i, var) in vars_in_expr.iter().enumerate() {
-                if !var_names.contains(&var) {
-                    if !search_vars_names.contains(var) {
-                        if i > search_vars_names.len() {
-                            search_vars_names.push(var.to_string());
-                        } else {
-                            search_vars_names.insert(i, var.to_string());
-                        }
-                    }
-                }
+        for i in &search_vars_names {
+            if context.vars.iter().map(|v| v.name.clone()).collect::<Vec<String>>().contains(&i) {
+                return Err(EvalError::SearchVarsInVars);
             }
         }
 
-        let mut vars = state.vars.to_vec();
-
         if search_vars_names.len() > expressions.len() {
-            return Err(NewtonError::UnderdeterminedSystem.into());
+            return Err(EvalError::UnderdeterminedSystem.into());
         }
 
         for i in &search_vars_names {
-            vars.push(Variable::new(i.to_string(), Value::Scalar(2.5690823)));
+            context.add_var(&Variable::new(i, vec![Value::Scalar(8.21785)]));
         }
 
-        let initial_res = eval(&expressions[0], &Store::new(&vars, &state.funs))?;
+        let initial_res = eval(&expressions[0], &context)?;
 
-        for _ in &search_vars_names {
-            vars.remove(state.vars.len()-1);
+        for i in &search_vars_names {
+            context.remove_var(i);
         }
 
-        match initial_res {
+        match initial_res.get(0).unwrap() {
             Value::Scalar(_) => {},
-            Value::Vector(_) => return Err(SolveError::VectorInEq),
-            Value::Matrix(_) => return Err(SolveError::MatrixInEq)
+            Value::Vector(_) => return Err(EvalError::VectorInEq),
+            Value::Matrix(_) => return Err(EvalError::MatrixInEq)
         }
 
         let combs;
@@ -351,7 +264,7 @@ impl RootFinder {
             combs = vec![(0..expressions.len()).collect::<Vec<usize>>()];
         }
 
-        return Ok(RootFinder { expressions, combinations: combs, state, search_vars_names });
+        return Ok(RootFinder { expressions, combinations: combs, context, search_vars_names });
     }
     /// starts the root finding process. It will always search for roots in terms of variables that
     /// have not yet been defined in the global variables passed in
@@ -359,7 +272,7 @@ impl RootFinder {
     /// 
     /// In the case of a system of equations results will be represented as a vector with the order
     /// being that of the variables in the expressions.
-    pub fn find_roots(&self) -> Result<Vec<Value>, SolveError> {
+    pub fn find_roots(&self) -> Result<Vec<Value>, EvalError> {
         for i in &self.combinations {
             let mut search_expres = vec![];
             let mut check_expres = self.expressions.clone();
@@ -368,16 +281,16 @@ impl RootFinder {
                 search_expres.push(check_expres.remove(*j-removed));
                 removed += 1;
             } 
-            let mut local_state = self.state.clone();
+            let mut local_context = self.context.clone();
             let mut results = vec![];
             'solve_loop_0: for j in -1000..1000 {
                 let mut x = vec![];
                 for k in &self.search_vars_names {
-                    x.push(Variable::new(k, Value::Scalar(j as f64)));
+                    x.push(Variable::new(k, vec![Value::Scalar(j as f64)]));
                 }
 
                 'solve_loop_1: for _ in 0..1000 {
-                    let newton_result = newton(&search_expres, &check_expres, &x, &mut local_state);
+                    let newton_result = newton(&search_expres, &check_expres, &x, &mut local_context);
 
                     match newton_result {
                         Ok(o) => {
@@ -386,7 +299,7 @@ impl RootFinder {
                                 NewtonReturn::FinishedX(fin_x) => {
                                     let mut result_vec = vec![];
                                     for i in fin_x {
-                                        result_vec.push(i.value.get_scalar().unwrap());
+                                        result_vec.push(i.values.get(0).unwrap().get_scalar().unwrap());
                                     }
                                     if result_vec.len() == 1 {
                                         results.push(Value::Scalar(result_vec[0].clone()));
@@ -399,9 +312,9 @@ impl RootFinder {
                         },
                         Err(e) => {
                             match e {
-                                NewtonError::InfiniteSolutions => break 'solve_loop_0,
-                                NewtonError::NaNOrInf => break 'solve_loop_1,
-                                NewtonError::ExpressionCheckFailed => break 'solve_loop_1,
+                                EvalError::InfiniteSolutions => break 'solve_loop_0,
+                                EvalError::NaNOrInf => break 'solve_loop_1,
+                                EvalError::ExpressionCheckFailed => break 'solve_loop_1,
                                 _ => return Err(e.into())
                             }
                         }
@@ -409,7 +322,7 @@ impl RootFinder {
                 }
             }
 
-            let cleaned_results = clean_results(results);
+            let cleaned_results = clean_results(&results);
 
             if !cleaned_results.is_empty() {
                 return Ok(cleaned_results);

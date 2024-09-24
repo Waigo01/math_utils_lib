@@ -32,9 +32,6 @@ pub fn center_in_string(f: String, n: i32) -> String {
 }
 
 #[doc(hidden)]
-
-
-#[doc(hidden)]
 pub fn round_and_format(x: f64, latex: bool) -> String {
     if (x*10f64.powi(PREC-2)).round()/10f64.powi(PREC-2) == 0. && !latex && x != 0. {
         let mut scientific = format!("{:+e}", x);
@@ -60,4 +57,44 @@ pub fn round_and_format(x: f64, latex: bool) -> String {
         }
         return rounded_string;
     }
+}
+
+#[doc(hidden)]
+pub fn cart_prod<T: Clone>(arr: &Vec<Vec<T>>) -> Vec<Vec<T>> {
+    let mut results: Vec<Vec<T>> = vec![vec![]];
+    for i in 0..arr.len() {
+        let mut temp_res = vec![];
+        for res in &results {
+            for el in &arr[i] {
+                let mut new_res = res.to_vec();
+                new_res.push(el.clone());
+                temp_res.push(new_res);
+            }
+        }
+        results = temp_res;
+    }
+
+    return results;
+}
+
+#[doc(hidden)]
+pub fn get_args(chars: &[char]) -> Vec<String> {
+    let mut args = vec![];
+    let mut parenths_open = 0;
+    let mut buffer = String::new();
+    for j in chars.into_iter() {
+        if parenths_open == 0 && *j == ',' {
+            args.push(buffer.clone());
+            buffer.clear();
+        } else {
+            buffer.push(*j);
+        }
+        if *j == '(' || *j == '[' || *j == '{' {
+            parenths_open += 1;
+        } else if *j == ')' || *j == ']' || *j == '}' {
+            parenths_open -= 1;
+        }
+    }
+    args.push(buffer);
+    args
 }

@@ -1,12 +1,12 @@
 use crate::basetypes::Value;
 
 #[doc(hidden)]
-pub fn sadd(a: f64, b: f64) -> Result<Value, String> {
+pub fn sadd(a: &f64, b: &f64) -> Result<Value, String> {
     Ok(Value::Scalar(a + b))
 }
 
 #[doc(hidden)]
-pub fn vadd(a: Vec<f64>, b: Vec<f64>) -> Result<Value, String> { 
+pub fn vadd(a: &Vec<f64>, b: &Vec<f64>) -> Result<Value, String> { 
     if a.len() != b.len() {
         return Err(format!("Vectors have different dimensions!"));
     }
@@ -18,7 +18,7 @@ pub fn vadd(a: Vec<f64>, b: Vec<f64>) -> Result<Value, String> {
 }
 
 #[doc(hidden)]
-pub fn madd(a: Vec<Vec<f64>>, b: Vec<Vec<f64>>) -> Result<Value, String> {
+pub fn madd(a: &Vec<Vec<f64>>, b: &Vec<Vec<f64>>) -> Result<Value, String> {
     if a.len() != b.len() || a[0].len() != b[0].len() {
         return Err(format!("Matrices have different dimensions!"));
     }
@@ -34,19 +34,23 @@ pub fn madd(a: Vec<Vec<f64>>, b: Vec<Vec<f64>>) -> Result<Value, String> {
 }
 
 #[doc(hidden)]
-pub fn vsub(a: Vec<f64>, mut b: Vec<f64>) -> Result<Value, String> {
+pub fn vsub(a: &Vec<f64>, b: &Vec<f64>) -> Result<Value, String> {
+    let mut b_neg = vec![];
     for i in 0..b.len() {
-        b[i] *= -1.;
+        b_neg.push(b[i] * -1.);
     }
-    vadd(a, b)
+    vadd(a, &b_neg)
 }
 
 #[doc(hidden)]
-pub fn msub(a: Vec<Vec<f64>>, mut b: Vec<Vec<f64>>) -> Result<Value, String> {
+pub fn msub(a: &Vec<Vec<f64>>, b: &Vec<Vec<f64>>) -> Result<Value, String> {
+    let mut b_neg = vec![];
     for i in 0..b.len() {
+        let mut r_neg = vec![];
         for j in 0..b[0].len() {
-            b[i][j] *= -1.;
+            r_neg.push(b[i][j] * -1.);
         }
+        b_neg.push(r_neg);
     }
-    madd(a, b)
+    madd(a, &b_neg)
 }
