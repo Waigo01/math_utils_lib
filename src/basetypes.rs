@@ -448,6 +448,22 @@ impl Values {
     pub fn get(&self, i: usize) -> Option<&Value> {
         self.0.iter().nth(i)
     }
+    pub fn to_string(&self) -> String {
+        self.clone().to_vec().iter().map(|v| v.to_string()).collect::<Vec<String>>().join(", ")
+    }
+    pub fn to_latex(&self) -> String {
+        format!("\\left\\{{{}\\right\\}}", self.clone().to_vec().iter().map(|v| v.to_latex()).collect::<Vec<String>>().join("; "))
+    }
+    pub fn to_latex_at_var<S: Into<String>>(&self, var_name: S, add_aligner: bool) -> String {
+        let aligner;
+        if add_aligner {
+            aligner = "&";
+        } else {
+            aligner = "";
+        }
+
+        format!("{} {}= \\left\\{{{}\\right\\}}", var_name.into(), aligner, self.clone().to_vec().iter().map(|v| v.to_latex()).collect::<Vec<String>>().join("; "))
+    }
 }
 
 ///used to construct a AST Tree which is recursively evaluated by the [eval()] function.
@@ -462,6 +478,7 @@ pub enum AST {
     Scalar(f64),
     Vector(Box<Vec<AST>>),
     Matrix(Box<Vec<Vec<AST>>>),
+    List(Vec<AST>),
     Variable(String),
     Function {
         name: String,
@@ -505,6 +522,7 @@ impl AST {
             AST::Scalar(s) => return round_and_format(*s, false),
             AST::Vector(v) => return format!("[{}]", v.iter().map(|a| a.to_string()).collect::<Vec<String>>().join(", ")),
             AST::Matrix(m) => return format!("[{}]", m.iter().map(|v| "[".to_string() + &v.iter().map(|v| v.to_string()).collect::<Vec<String>>().join(", ") + "]").collect::<Vec<String>>().join(", ")),
+            AST::List(l) => return format!("{{{}}}", l.iter().map(|a| a.to_string()).collect::<Vec<String>>().join(", ")),
             AST::Variable(v) => return v.to_string(),
             AST::Function { name, inputs } => return format!("{}({})", name, inputs.iter().map(|i| i.to_string()).collect::<Vec<String>>().join(", ")),
             AST::Operation(o) => {
@@ -516,6 +534,7 @@ impl AST {
                             SimpleOpType::Get => return format!("{}_{}", lv, rv),
                             SimpleOpType::Add => return format!("{} + {}", lv, rv),
                             SimpleOpType::Sub => return format!("{} - {}", lv, rv),
+                            SimpleOpType::AddSub => return format!("{} +- {}", lv, rv),
                             SimpleOpType::Mult => return format!("{} * {}", lv, rv),
                             SimpleOpType::Neg => return format!("-{}", lv),
                             SimpleOpType::Div => return format!("{} / {}", lv, rv),
@@ -603,6 +622,7 @@ impl AST {
                 output_string += "\\end{bmatrix}";
                 return output_string;
             },
+            AST::List(l) => return format!("\\left\\{{{}\\right\\}}", l.iter().map(|a| a.to_latex()).collect::<Vec<String>>().join("; ")),
             AST::Variable(v) => {
                 if v == "pi" {
                     return "\\pi".to_string();
@@ -630,6 +650,7 @@ impl AST {
                             SimpleOpType::Get => return format!("{}_{{{}}}", lv, rv),
                             SimpleOpType::Add => return format!("{}+{}", lv, rv),
                             SimpleOpType::Sub => return format!("{}-{}", lv, rv),
+                            SimpleOpType::AddSub => return format!("{}\\pm{}", lv, rv),
                             SimpleOpType::Mult => return format!("{}\\cdot {}", lv, rv),
                             SimpleOpType::Neg => return format!("-{}", lv),
                             SimpleOpType::Div => return format!("\\frac{{{}}}{{{}}}", lv, rv),
@@ -686,6 +707,8 @@ pub enum SimpleOpType {
     Add,
     ///Subtract two scalars, vectors, or matrices (a-b)
     Sub,
+    ///Add and subtract two scalars, vectors or matrices (a&b)
+    AddSub,
     ///Negate a scalar, vector or matrix or expression in parentheses (-(3*4))
     Neg,
     ///Multiply a scalar, vector or matrix with each other (Dotproduct, Matrix multiplication,

@@ -56,7 +56,7 @@ fn easy_eval6() -> Result<(), MathLibError> {
 
 #[test]
 fn easy_eval7() -> Result<(), MathLibError> {
-    let res = quick_eval("root(9, 2)", Context::empty())?.to_vec();
+    let res = quick_eval("&root(9, 2)", Context::empty())?.to_vec();
 
     assert_eq!(res, vec![Value::Scalar(3.), Value::Scalar(-3.)]);
 
@@ -65,7 +65,7 @@ fn easy_eval7() -> Result<(), MathLibError> {
 
 #[test]
 fn easy_eval8() -> Result<(), MathLibError> {
-    let res = quick_eval("2*sqrt(9)", Context::empty())?.to_vec();
+    let res = quick_eval("2*(&sqrt(9))", Context::empty())?.to_vec();
 
     assert_eq!(res, vec![Value::Scalar(6.), Value::Scalar(-6.)]);
 
@@ -291,7 +291,7 @@ fn medium_eval23() -> Result<(), MathLibError> {
 
 #[test]
 fn medium_eval24() -> Result<(), MathLibError> {
-    let res = quick_eval("[sqrt(9), sqrt(9), 0]", Context::empty())?.to_vec();
+    let res = quick_eval("[&sqrt(9), &sqrt(9), 0]", Context::empty())?.to_vec();
 
     assert_eq!(res, vec![Value::Vector(vec![3., 3., 0.]), Value::Vector(vec![3., -3., 0.]), Value::Vector(vec![-3., 3., 0.]), Value::Vector(vec![-3., -3., 0.])]);
 
@@ -300,7 +300,7 @@ fn medium_eval24() -> Result<(), MathLibError> {
 
 #[test]
 fn medium_eval25() -> Result<(), MathLibError> {
-    let res = quick_eval("[[sqrt(9), 0, 0], [0, 1, 0], [0, 0, 1]]", Context::empty())?.to_vec();
+    let res = quick_eval("[[&sqrt(9), 0, 0], [0, 1, 0], [0, 0, 1]]", Context::empty())?.to_vec();
 
     assert_eq!(res, vec![Value::Matrix(vec![vec![3., 0., 0.], vec![0., 1., 0.], vec![0., 0., 1.]]), Value::Matrix(vec![vec![-3., 0., 0.], vec![0., 1., 0.], vec![0., 0., 1.]])]);
 
@@ -309,12 +309,21 @@ fn medium_eval25() -> Result<(), MathLibError> {
 
 #[test]
 fn medium_eval26() -> Result<(), MathLibError> {
-    let function = parse("sqrt(x)+y")?;
+    let function = parse("&sqrt(x)+y")?;
     let function_var = Function::new("f", function, vec!["x", "y"]);
 
-    let res = quick_eval("f(sqrt(16), sqrt(9))", Context::new(vec![], vec![function_var]))?.to_vec();
+    let res = quick_eval("f(&sqrt(16), &sqrt(9))", Context::new(vec![], vec![function_var]))?.to_vec();
 
     assert_eq!(res[0..4].to_vec(), vec![Value::Scalar(5.), Value::Scalar(1.), Value::Scalar(-1.), Value::Scalar(-5.)]);
+
+    Ok(())
+}
+
+#[test]
+fn medium_eval27() -> Result<(), MathLibError> {
+    let res = quick_eval("3*{7, 3, 2}", Context::empty())?.to_vec();
+
+    assert_eq!(res, vec![Value::Scalar(21.), Value::Scalar(9.), Value::Scalar(6.)]);
 
     Ok(())
 }

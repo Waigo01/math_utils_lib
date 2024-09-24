@@ -223,6 +223,7 @@ impl RootFinder {
                 AST::Vector(_) => return Err(EvalError::NothingToDoEq),
                 AST::Scalar(_) => return Err(EvalError::NothingToDoEq),
                 AST::Matrix(_) => return Err(EvalError::NothingToDoEq),
+                AST::List(_) => return Err(EvalError::NothingToDoEq),
                 AST::Variable(_) => return Err(EvalError::NothingToDoEq),
                 AST::Function {..} => return Err(EvalError::NothingToDoEq),
                 AST::Operation(_) => {}

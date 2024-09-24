@@ -5,6 +5,7 @@ fn get_op_symbol(c: char) -> Option<SimpleOpType> {
         '?' => Some(SimpleOpType::Get),
         '+' => Some(SimpleOpType::Add),
         '-' => Some(SimpleOpType::Sub),
+        '&' => Some(SimpleOpType::AddSub),
         '*' => Some(SimpleOpType::Mult),
         '/' => Some(SimpleOpType::Div),
         '^' => Some(SimpleOpType::Pow),
@@ -189,7 +190,7 @@ pub fn parse<S: Into<String>>(expr: S) -> Result<AST, ParserError> {
 
     //is it an operation?
     
-    let op_types = vec![SimpleOpType::Add, SimpleOpType::Sub, SimpleOpType::Mult, SimpleOpType::Div, SimpleOpType::Cross, SimpleOpType::HiddenMult, SimpleOpType::Pow, SimpleOpType::Get];
+    let op_types = vec![SimpleOpType::Add, SimpleOpType::Sub, SimpleOpType::AddSub, SimpleOpType::Mult, SimpleOpType::Div, SimpleOpType::Cross, SimpleOpType::HiddenMult, SimpleOpType::Pow, SimpleOpType::Get];
     let mut ops_in_expr: Vec<(SimpleOpType, usize, usize, usize)> = vec![];
     let mut highest_op = 7;
     let mut last_char = '\\';
@@ -271,6 +272,16 @@ pub fn parse<S: Into<String>>(expr: S) -> Result<AST, ParserError> {
             op_type: SimpleOpType::Neg,
             left: parse(expr_chars[1..].to_vec().iter().collect::<String>())?,
             right: AST::from_value(Value::Scalar(0.))
+        }));
+    }
+
+    // is it a plus minus?
+    
+    if expr_chars[0] == '&' {
+        return Ok(AST::from_operation(Operation::SimpleOperation { 
+            op_type: SimpleOpType::AddSub, 
+            left: AST::from_value(Value::Scalar(0.)), 
+            right: parse(expr_chars[1..].to_vec().iter().collect::<String>())? 
         }));
     }
 
@@ -404,6 +415,12 @@ pub fn parse<S: Into<String>>(expr: S) -> Result<AST, ParserError> {
         return Ok(AST::from_variable_name(expr));
     }
 
+    // is it a list of values?
+    
+    if expr_chars[0] == '{' && expr_chars[expr_chars.len()-1] == '}' {
+        return Ok(AST::List(get_args(&expr_chars[1..expr_chars.len()-1]).iter().map(|s| parse(s)).collect::<Result<Vec<AST>, ParserError>>()?));
+    }
+
     let v = parse_value(expr_chars.iter().collect())?;
 
     return Ok(v);
@@ -460,7 +477,10 @@ fn eval_rec(b: &AST, context: &Context, last_fn: &str) -> Result<Vec<Value>, Eva
             let permuts = cart_prod(&permuts_row);
             
             Ok(permuts.iter().map(|m| Value::Matrix(m.to_vec())).collect())
-        }, 
+        },
+        AST::List(l) => {
+            return Ok(l.iter().map(|e| eval_rec(e, context, last_fn)).collect::<Result<Vec<Vec<Value>>, EvalError>>()?.into_iter().flatten().collect());
+        }
         AST::Variable(v) => {
             for i in context.vars.iter() {
                 if &i.name == v {
@@ -530,6 +550,7 @@ fn eval_rec(b: &AST, context: &Context, last_fn: &str) -> Result<Vec<Value>, Eva
                                 SimpleOpType::Get => res.push(maths::get(&i, &j)?),
                                 SimpleOpType::Add => res.push(maths::add(&i, &j)?),
                                 SimpleOpType::Sub => res.push(maths::sub(&i, &j)?),
+                                SimpleOpType::AddSub => res.append(&mut vec![maths::add(&i, &j)?, maths::sub(&i, &j)?]),
                                 SimpleOpType::Mult => res.push(maths::mult(&i, &j)?),
                                 SimpleOpType::Neg => res.push(maths::neg(&i)?),
                                 SimpleOpType::Div => res.push(maths::div(&i, &j)?),
@@ -540,8 +561,8 @@ fn eval_rec(b: &AST, context: &Context, last_fn: &str) -> Result<Vec<Value>, Eva
                                 SimpleOpType::Cos => res.push(maths::cos(&i)?),
                                 SimpleOpType::Tan => res.push(maths::tan(&i)?),
                                 SimpleOpType::Abs => res.push(maths::abs(&i)?),
-                                SimpleOpType::Sqrt => res.append(&mut maths::sqrt(&i)?),
-                                SimpleOpType::Root => res.append(&mut maths::root(&i, &j)?),
+                                SimpleOpType::Sqrt => res.push(maths::sqrt(&i)?),
+                                SimpleOpType::Root => res.push(maths::root(&i, &j)?),
                                 SimpleOpType::Ln => res.push(maths::ln(&i)?),
                                 SimpleOpType::Arcsin => res.push(maths::arcsin(&i)?),
                                 SimpleOpType::Arccos => res.push(maths::arccos(&i)?),
