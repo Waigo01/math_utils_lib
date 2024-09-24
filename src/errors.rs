@@ -202,13 +202,6 @@ impl LatexError {
 }
 
 #[cfg(feature = "output")]
-impl From<gdk_pixbuf::glib::Error> for LatexError {
-    fn from(value: gdk_pixbuf::glib::Error) -> Self {
-        LatexError::LatexToImageError(value.to_string())
-    }
-}
-
-#[cfg(feature = "output")]
 impl From<mathjax_svg::Error> for LatexError {
     fn from(value: mathjax_svg::Error) -> Self {
         LatexError::LatexToSvgError(value.to_string())
@@ -216,15 +209,15 @@ impl From<mathjax_svg::Error> for LatexError {
 }
 
 #[cfg(feature = "output")]
-impl From<usvg::Error> for LatexError {
-    fn from(value: usvg::Error) -> Self {
-        LatexError::LatexToImageError(value.to_string())
+impl From<tectonic::Error> for LatexError {
+    fn from(value: tectonic::Error) -> Self {
+        LatexError::LatexToPdfError(value.to_string())
     }
 }
 
 #[cfg(feature = "output")]
-impl From<tectonic::Error> for LatexError {
-    fn from(value: tectonic::Error) -> Self {
-        LatexError::LatexToPdfError(value.to_string())
+impl From<resvg::usvg::Error> for LatexError {
+    fn from(value: resvg::usvg::Error) -> Self {
+        LatexError::LatexToImageError(value.to_string())
     }
 }

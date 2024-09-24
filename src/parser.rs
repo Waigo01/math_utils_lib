@@ -1,4 +1,4 @@
-use crate::{basetypes::{AdvancedOpType, AdvancedOperation, Operation, SimpleOpType, Value, Variable, AST}, errors::{EvalError, ParserError}, helpers::{cart_prod, get_args}, maths, solve, Context, Values};
+use crate::{basetypes::{AdvancedOpType, AdvancedOperation, Operation, SimpleOpType, Value, Variable, AST}, errors::{EvalError, ParserError}, helpers::{cart_prod, get_args}, maths, solver::solve, Context, Values};
 
 fn get_op_symbol(c: char) -> Option<SimpleOpType> {
     match c {

@@ -23,12 +23,11 @@ doctest = false
 embed-doc-image = { version = "0.1.4", optional = true }
 mathjax_svg = { version = "3.1.2", optional = true }
 tectonic = { git = "https://github.com/tectonic-typesetting/tectonic.git", branch = "master", optional = true }
-gdk-pixbuf = { version = "0.20.1", optional = true }
-usvg = { version = "0.43.0", optional = true }
+resvg = { version = "0.43.0", optional = true }
 
 [features]
 default = ["column-major"]
 doc-images = ["dep:embed-doc-image"]
 high-prec = []
 column-major = []
-output = ["dep:mathjax_svg", "dep:gdk-pixbuf", "dep:tectonic", "dep:usvg"]
+output = ["dep:mathjax_svg", "dep:tectonic", "dep:resvg"]

@@ -111,14 +111,12 @@ pub mod solver;
 #[cfg(test)]
 mod tests;
 
-pub use basetypes::{Value, Values, Variable};
+pub use basetypes::{Value, Values, Variable, Context};
 pub use latex::Step;
 #[cfg(feature = "output")]
-pub use latex::{export_history, ExportType, png_from_latex, svg_from_latex};
+pub use latex::{export_history, ExportType, svg_from_latex, png_from_latex};
 pub use parser::{parse, eval};
-pub use solver::solve;
 pub use errors::MathLibError;
-pub use basetypes::Context;
 
 ///defines the precision used by the equation solver and the printing precision, which is PREC-2.
 #[cfg(feature = "high-prec")]

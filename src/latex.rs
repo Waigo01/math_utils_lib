@@ -1,17 +1,12 @@
 #[cfg(feature = "output")]
-use gdk_pixbuf::{gio::{Cancellable, MemoryInputStream}, glib::Bytes, Pixbuf};
-#[cfg(feature = "output")]
-use mathjax_svg::convert_to_svg;
-#[cfg(feature = "output")]
-use usvg::{Options, Tree};
-
-#[cfg(feature = "output")]
 use crate::errors::LatexError;
 
 use crate::{basetypes::AST, Values};
 
 #[cfg(feature = "output")]
 pub fn png_from_latex<S: Into<String>>(latex: String, scale: f32, line_color: S) -> Result<Vec<u8>, LatexError> {
+    use resvg::{render, tiny_skia::PixmapMut, usvg::{Options, Transform, Tree}};
+
     let svg = svg_from_latex(latex, line_color)?;
 
     let tree = Tree::from_str(&svg, &Options::default())?;
@@ -19,15 +14,17 @@ pub fn png_from_latex<S: Into<String>>(latex: String, scale: f32, line_color: S)
     let dest_width = tree.size().width() * scale;
     let dest_height = tree.size().height() * scale;
 
-    let input_stream = MemoryInputStream::from_bytes(&Bytes::from_owned(svg));
+    let mut buf = PixmapMut::from_bytes(&mut [], dest_width as u32, dest_height as u32).unwrap();
 
-    let pixbuf = Pixbuf::from_stream_at_scale(&input_stream, dest_width as i32, dest_height as i32, true, None::<&Cancellable>)?;
+    render(&tree, Transform::identity(), &mut buf);
 
-    Ok(pixbuf.save_to_bufferv("png", &[])?)
+    Ok(buf.data_mut().to_vec())
 }
 
 #[cfg(feature = "output")]
 pub fn svg_from_latex<S: Into<String>>(latex: String, line_color: S) -> Result<String, LatexError> {
+    use mathjax_svg::convert_to_svg;
+
     let mut svg = convert_to_svg(latex)?;
 
     svg = svg.replace("currentColor", &line_color.into());
