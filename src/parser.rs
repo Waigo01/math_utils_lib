@@ -31,6 +31,7 @@ pub fn is_valid_var_name(var: String) -> bool {
         if (i == '?'
             || i == '+'
             || i == '-'
+            || i == '&'
             || i == '*'
             || i == '/'
             || i == '^'

@@ -321,9 +321,9 @@ fn medium_eval26() -> Result<(), MathLibError> {
 
 #[test]
 fn medium_eval27() -> Result<(), MathLibError> {
-    let res = quick_eval("3*{7, 3, 2}", Context::empty())?.to_vec();
+    let res = quick_eval("{3, 2}*{7, 3, 2}", Context::empty())?.to_vec();
 
-    assert_eq!(res, vec![Value::Scalar(21.), Value::Scalar(9.), Value::Scalar(6.)]);
+    assert_eq!(res, vec![Value::Scalar(21.), Value::Scalar(9.), Value::Scalar(6.), Value::Scalar(14.), Value::Scalar(6.), Value::Scalar(4.)]);
 
     Ok(())
 }
