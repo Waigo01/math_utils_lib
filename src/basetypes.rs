@@ -31,8 +31,11 @@ pub struct Variable {
 
 impl Variable {
     /// creates a new [Variable] from a [Value].
-    pub fn new<S: Into<String>>(name: S, values: Vec<Value>) -> Variable {
+    pub fn new<S: Into<String>>(name: S, values: Vec<Value>) -> Self {
         Variable { name: name.into(), values: Values::from_vec(values)}
+    }
+    pub fn new_from_values<S: Into<String>>(name: S, values: Values) -> Self {
+        Variable { name: name.into(), values }
     }
 }
 
