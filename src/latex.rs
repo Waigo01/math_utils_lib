@@ -11,16 +11,14 @@ pub fn png_from_latex<S: Into<String>>(latex: String, scale: f32, line_color: S)
 
     let tree = Tree::from_str(&svg, &Options::default())?;
 
-    let dest_width = tree.size().width() * scale;
-    let dest_height = tree.size().height() * scale;
+    let dest_width = (tree.size().width() * scale).ceil();
+    let dest_height = (tree.size().height() * scale).ceil();
 
     let mut pixmap = Pixmap::new(dest_width as u32, dest_height as u32).unwrap();
 
-    let mut buf = pixmap.as_mut();
+    render(&tree, Transform::from_row(scale, 0., 0., scale, 0., 0.), &mut pixmap.as_mut());
 
-    render(&tree, Transform::identity(), &mut buf);
-
-    Ok(buf.data_mut().to_vec())
+    Ok(pixmap.encode_png().ok().unwrap())
 }
 
 #[cfg(feature = "output")]

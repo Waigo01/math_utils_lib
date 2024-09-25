@@ -521,7 +521,7 @@ fn output1() -> Result<(), MathLibError> {
 //
 //     let res = quick_eval("3*3+6^5", Context::empty())?;
 //
-//     let png = png_from_latex(res.to_latex_at_var("H", false), 2.0, "#FFFFFF")?;
+//     let png = png_from_latex(res.to_latex_at_var("H", false), 10.0, "#FFFFFF")?;
 //
 //     let _ = fs::write("./test.png", png);
 //
