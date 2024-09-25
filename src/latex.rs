@@ -5,7 +5,7 @@ use crate::{basetypes::AST, Values};
 
 #[cfg(feature = "output")]
 pub fn png_from_latex<S: Into<String>>(latex: String, scale: f32, line_color: S) -> Result<Vec<u8>, LatexError> {
-    use resvg::{render, tiny_skia::PixmapMut, usvg::{Options, Transform, Tree}};
+    use resvg::{render, tiny_skia::Pixmap, usvg::{Options, Transform, Tree}};
 
     let svg = svg_from_latex(latex, line_color)?;
 
@@ -14,7 +14,9 @@ pub fn png_from_latex<S: Into<String>>(latex: String, scale: f32, line_color: S)
     let dest_width = tree.size().width() * scale;
     let dest_height = tree.size().height() * scale;
 
-    let mut buf = PixmapMut::from_bytes(&mut [], dest_width as u32, dest_height as u32).unwrap();
+    let mut pixmap = Pixmap::new(dest_width as u32, dest_height as u32).unwrap();
+
+    let mut buf = pixmap.as_mut();
 
     render(&tree, Transform::identity(), &mut buf);
 
