@@ -108,6 +108,27 @@ impl Step {
             Step::Fun{term, inputs, name} => return term.to_latex_at_fun(name, inputs.iter().collect(), true)
         }
     }
+    pub fn to_latex_inline(&self) -> String {
+        match self {
+            Step::Calc{term, result, variable_save} => {
+                let mut latex = "".to_string();
+                if variable_save.is_some() {
+                    latex += &format!("{} = ", variable_save.clone().unwrap());
+                }
+                let expression = term.to_latex();
+                let res = result.to_latex();
+
+                if expression != res {
+                    latex += &format!("{} = {}", expression, res);
+                } else {
+                    latex += &format!("{}", expression);
+                }
+
+                return latex;
+            },
+            Step::Fun{term, inputs, name} => return term.to_latex_at_fun(name, inputs.iter().collect(), true)
+        }
+    }
 }
 
 ///describes the type of export done by the [export()] function:

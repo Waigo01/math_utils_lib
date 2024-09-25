@@ -390,19 +390,6 @@ impl Value {
     pub fn to_latex(&self) -> String {
         self.latex_print()
     }
-    pub fn to_latex_at_var<S: Into<String>>(&self, var_name: S, add_aligner: bool) -> String{
-        let mut var_name = var_name.into();
-        if var_name == "pi" {
-            var_name = "\\pi".to_string();
-        }
-        let aligner;
-        if add_aligner {
-            aligner = "&".to_string();
-        } else {
-            aligner = String::new();
-        }
-        format!("{} {}= {}", var_name, aligner, self.latex_print())
-    }
     fn latex_print(&self) -> String {
         match self {
             Value::Scalar(s) => return round_and_format(*s, true),
@@ -451,11 +438,20 @@ impl Values {
     pub fn get(&self, i: usize) -> Option<&Value> {
         self.0.iter().nth(i)
     }
+    pub fn len(&self) -> usize {
+        return self.0.len()
+    }
     pub fn to_string(&self) -> String {
         self.clone().to_vec().iter().map(|v| v.to_string()).collect::<Vec<String>>().join(", ")
     }
     pub fn to_latex(&self) -> String {
-        format!("\\left\\{{{}\\right\\}}", self.clone().to_vec().iter().map(|v| v.to_latex()).collect::<Vec<String>>().join("; "))
+        if self.len() == 1 {
+            return format!("{}", self.0[0].to_latex());
+        } else if self.len() <= 0 {
+            return "No solutions".to_string();
+        } else {
+            return format!("\\left\\{{{}\\right\\}}", self.clone().to_vec().iter().map(|v| v.to_latex()).collect::<Vec<String>>().join("; "));
+        }
     }
     pub fn to_latex_at_var<S: Into<String>>(&self, var_name: S, add_aligner: bool) -> String {
         let aligner;
@@ -465,7 +461,19 @@ impl Values {
             aligner = "";
         }
 
-        format!("{} {}= \\left\\{{{}\\right\\}}", var_name.into(), aligner, self.clone().to_vec().iter().map(|v| v.to_latex()).collect::<Vec<String>>().join("; "))
+        let mut var = var_name.into();
+
+        if var == "pi" {
+            var = "\\pi".to_string();
+        }
+
+        if self.len() <= 0 {
+            return format!("{}: No solutions", var);
+        } else if self.len() == 1 {
+            return format!("{} = {}", var, self.0[0].to_latex());
+        } else {
+            return format!("{} {}= \\left\\{{{}\\right\\}}", var, aligner, self.clone().to_vec().iter().map(|v| v.to_latex()).collect::<Vec<String>>().join("; "));
+        }
     }
 }
 
