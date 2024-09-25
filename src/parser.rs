@@ -149,9 +149,13 @@ fn parse_value(s: String) -> Result<AST, ParserError> {
     }
 }
 
-///used to construct a AST Tree from a mathematical expression.
 pub fn parse<S: Into<String>>(expr: S) -> Result<AST, ParserError> {
-    let expr = expr.into();
+    let whitespaced_string: String = expr.into().trim().split(" ").filter(|s| !s.is_empty()).collect();
+    parse_inner(whitespaced_string)
+}
+
+///used to construct a AST Tree from a mathematical expression.
+fn parse_inner(expr: String) -> Result<AST, ParserError> {
     if expr.is_empty() {
         return Err(ParserError::EmptyExpr);
     }
