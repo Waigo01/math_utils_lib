@@ -55,92 +55,54 @@ fn parse_value(s: String) -> Result<AST, ParserError> {
             Err(_) => return Err(ParserError::ParseValue(s))
         };
         return Ok(AST::Scalar(p));
-    } else if s.len() > 2 {
-        if s.len() > 4 && s[1..s.len()-1].contains(&"[") && s.chars().nth(1).unwrap() == '[' && s.chars().nth(s.len()-2).unwrap() == ']' {
-            let mut output_m = vec![];
-            let mut row = vec![];
-            let mut row_size = None;
-            let mut n_buffer = String::new();
-            let mut open_parenths = 0;
-            for i in s[1..s.len()-1].chars().collect::<Vec<char>>() {
-                if i == '[' {
-                    open_parenths += 1;
-                    continue;
-                }
-                if i == ']' {
-                    open_parenths -= 1;
-                    continue;
-                }
-                if open_parenths > 0 {
-                    if i == ',' {
-                        if n_buffer.is_empty() {
-                            return Err(ParserError::EmptyVec)
-                        }
-                        row.push(parse(&n_buffer)?);
-                        n_buffer.clear();
-                    } else {
-                        n_buffer.push(i);
-                    }
-                } else if open_parenths == 0 {
-                    if i == ',' {
-                        if n_buffer.is_empty() {
-                            return Err(ParserError::EmptyVec)
-                        }
-                        row.push(parse(&n_buffer)?);
-                        if row_size.is_some() && row.len() != row_size.unwrap() {
-                            return Err(ParserError::NotRectMatrix)
-                        }
-                        row_size = Some(row.len());
-                        output_m.push(row.clone());
-                        n_buffer.clear();
-                        row.clear();
-                    }
-                }
-            }
-            if open_parenths != 0 {
-                return Err(ParserError::MissingBracket)
-            }
-            if n_buffer.is_empty() {
-                return Err(ParserError::EmptyVec)
-            }
-            row.push(parse(&n_buffer)?);
-            if row_size.is_some() && row.len() != row_size.unwrap() {
-                return Err(ParserError::NotRectMatrix)
-            }
-            output_m.push(row);
-            #[cfg(feature = "column-major")]
-            let mut col_matrix = vec![];
-            #[cfg(feature = "column-major")]
-            for i in 0..output_m[0].len() {
-                let mut row = vec![];
-                for j in 0..output_m.len() {
-                    row.push(output_m[j][i].clone());
-                }
-                col_matrix.push(row);
-            }
-            #[cfg(feature = "column-major")]
-            return Ok(AST::Matrix(Box::new(col_matrix)));
-            #[cfg(not(feature = "column-major"))]
-            return Ok(AST::Matrix(Box::new(output_m)));
-        } else if s.chars().nth(0).unwrap() == '[' && s.chars().nth(s.len()-1).unwrap() == ']' {
-            let mut output_v = vec![];
-            let mut n_buffer = String::new();
-            for i in s[1..s.len()].chars().collect::<Vec<char>>() {
-                if i == ',' {
-                    if n_buffer.is_empty() {
-                        return Err(ParserError::EmptyVec)
-                    }
-                    output_v.push(parse(&n_buffer)?);
-                    n_buffer.clear();
-                } else {
-                    n_buffer.push(i);
-                }
-            }
-            if n_buffer.is_empty() {
+    } else if s.len() >= 2 {
+        if s.chars().nth(0).unwrap() == '[' && s.chars().nth(s.len()-1).unwrap() == ']' {
+            let args = get_args(&s.chars().collect::<Vec<char>>()[1..s.len()-1]);
+            if args.is_empty() || args[0].is_empty() {
                 return Err(ParserError::EmptyVec);
             }
-            output_v.push(parse(n_buffer[0..n_buffer.len()-1].to_string())?);
-            return Ok(AST::Vector(Box::new(output_v)));
+            let output_v = args.iter().map(|v| parse_inner(v)).collect::<Result<Vec<AST>, ParserError>>()?;
+            let mut is_vec = true;
+            let mut is_mat = true;
+            for i in &output_v {
+                match i {
+                    AST::Vector(_) => is_vec = false,
+                    AST::Matrix(_) => is_mat = false,
+                    _ => {}
+                }
+            }
+            if is_vec && is_mat {
+                return Ok(AST::Vector(Box::new(output_v)));
+            } else if is_mat && !is_vec {
+                let output_m = output_v.iter().map(|v| {
+                    match v {
+                        AST::Vector(v) => return Ok(v.to_vec()),
+                        _ => return Err(ParserError::NotRectMatrix)
+                    }
+                }).collect::<Result<Vec<Vec<AST>>, ParserError>>()?;
+                let size = output_m[0].len();
+                for i in &output_m {
+                    if i.len() != size {
+                        return Err(ParserError::NotRectMatrix);
+                    }
+                }
+                #[cfg(feature = "column-major")]
+                let mut col_matrix = vec![];
+                #[cfg(feature = "column-major")]
+                for i in 0..output_m[0].len() {
+                    let mut row = vec![];
+                    for j in 0..output_m.len() {
+                        row.push(output_m[j][i].clone());
+                    }
+                    col_matrix.push(row);
+                }
+                #[cfg(feature = "column-major")]
+                return Ok(AST::Matrix(Box::new(col_matrix)));
+                #[cfg(not(feature = "column-major"))]
+                return Ok(AST::Matrix(Box::new(output_m)));
+            } else {
+                return Err(ParserError::ParseValue(s))
+            }
         } else {
             return Err(ParserError::MissingBracket)
         }
@@ -151,11 +113,11 @@ fn parse_value(s: String) -> Result<AST, ParserError> {
 
 pub fn parse<S: Into<String>>(expr: S) -> Result<AST, ParserError> {
     let whitespaced_string: String = expr.into().trim().split(" ").filter(|s| !s.is_empty()).collect();
-    parse_inner(whitespaced_string)
+    parse_inner(&whitespaced_string)
 }
 
 ///used to construct a AST Tree from a mathematical expression.
-fn parse_inner(expr: String) -> Result<AST, ParserError> {
+fn parse_inner(expr: &str) -> Result<AST, ParserError> {
     if expr.is_empty() {
         return Err(ParserError::EmptyExpr);
     }
@@ -186,7 +148,7 @@ fn parse_inner(expr: String) -> Result<AST, ParserError> {
             expr_chars = expr_chars[1..expr_chars.len()-1].iter().map(|c| *c).collect::<Vec<char>>();
             return Ok(AST::from_operation(Operation::SimpleOperation {
                 op_type: SimpleOpType::Parenths,
-                left: parse(expr_chars.iter().collect::<String>())?,
+                left: parse_inner(&expr_chars.iter().collect::<String>())?,
                 right: AST::from_value(Value::Scalar(0.)) 
             }));
         }
@@ -259,8 +221,8 @@ fn parse_inner(expr: String) -> Result<AST, ParserError> {
     for o in op_types {
         for i in &ops_in_expr {
             if i.0 == o {
-                let left_b = parse(expr_chars[0..(i.1-i.2)].to_vec().iter().collect::<String>())?;
-                let right_b = parse(expr_chars[(i.1+i.3)..].to_vec().iter().collect::<String>())?; 
+                let left_b = parse_inner(&expr_chars[0..(i.1-i.2)].to_vec().iter().collect::<String>())?;
+                let right_b = parse_inner(&expr_chars[(i.1+i.3)..].to_vec().iter().collect::<String>())?; 
                 return Ok(AST::from_operation(Operation::SimpleOperation {
                     op_type: i.0.clone(),
                     left: left_b,
@@ -275,7 +237,7 @@ fn parse_inner(expr: String) -> Result<AST, ParserError> {
     if expr_chars[0] == '-' {
         return Ok(AST::from_operation(Operation::SimpleOperation {
             op_type: SimpleOpType::Neg,
-            left: parse(expr_chars[1..].to_vec().iter().collect::<String>())?,
+            left: parse_inner(&expr_chars[1..].to_vec().iter().collect::<String>())?,
             right: AST::from_value(Value::Scalar(0.))
         }));
     }
@@ -286,7 +248,7 @@ fn parse_inner(expr: String) -> Result<AST, ParserError> {
         return Ok(AST::from_operation(Operation::SimpleOperation { 
             op_type: SimpleOpType::AddSub, 
             left: AST::from_value(Value::Scalar(0.)), 
-            right: parse(expr_chars[1..].to_vec().iter().collect::<String>())? 
+            right: parse_inner(&expr_chars[1..].to_vec().iter().collect::<String>())? 
         }));
     }
 
@@ -302,8 +264,8 @@ fn parse_inner(expr: String) -> Result<AST, ParserError> {
                 if args.len() != 2 {
                     return Err(ParserError::WrongNumberOfArgs("root".to_string()));
                 } else {
-                    let left_b = parse(args[0].clone())?;
-                    let right_b = parse(args[1].clone())?;
+                    let left_b = parse_inner(&args[0].clone())?;
+                    let right_b = parse_inner(&args[1].clone())?;
 
                     return Ok(AST::from_operation(Operation::SimpleOperation { 
                         op_type: i.0,
@@ -312,7 +274,7 @@ fn parse_inner(expr: String) -> Result<AST, ParserError> {
                     }));
                 }
             } else {
-                let left_b = parse(expr_chars[i.1.len()..expr_chars.len()-1].to_vec().iter().collect::<String>())?;
+                let left_b = parse_inner(&expr_chars[i.1.len()..expr_chars.len()-1].to_vec().iter().collect::<String>())?;
                 return Ok(AST::from_operation(Operation::SimpleOperation {
                     op_type: i.0,
                     left: left_b,
@@ -335,8 +297,8 @@ fn parse_inner(expr: String) -> Result<AST, ParserError> {
                     if args.len() != 3 {
                         return Err(ParserError::WrongNumberOfArgs("derivative".to_string()));
                     }
-                    let parsed_function = parse(&args[0])?;
-                    let parsed_value_at = parse(&args[2])?;
+                    let parsed_function = parse_inner(&args[0])?;
+                    let parsed_value_at = parse_inner(&args[2])?;
                     return Ok(AST::from_operation(Operation::AdvancedOperation(AdvancedOperation::Derivative {
                         expr: parsed_function,
                         in_terms_of: args[1].clone(),
@@ -349,9 +311,9 @@ fn parse_inner(expr: String) -> Result<AST, ParserError> {
                     if args.len() != 4 {
                         return Err(ParserError::WrongNumberOfArgs("integral".to_string()));
                     }
-                    let parsed_function = parse(&args[0])?;
-                    let parsed_lower_b = parse(&args[2])?;
-                    let parsed_upper_b = parse(&args[3])?;
+                    let parsed_function = parse_inner(&args[0])?;
+                    let parsed_lower_b = parse_inner(&args[2])?;
+                    let parsed_upper_b = parse_inner(&args[3])?;
                     return Ok(AST::from_operation(Operation::AdvancedOperation(AdvancedOperation::Integral {
                         expr: parsed_function,
                         in_terms_of: args[1].clone(),
@@ -377,11 +339,11 @@ fn parse_inner(expr: String) -> Result<AST, ParserError> {
                         let left_b;
                         let right_b;
                         if left.len() >= right.len() {
-                            left_b = parse(left)?;
-                            right_b = parse(right)?;
+                            left_b = parse_inner(&left)?;
+                            right_b = parse_inner(&right)?;
                         } else {
-                            left_b = parse(right)?;
-                            right_b = parse(left)?;
+                            left_b = parse_inner(&right)?;
+                            right_b = parse_inner(&left)?;
                         }
 
                         parsed_equations.push((left_b, right_b));
@@ -399,7 +361,7 @@ fn parse_inner(expr: String) -> Result<AST, ParserError> {
         let first_parenth = expr.find("(").unwrap();
         let args = get_args(&expr_chars[first_parenth+1..expr_chars.len()-1]);
 
-        let parsed_args: Vec<AST> = args.iter().map(|a| parse(a)).collect::<Result<Vec<AST>, ParserError>>()?;
+        let parsed_args: Vec<AST> = args.iter().map(|a| parse_inner(a)).collect::<Result<Vec<AST>, ParserError>>()?;
 
         let func_name = expr.split("(").nth(0).unwrap().to_string(); 
 
@@ -413,8 +375,8 @@ fn parse_inner(expr: String) -> Result<AST, ParserError> {
     // is it a variable?
 
     if expr_chars[0].is_alphabetic() || expr_chars[0] == '\\' {
-        if is_valid_var_name(expr.clone()) == false {
-            return Err(ParserError::InvalidVariableName(expr));
+        if is_valid_var_name(expr.to_string()) == false {
+            return Err(ParserError::InvalidVariableName(expr.to_string()));
         }
 
         return Ok(AST::from_variable_name(expr));
@@ -423,7 +385,7 @@ fn parse_inner(expr: String) -> Result<AST, ParserError> {
     // is it a list of values?
     
     if expr_chars[0] == '{' && expr_chars[expr_chars.len()-1] == '}' {
-        return Ok(AST::List(get_args(&expr_chars[1..expr_chars.len()-1]).iter().map(|s| parse(s)).collect::<Result<Vec<AST>, ParserError>>()?));
+        return Ok(AST::List(get_args(&expr_chars[1..expr_chars.len()-1]).iter().map(|s| parse_inner(s)).collect::<Result<Vec<AST>, ParserError>>()?));
     }
 
     let v = parse_value(expr_chars.iter().collect())?;

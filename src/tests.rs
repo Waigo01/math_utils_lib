@@ -73,6 +73,15 @@ fn easy_eval8() -> Result<(), MathLibError> {
 }
 
 #[test]
+fn easy_eval9() -> Result<(), MathLibError> {
+    let res = quick_eval("[{3, 5}, 0, 0]", Context::empty())?.to_vec();
+
+    assert_eq!(res, vec![Value::Vector(vec![3., 0., 0.]), Value::Vector(vec![5., 0., 0.])]);
+
+    Ok(())
+}
+
+#[test]
 fn medium_eval1() -> Result<(), MathLibError> {
     let x = Variable::new("x", vec![Value::Scalar(3.)]);
     let res = quick_eval("3x", Context::from_vars(vec![x]))?.to_vec();
@@ -147,14 +156,14 @@ fn medium_eval8() {
 fn medium_eval9() {
     let res = quick_eval("[[3, 0,], [2, 4, 5], [1, 2]]", Context::empty());
 
-    assert_eq!(res.unwrap_err(), QuickEvalError::ParserError(ParserError::EmptyVec))
+    assert_eq!(res.unwrap_err(), QuickEvalError::ParserError(ParserError::EmptyExpr))
 }
 
 #[test]
 fn medium_eval10() {
     let res = quick_eval("[[3, 0, 5], [2, 4], [1, 2,]]", Context::empty());
 
-    assert_eq!(res.unwrap_err(), QuickEvalError::ParserError(ParserError::NotRectMatrix))
+    assert_eq!(res.unwrap_err(), QuickEvalError::ParserError(ParserError::EmptyExpr))
 }
 
 #[test]
