@@ -1,7 +1,7 @@
 use std::fmt::{self, Display};
 
-///provides an enum with the corresponding From implementations in order to use as a convenient return
-///error type for this library.
+/// provides an enum with the corresponding From implementations in order to use as a convenient return
+/// error type for this library.
 #[derive(Debug, PartialEq, Clone)]
 pub enum MathLibError {
     ParserError(ParserError),

@@ -69,8 +69,8 @@ impl Step {
                     latex += &format!("{} &= ", variable_save.clone().unwrap());
                     aligner = "";
                 }
-                let expression = term.to_latex();
-                let res = result.to_latex();
+                let expression = term.as_latex();
+                let res = result.as_latex();
 
                 if expression != res {
                     latex += &format!("{} {}= {} \\tag{{{}}}\\label{{eq:{}}} \\\\ \\\\ \n", expression, aligner, res, equation_number, equation_number);
@@ -81,7 +81,7 @@ impl Step {
                 return latex;
             }, 
             Step::Fun{term, inputs, name} => {
-                return term.to_latex_at_fun(name, inputs.iter().collect(), true) + &format!(" \\tag{{{}}}\\label{{eq:{}}} \\\\ \\\\ \n", equation_number, equation_number);
+                return term.as_latex_at_fun(name, inputs.iter().collect(), true) + &format!(" \\tag{{{}}}\\label{{eq:{}}} \\\\ \\\\ \n", equation_number, equation_number);
             }
         }
     }
@@ -94,8 +94,8 @@ impl Step {
                     latex += &format!("{} &= ", variable_save.clone().unwrap());
                     aligner = "";
                 }
-                let expression = term.to_latex();
-                let res = result.to_latex();
+                let expression = term.as_latex();
+                let res = result.as_latex();
 
                 if expression != res {
                     latex += &format!("{} {}= {}", expression, aligner, res);
@@ -105,7 +105,7 @@ impl Step {
 
                 return latex;
             },
-            Step::Fun{term, inputs, name} => return term.to_latex_at_fun(name, inputs.iter().collect(), true)
+            Step::Fun{term, inputs, name} => return term.as_latex_at_fun(name, inputs.iter().collect(), true)
         }
     }
     pub fn to_latex_inline(&self) -> String {
@@ -115,8 +115,8 @@ impl Step {
                 if variable_save.is_some() {
                     latex += &format!("{} = ", variable_save.clone().unwrap());
                 }
-                let expression = term.to_latex();
-                let res = result.to_latex();
+                let expression = term.as_latex();
+                let res = result.as_latex();
 
                 if expression != res {
                     latex += &format!("{} = {}", expression, res);
@@ -126,7 +126,7 @@ impl Step {
 
                 return latex;
             },
-            Step::Fun{term, inputs, name} => return term.to_latex_at_fun(name, inputs.iter().collect(), true)
+            Step::Fun{term, inputs, name} => return term.as_latex_at_fun(name, inputs.iter().collect(), true)
         }
     }
 }
