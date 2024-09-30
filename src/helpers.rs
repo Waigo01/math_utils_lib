@@ -33,13 +33,13 @@ pub fn center_in_string(f: String, n: i32) -> String {
 
 #[doc(hidden)]
 pub fn round_and_format(x: f64, latex: bool) -> String {
-    if (x*10f64.powi(PREC-2)).round()/10f64.powi(PREC-2) == 0. && !latex && x != 0. {
+    if (x*10f64.powi(PREC as i32-2)).round()/10f64.powi(PREC as i32-2) == 0. && !latex && x != 0. {
         let mut scientific = format!("{:+e}", x);
         if scientific.chars().nth(0).unwrap() == '+' {
             scientific = scientific[1..].to_string();
         }
         return scientific;
-    } else if (x*10f64.powi(PREC-2)).round()/10f64.powi(PREC-2) == 0. && x != 0. {
+    } else if (x*10f64.powi(PREC as i32-2)).round()/10f64.powi(PREC as i32-2) == 0. && x != 0. {
         let mut scientific = format!("{:+e}", x);
         if scientific.chars().nth(0).unwrap() == '+' {
             scientific = scientific[1..].to_string();
@@ -48,6 +48,53 @@ pub fn round_and_format(x: f64, latex: bool) -> String {
         let right = scientific.split("e").nth(1).unwrap();
         return format!("{}\\cdot 10^{{{}}}", left, right);
     } else {
-        return ((x*10f64.powi(PREC-2)).round()/10f64.powi(PREC-2)).to_string();
+        let rounded = (x*10f64.powi(PREC as i32-2)).round()/10f64.powi(PREC as i32-2);
+        let rounded_string;
+        if rounded == 0. && rounded.to_string().len() > 1 {
+            rounded_string = rounded.to_string()[1..].to_string();
+        } else {
+            rounded_string = rounded.to_string();
+        }
+        return rounded_string;
     }
+}
+
+#[doc(hidden)]
+pub fn cart_prod<T: Clone>(arr: &Vec<Vec<T>>) -> Vec<Vec<T>> {
+    let mut results: Vec<Vec<T>> = vec![vec![]];
+    for i in 0..arr.len() {
+        let mut temp_res = vec![];
+        for res in &results {
+            for el in &arr[i] {
+                let mut new_res = res.to_vec();
+                new_res.push(el.clone());
+                temp_res.push(new_res);
+            }
+        }
+        results = temp_res;
+    }
+
+    return results;
+}
+
+#[doc(hidden)]
+pub fn get_args(chars: &[char]) -> Vec<String> {
+    let mut args = vec![];
+    let mut parenths_open = 0;
+    let mut buffer = String::new();
+    for j in chars.into_iter() {
+        if parenths_open == 0 && *j == ',' {
+            args.push(buffer.clone());
+            buffer.clear();
+        } else {
+            buffer.push(*j);
+        }
+        if *j == '(' || *j == '[' || *j == '{' {
+            parenths_open += 1;
+        } else if *j == ')' || *j == ']' || *j == '}' {
+            parenths_open -= 1;
+        }
+    }
+    args.push(buffer);
+    args
 }
