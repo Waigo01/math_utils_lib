@@ -212,13 +212,13 @@ impl Value {
         }
     }
     /// rounds the value.
-    pub fn round(&self, prec: i32) -> Value {
+    pub fn round(&self, prec: usize) -> Value {
         match self {
-            Value::Scalar(a) => return Value::Scalar((a*10f64.powi(prec)).round()/10f64.powi(prec)),
+            Value::Scalar(a) => return Value::Scalar((a*10f64.powi(prec as i32)).round()/10f64.powi(prec as i32)),
             Value::Vector(v) => {
                 let mut new_vec = vec![];
                 for i in v {
-                    new_vec.push((i*10f64.powi(prec)).round()/10f64.powi(prec));
+                    new_vec.push((i*10f64.powi(prec as i32)).round()/10f64.powi(prec as i32));
                 }
                 return Value::Vector(new_vec);
             },
@@ -227,7 +227,7 @@ impl Value {
                 for i in m {
                     let mut row = vec![];
                     for j in i {
-                        row.push((j*10f64.powi(prec)).round()/10f64.powi(prec));
+                        row.push((j*10f64.powi(prec as i32)).round()/10f64.powi(prec as i32));
                     }
                     new_matrix.push(row);
                 }
@@ -516,6 +516,11 @@ impl Values {
     /// returns the length of the values.
     pub fn len(&self) -> usize {
         return self.0.len()
+    }
+    /// rounds all values.
+    pub fn round(&self, prec: usize) -> Values {
+        let rounded_vals = self.0.iter().map(|x| x.round(prec)).collect::<Vec<Value>>();
+        Values::from_vec(rounded_vals)
     }
     /// converts the values to a string using "{}" and "," to print multiple Values. This is a crude
     /// way to convert [Values] as it uses [Value::as_string].

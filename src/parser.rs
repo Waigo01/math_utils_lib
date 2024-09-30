@@ -87,9 +87,9 @@ fn parse_value(s: String) -> Result<AST, ParserError> {
                         return Err(ParserError::NotRectMatrix);
                     }
                 }
-                #[cfg(feature = "column-major")]
+                #[cfg(not(feature = "row-major"))]
                 let mut col_matrix = vec![];
-                #[cfg(feature = "column-major")]
+                #[cfg(not(feature = "row-major"))]
                 for i in 0..output_m[0].len() {
                     let mut row = vec![];
                     for j in 0..output_m.len() {
@@ -97,9 +97,9 @@ fn parse_value(s: String) -> Result<AST, ParserError> {
                     }
                     col_matrix.push(row);
                 }
-                #[cfg(feature = "column-major")]
+                #[cfg(not(feature = "row-major"))]
                 return Ok(AST::Matrix(Box::new(col_matrix)));
-                #[cfg(not(feature = "column-major"))]
+                #[cfg(feature = "row-major")]
                 return Ok(AST::Matrix(Box::new(output_m)));
             } else {
                 return Err(ParserError::ParseValue(s))

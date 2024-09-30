@@ -152,7 +152,7 @@ fn newton(search_expres: &Vec<AST>, check_expres: &Vec<AST> , x: &Vec<Variable>,
         context.remove_var(&i.name);
     }
 
-    if -10f64.powi(-PREC) < fx.iter().map(|f| f.powi(2)).sum::<f64>().sqrt() && fx.iter().map(|f| f.powi(2)).sum::<f64>().sqrt() < 10f64.powi(-PREC) {
+    if -10f64.powi(-(PREC as i32)) < fx.iter().map(|f| f.powi(2)).sum::<f64>().sqrt() && fx.iter().map(|f| f.powi(2)).sum::<f64>().sqrt() < 10f64.powi(-(PREC as i32)) {
         let mut check_results = vec![]; 
         for i in x {
             context.add_var(i);
@@ -166,7 +166,7 @@ fn newton(search_expres: &Vec<AST>, check_expres: &Vec<AST> , x: &Vec<Variable>,
         if check_results.is_empty() {
             return Ok(NewtonReturn::FinishedX(x.to_vec()));
         }
-        if -10f64.powi(-PREC) < check_results.iter().map(|f| f.powi(2)).sum::<f64>().sqrt() && check_results.iter().map(|f| f.powi(2)).sum::<f64>().sqrt() < 10f64.powi(-PREC) {
+        if -10f64.powi(-(PREC as i32)) < check_results.iter().map(|f| f.powi(2)).sum::<f64>().sqrt() && check_results.iter().map(|f| f.powi(2)).sum::<f64>().sqrt() < 10f64.powi(-(PREC as i32)) {
             return Ok(NewtonReturn::FinishedX(x.to_vec()));
         } else {
             return Err(EvalError::ExpressionCheckFailed);

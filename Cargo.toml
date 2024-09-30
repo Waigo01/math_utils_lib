@@ -26,8 +26,8 @@ tectonic = { git = "https://github.com/tectonic-typesetting/tectonic.git", branc
 resvg = { version = "0.43.0", optional = true }
 
 [features]
-default = ["column-major"]
+default = ["output"]
 doc-images = ["dep:embed-doc-image"]
 high-prec = []
-column-major = []
+row-major = []
 output = ["dep:mathjax_svg", "dep:tectonic", "dep:resvg"]

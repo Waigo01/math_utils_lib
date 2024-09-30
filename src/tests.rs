@@ -369,22 +369,18 @@ fn hard_eval1() -> Result<(), MathLibError> {
 
 #[test]
 fn easy_solve1() -> Result<(), MathLibError> {
-    let res = quick_eval("eq(x^2=9, x)", &Context::empty())?.to_vec();
+    let res = quick_eval("eq(x^2=9, x)", &Context::empty())?.round(3).to_vec();
     
-    let res_rounded = res.iter().map(|x| x.round(3)).collect::<Vec<Value>>();
-
-    assert_eq!(res_rounded, vec![Value::Scalar(-3.), Value::Scalar(3.)]);
+    assert_eq!(res, vec![Value::Scalar(-3.), Value::Scalar(3.)]);
 
     Ok(())
 }
 
 #[test]
 fn medium_solve1() -> Result<(), MathLibError> {
-    let res = quick_eval("eq(3x^2+2x-1=0, x)", &Context::empty())?.to_vec();
+    let res = quick_eval("eq(3x^2+2x-1=0, x)", &Context::empty())?.round(3).to_vec();
     
-    let res_rounded = res.iter().map(|x| x.round(3)).collect::<Vec<Value>>();
-
-    assert_eq!(res_rounded, vec![Value::Scalar(-1.), Value::Scalar(((1./3.) as f64*1000.).round()/1000.)]);
+    assert_eq!(res, vec![Value::Scalar(-1.), Value::Scalar(((1./3.) as f64*1000.).round()/1000.)]);
 
     Ok(())
 }
@@ -393,10 +389,9 @@ fn medium_solve1() -> Result<(), MathLibError> {
 fn medium_solve2() -> Result<(), MathLibError> {
     let equation = "eq(2x+5y+2z=-38, 3x-2y+4z=17, -6x+y-7z=-12, x, y, z)";
 
-    let res = quick_eval(equation, &Context::empty())?.to_vec();
-    let res_rounded = res.iter().map(|x| x.round(3)).collect::<Vec<Value>>();
+    let res = quick_eval(equation, &Context::empty())?.round(3).to_vec();
 
-    assert_eq!(res_rounded, vec![Value::Vector(vec![3., -8., -2.])]);
+    assert_eq!(res, vec![Value::Vector(vec![3., -8., -2.])]);
 
     Ok(())
 }
@@ -405,10 +400,9 @@ fn medium_solve2() -> Result<(), MathLibError> {
 fn medium_solve3() -> Result<(), MathLibError> {
     let equation = "eq(3x-9z=33, 7x-4y-z=-15, 4x+6y+5z=-6, x, y, z)";
 
-    let res = quick_eval(equation, &Context::empty())?.to_vec();
-    let res_rounded = res.iter().map(|x| x.round(3)).collect::<Vec<Value>>();
+    let res = quick_eval(equation, &Context::empty())?.round(3).to_vec();
 
-    assert_eq!(res_rounded, vec![Value::Vector(vec![-1., 3., -4.])]);
+    assert_eq!(res, vec![Value::Vector(vec![-1., 3., -4.])]);
 
     Ok(())
 }
@@ -418,9 +412,7 @@ fn medium_solve4() -> Result<(), MathLibError> {
     let function = parse("4x^2-9")?;
     let function_var = Function::new("f", function, vec!["x"]);
 
-    let mut res = quick_eval("eq(f(x)=0, x)", &Context::from_funs(vec![function_var]))?.to_vec();
-
-    res = res.iter().map(|r| r.round(3)).collect();
+    let res = quick_eval("eq(f(x)=0, x)", &Context::from_funs(vec![function_var]))?.round(3).to_vec();
 
     assert_eq!(res, vec![Value::Scalar(-1.5), Value::Scalar(1.5)]);
 
@@ -429,11 +421,9 @@ fn medium_solve4() -> Result<(), MathLibError> {
 
 #[test]
 fn calculus_solve1() -> Result<(), MathLibError> {
-    let res = quick_eval("eq(D(3x^2+2x-1, x, k)=0, k)", &Context::empty())?.to_vec();
+    let res = quick_eval("eq(D(3x^2+2x-1, x, k)=0, k)", &Context::empty())?.round(3).to_vec();
 
-    let res_rounded = res.iter().map(|x| x.round(3)).collect::<Vec<Value>>();
-
-    assert_eq!(res_rounded, vec![Value::Scalar(-(((1./3.) as f64*1000.).round()/1000.))]);
+    assert_eq!(res, vec![Value::Scalar(-(((1./3.) as f64*1000.).round()/1000.))]);
 
     Ok(())
 }
@@ -442,11 +432,9 @@ fn calculus_solve1() -> Result<(), MathLibError> {
 fn hard_solve1() -> Result<(), MathLibError> {
     let equation = "eq(((25x^3-96x^2+512x+384)/(x^4+2x^3+90x^2-128x+1664)^(1.5))/(-sqrt(1-((32-x+x^2)/(((x-1)^2+25)(x^2+64)))^2))=0, x)";
 
-    let res = quick_eval(equation, &Context::empty())?.to_vec();
+    let res = quick_eval(equation, &Context::empty())?.round(3).to_vec();
 
-    let res_rounded = res.iter().map(|x| x.round(3)).collect::<Vec<Value>>();
-
-    assert_eq!(res_rounded.contains(&Value::Scalar(-0.656)), true);
+    assert_eq!(res.contains(&Value::Scalar(-0.656)), true);
 
     Ok(())
 }
@@ -475,10 +463,9 @@ fn hard_solve3() -> Result<(), MathLibError> {
 fn hard_solve4() -> Result<(), MathLibError> {
     let equation = "eq(400-100g=600-100k, -600-100g=-400-100k, 1000-100g=100k, g, k)";
 
-    let res = quick_eval(equation, &Context::empty())?.to_vec();
-    let res_rounded = res.iter().map(|x| x.round(3)).collect::<Vec<Value>>();
+    let res = quick_eval(equation, &Context::empty())?.round(3).to_vec();
     
-    assert_eq!(res_rounded, vec![Value::Vector(vec![4., 6.])]);
+    assert_eq!(res, vec![Value::Vector(vec![4., 6.])]);
 
     Ok(())
 }
@@ -487,10 +474,9 @@ fn hard_solve4() -> Result<(), MathLibError> {
 fn hard_solve5() -> Result<(), MathLibError> {
     let equation = "eq(y=x^2+6x-8, y=4x+7, x, y)";
 
-    let res = quick_eval(equation, &Context::empty())?.to_vec();
-    let res_rounded = res.iter().map(|x| x.round(3)).collect::<Vec<Value>>();
+    let res = quick_eval(equation, &Context::empty())?.round(3).to_vec();
 
-    assert_eq!(res_rounded, vec![Value::Vector(vec![-5., -13.]), Value::Vector(vec![3., 19.])]);
+    assert_eq!(res, vec![Value::Vector(vec![-5., -13.]), Value::Vector(vec![3., 19.])]);
 
     Ok(())
 }
@@ -499,10 +485,9 @@ fn hard_solve5() -> Result<(), MathLibError> {
 fn hard_solve6() -> Result<(), MathLibError> {
     let equation = "eq(y=1-3x, x^2/4+y^2=1, x, y)";
 
-    let res = quick_eval(equation, &Context::empty())?.to_vec();
-    let res_rounded = res.iter().map(|x| x.round(3)).collect::<Vec<Value>>();
+    let res = quick_eval(equation, &Context::empty())?.round(3).to_vec();
 
-    assert_eq!(res_rounded, vec![Value::Vector(vec![24./37., -35./37.]).round(3), Value::Vector(vec![0., 1.])]);
+    assert_eq!(res, vec![Value::Vector(vec![24./37., -35./37.]).round(3), Value::Vector(vec![0., 1.])]);
 
     Ok(())
 }
@@ -510,29 +495,35 @@ fn hard_solve6() -> Result<(), MathLibError> {
 #[cfg(feature = "output")]
 #[test]
 fn output1() -> Result<(), MathLibError> {
-    use crate::svg_from_latex;
+    use crate::{eval, export_history, ExportType, Step};
+    use std::fs;
 
-    let res = quick_eval("3*3+6^5", &Context::empty())?;
+    let parsed_expr = parse("3*3+6^5")?;
+    let res = eval(&parsed_expr, &Context::empty())?;
 
-    let svg = svg_from_latex(res.as_latex_at_var("H", false), "#FFFFFF")?;
+    let step = Step::Calc { term: parsed_expr, result: res, variable_save: Some("x".to_string()) };
 
-    println!("{}", svg);
+    let pdf = export_history(vec![step], ExportType::Pdf)?;
+
+    let _ = fs::write("./images/test.pdf", pdf);
 
     Ok(())
 }
 
-// Won't work because of double V8 initialization
-// #[cfg(feature = "output")]
-// #[test]
-// fn output2() -> Result<(), MathLibError> {
-//     use crate::png_from_latex;
-//     use std::fs;
-//
-//     let res = quick_eval("3*3+6^5", &Context::empty())?;
-//
-//     let png = png_from_latex(res.to_latex_at_var("H", false), 10.0, "#FFFFFF")?;
-//
-//     let _ = fs::write("./test.png", png);
-//
-//     Ok(())
-// }
+#[cfg(feature = "output")]
+#[test]
+fn output2() -> Result<(), MathLibError> {
+    use crate::{eval, png_from_latex, Step};
+    use std::fs;
+
+    let parsed_expr = parse("3*3+6^5")?;
+    let res = eval(&parsed_expr, &Context::empty())?;
+
+    let step = Step::Calc { term: parsed_expr, result: res, variable_save: Some("x".to_string()) };
+
+    let png = png_from_latex(step.as_latex_inline(), 200, "#FFFFFF")?;
+
+    let _ = fs::write("./images/test.png", png);
+
+    Ok(())
+}

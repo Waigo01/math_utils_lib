@@ -4,8 +4,9 @@ use crate::errors::LatexError;
 use crate::{basetypes::AST, Values};
 
 #[cfg(feature = "output")]
-/// converts the given latex string to a png image with the given height in pixels, returned as its raw bytes/// . This function allows for a change of line color. The line color is defined by a hex string
-/// e.g. "FFFFFF". The background is always transparent.
+/// converts the given latex string to a png image with the given height in pixels, returned as its raw bytes. 
+/// This function allows for a change of line color. The line color is defined by a hex string
+/// e.g. "#FFFFFF". The background is always transparent.
 pub fn png_from_latex<S: Into<String>>(latex: String, height: u32, line_color: S) -> Result<Vec<u8>, LatexError> {
     use resvg::{render, tiny_skia::Pixmap, usvg::{Options, Transform, Tree}};
 
@@ -26,7 +27,7 @@ pub fn png_from_latex<S: Into<String>>(latex: String, height: u32, line_color: S
 
 #[cfg(feature = "output")]
 /// converts the given latex string to an svg string. The function also takes a line color, which
-/// is given as a hex string e.g. "FFFFFF".
+/// is given as a hex string e.g. "#FFFFFF".
 pub fn svg_from_latex<S: Into<String>>(latex: String, line_color: S) -> Result<String, LatexError> {
     use mathjax_svg::convert_to_svg;
 
@@ -45,9 +46,7 @@ pub fn svg_from_latex<S: Into<String>>(latex: String, line_color: S) -> Result<S
 ///
 /// # Example
 /// ```
-/// let steps: Vec<Step> = vec![
-///      Step::Calc((parsed_expr, eval_results, Some("A".to_string())));
-/// ];
+/// let step = Step::Calc { term: parsed_expr, result: res, variable_save: Some("x".to_string()) };
 /// ```
 #[derive(Debug, Clone)]
 pub enum Step {

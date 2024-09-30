@@ -23,11 +23,11 @@ pub use errors::MathLibError;
 
 #[cfg(feature = "high-prec")]
 /// defines the precision used by the equation solver and the printing precision, which is PREC-2.
-pub const PREC: i32 = 13;
+pub const PREC: usize = 13;
 
 #[cfg(not(feature = "high-prec"))]
 /// defines the precision used by the equation solver and the printing precision, which is PREC - 2.
-pub const PREC: i32 = 8;
+pub const PREC: usize = 8;
 
 /// evaluates a given expression in the given context. If you just want the AST, have a look at [parse()].
 ///
