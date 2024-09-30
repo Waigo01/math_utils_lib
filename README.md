@@ -21,7 +21,7 @@ This repo/crate provides a number of math utilities:
 
 ## Usage
 
-*For usage information and more examples, please see [the wiki](https://github.com/Waigo01/math_utils_lib/wiki).*
+**For usage information and more examples, please take a look at [the wiki](https://github.com/Waigo01/math_utils_lib/wiki).**
 
 ## Examples
 ```rust
@@ -93,7 +93,7 @@ Output:
 When opening an issue, please specify the following:
 
 - The mathematical expression that causes the issue
-- The error, be it a MathLibError or any other kind of error
+- The error (or lack of it), be it a MathLibError or any other kind of error
 - The expected behavior
 
 When it comes to contributions you are free to fork this repo and open pull requests.
