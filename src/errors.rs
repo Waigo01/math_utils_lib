@@ -13,7 +13,7 @@ pub enum MathLibError {
 }
 
 impl MathLibError {
-    ///returns the reason behind the MathLibError.
+    /// returns the reason behind the MathLibError.
     pub fn get_reason(&self) -> String {
         match self {
             MathLibError::ParserError(s) => return s.get_reason(),

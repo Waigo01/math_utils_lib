@@ -209,10 +209,11 @@ pub struct RootFinder {
 impl RootFinder {
     /// creates a new [RootFinder](struct@crate::roots::RootFinder) using a vec of expressions which represents
     /// the functions that you want the roots to be found of. Multiple expressions act as a system
-    /// of equations. Additionally you have to pass the global variables.
+    /// of equations. Additionally you have to pass the context and the variables in terms of which
+    /// should be solved.
     ///
-    /// If you want a simpler way of solving equations and systems of equations, have a look at
-    /// [solve()](fn@crate::solver::solve) and [quick_solve()](fn@crate::quick_solve).
+    /// This functionality has been implemented into the eval process using the
+    /// [Equation](crate::basetypes::AdvancedOpType::Equation) operator.
     pub fn new(expressions: Vec<AST>, mut context: Context, search_vars_names: Vec<String>) -> Result<RootFinder, EvalError> {
         if expressions.len() == 0 {
             return Err(EvalError::NothingToDoEq);
@@ -266,12 +267,11 @@ impl RootFinder {
 
         return Ok(RootFinder { expressions, combinations: combs, context, search_vars_names });
     }
-    /// starts the root finding process. It will always search for roots in terms of variables that
-    /// have not yet been defined in the global variables passed in
-    /// [new()](fn@crate::roots::RootFinder::new).
+    /// starts the root finding process.
     /// 
-    /// In the case of a system of equations results will be represented as a vector with the order
-    /// being that of the variables in the expressions.
+    /// In the case of a system of equations results will be represented as a vector with the
+    /// result order being that in which the search_vars_names have been passed to the
+    /// [RootFinder::new] function.
     pub fn find_roots(&self) -> Result<Vec<Value>, EvalError> {
         for i in &self.combinations {
             let mut search_expres = vec![];

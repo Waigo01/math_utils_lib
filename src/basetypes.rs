@@ -303,7 +303,7 @@ impl Value {
         self.pretty_print(None)
     }
     #[deprecated(since="0.4.0", note="Because of the complexity of Value, Values and ASTs this function can still be used to convert a single Value but will not be implemented for ASTs or Values in the forseeable future.")]
-    /// converts the given value to unicode, same as [as_unicode] but with a variable name in
+    /// converts the given value to unicode, same as [as_unicode](Value::as_unicode) but with a variable name in
     /// front of the value.
     pub fn as_unicode_at_var<S: Into<String>>(&self, var_name: S) -> String {
         let mut var_name_string = var_name.into();
@@ -490,7 +490,7 @@ impl Value {
     }
 }
 
-/// provides a wrapper around Vec<Value> with some quality of life implementations.
+/// provides a wrapper around Vec of Value with some quality of life implementations.
 ///
 /// # Example
 ///
@@ -559,7 +559,7 @@ impl Values {
     }
 }
 
-/// used to construct an AST which is recursively evaluated by the [eval()] function.
+/// used to construct an AST which is recursively evaluated by the [eval](crate::parser::eval) function.
 /// 
 /// Each node of the AST can be a:
 /// 

@@ -4,6 +4,9 @@ use crate::errors::LatexError;
 use crate::{basetypes::AST, Values};
 
 #[cfg(feature = "output")]
+/// converts the given latex string to a png image, returned as its raw bytes. The function allows
+/// for a change of scale and a change of line color. The line color is defined by a hex string
+/// e.g. "FFFFFF". The background is always transparent.
 pub fn png_from_latex<S: Into<String>>(latex: String, scale: f32, line_color: S) -> Result<Vec<u8>, LatexError> {
     use resvg::{render, tiny_skia::Pixmap, usvg::{Options, Transform, Tree}};
 
@@ -22,6 +25,8 @@ pub fn png_from_latex<S: Into<String>>(latex: String, scale: f32, line_color: S)
 }
 
 #[cfg(feature = "output")]
+/// converts the given latex string to an svg string. The function also takes a line color, which
+/// is given as a hex string e.g. "FFFFFF".
 pub fn svg_from_latex<S: Into<String>>(latex: String, line_color: S) -> Result<String, LatexError> {
     use mathjax_svg::convert_to_svg;
 
@@ -32,19 +37,18 @@ pub fn svg_from_latex<S: Into<String>>(latex: String, line_color: S) -> Result<S
     Ok(svg)
 }
 
-///provides a way of saving a step. A step can either be a: 
+/// provides a way of saving a step. A step can either be a: 
 ///
-///- Calculation, specified by the AST Tree of the calculation, its result and a possible Variable Name in which it is saved.
-///- Equation, specified by both the left (left of the =) and the right (right of the =) AST
-///Trees, its results and a possible Variable Name in which the results are saved. Multiple Tuples
-///of Trees specify a system of equations.
+/// - Calculation, specified by the AST of the calculation, its results and a possible Variable Name in which it is saved.
+/// - Function, specified by the AST, the names of the input variables and the name of the
+/// function.
 ///
-///# Example
-///```
-///let steps: Vec<Step> = vec![
-///     Step::Calc((BinaryTree, Result, Some("A".to_string())))
-///];
-///```
+/// # Example
+/// ```
+/// let steps: Vec<Step> = vec![
+///      Step::Calc((parsed_expr, eval_results, Some("A".to_string())));
+/// ];
+/// ```
 #[derive(Debug, Clone)]
 pub enum Step {
     Calc{
@@ -60,6 +64,8 @@ pub enum Step {
 }
 
 impl Step {
+    /// converts a step to latex with an added equation tag, which number is given by the equation
+    /// number. This function also adds a "&" aligner before the "=".
     pub fn to_latex_with_tag(&self, equation_number: i32) -> String {
         match self {
             Step::Calc{term, result, variable_save} => {
@@ -85,6 +91,7 @@ impl Step {
             }
         }
     }
+    /// converts a step to latex. This function also adds a "&" aligner before the "=".
     pub fn to_latex(&self) -> String {
         match self {
             Step::Calc{term, result, variable_save} => {
@@ -108,6 +115,7 @@ impl Step {
             Step::Fun{term, inputs, name} => return term.as_latex_at_fun(name, inputs.iter().collect(), true)
         }
     }
+    /// converts a step to inline latex (without the "&" aligner).
     pub fn to_latex_inline(&self) -> String {
         match self {
             Step::Calc{term, result, variable_save} => {
@@ -131,19 +139,18 @@ impl Step {
     }
 }
 
-///describes the type of export done by the [export()] function:
+/// describes the type of export done by the [export()] function:
 ///
-///- Pdf: Save as one pdf file.
-///- Png: Save as consecutive .png images (one image per page).
-///- Tex: Save as the generated .tex file.
+/// - Pdf: Save as a pdf file.
+/// - Tex: Save as the generated .tex file.
 #[cfg(feature = "output")]
 pub enum ExportType {
     Pdf,
     Tex
 }
 
-///exports a history of [Step] to a file named <file_name> with the file type defined
-///by export_type (see [ExportType] for further details).
+/// exports a history of [Step] to a file named <file_name> with the file type defined
+/// by export_type (see [ExportType] for further details).
 #[cfg(feature = "output")]
 pub fn export_history(history: Vec<Step>, export_type: ExportType) -> Result<Vec<u8>, LatexError> {
     let mut output_string = "\\documentclass[12pt, letterpaper]{article}\n\\usepackage{amsmath}\n\\usepackage[margin=1in]{geometry}\n\\allowdisplaybreaks\n\\begin{document}\n\\begin{align*}\n".to_string();

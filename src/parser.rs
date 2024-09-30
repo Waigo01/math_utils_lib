@@ -1,4 +1,4 @@
-use crate::{basetypes::{AdvancedOpType, AdvancedOperation, Operation, SimpleOpType, Value, Variable, AST}, errors::{EvalError, ParserError}, helpers::{cart_prod, get_args}, maths, solver::solve, Context, Values};
+use crate::{basetypes::{AdvancedOpType, AdvancedOperation, Operation, SimpleOpType, Value, Variable, AST}, errors::{EvalError, ParserError}, helpers::{cart_prod, get_args}, maths, roots::RootFinder, Context, Values};
 
 fn get_op_symbol(c: char) -> Option<SimpleOpType> {
     match c {
@@ -14,6 +14,7 @@ fn get_op_symbol(c: char) -> Option<SimpleOpType> {
     }
 }
 
+/// checks if the given variable name is a valid variable name.
 pub fn is_valid_var_name(var: String) -> bool {
     let var_chars: Vec<char> = var.chars().collect();
     if !var_chars[0].is_alphabetic() && var_chars[0] != '\\' {
@@ -111,12 +112,12 @@ fn parse_value(s: String) -> Result<AST, ParserError> {
     }
 }
 
+/// used to construct an AST from a string.
 pub fn parse<S: Into<String>>(expr: S) -> Result<AST, ParserError> {
     let whitespaced_string: String = expr.into().trim().split(" ").filter(|s| !s.is_empty()).collect();
     parse_inner(&whitespaced_string)
 }
 
-///used to construct a AST Tree from a mathematical expression.
 fn parse_inner(expr: &str) -> Result<AST, ParserError> {
     if expr.is_empty() {
         return Err(ParserError::EmptyExpr);
@@ -393,11 +394,9 @@ fn parse_inner(expr: &str) -> Result<AST, ParserError> {
     return Ok(v);
 }
 
-///used to evaluate a given binary tree in the context of the provided variables.
+/// used to evaluate a AST in the provided context.
 ///
-///pi and e need to be provided as variables if used.
-///
-///If you are searching for a quick and easy way to evaluate an expression, have a look at [quick_eval()](fn@crate::quick_eval).
+/// If you are searching for a quick and easy way to evaluate an expression, have a look at [quick_eval()](fn@crate::quick_eval).
 pub fn eval(b: &AST, context: &Context) -> Result<Values, EvalError> {
    Ok(Values::from_vec(eval_rec(b, context, "")?))
 }
@@ -570,7 +569,19 @@ fn eval_rec(b: &AST, context: &Context, last_fn: &str) -> Result<Vec<Value>, Eva
                             return Ok(res.into_iter().flatten().collect());
                         },
                         AdvancedOperation::Equation { equations, search_vars } => {
-                            return Ok(solve(equations.to_vec(), context, search_vars.to_vec())?);
+                            let mut final_expressions = vec![];
+
+                            for i in equations {
+                                let root_b = AST::from_operation(Operation::SimpleOperation {
+                                    op_type: SimpleOpType::Sub,
+                                    left: i.0.clone(),
+                                    right: i.1.clone()
+                                });
+
+                                final_expressions.push(root_b);
+                            }
+                            let root_finder = RootFinder::new(final_expressions, context.to_owned(), search_vars.to_vec())?;
+                            return root_finder.find_roots();
                         }
                     }
                 }

@@ -1,14 +1,10 @@
 use crate::{basetypes::{Operation, SimpleOpType, AST}, errors::EvalError, roots::RootFinder, Context, Value};
 
+#[deprecated(since="0.4.0", note="This functionality has been directly implemented into the eval process using the eq AdvancedOperator")]
 /// used to solve an equation or a system of equations.
 ///
-/// This function takes a Vec of a Tuple of Binaries, which are the parsed left and right sides of
-/// the equation(s). Multiple Tuples signify a system of equations. It also takes the user defined global variables.
-///
-/// e and pi need to be provided as variables.
-///
-/// If you are searching for an easy way of directly solving equations, have a look at
-/// [quick_solve()](fn@crate::quick_solve)
+/// This function takes a Vec of a Tuple of ASTs, which are the parsed left and right sides of
+/// the equation(s). Multiple Tuples describe a system of equations. It also takes the global context.
 pub fn solve(equations: Vec<(AST, AST)>, context: &Context, search_vars: Vec<String>) -> Result<Vec<Value>, EvalError> {
     let mut final_expressions = vec![];
 
