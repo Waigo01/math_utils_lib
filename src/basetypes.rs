@@ -743,7 +743,7 @@ impl AST {
                         inputs_str += &format!("{}", recursed);
                     }
                 }
-                return format!("{}({})", name, inputs_str);
+                return format!("{}\\left({}\\right)", name, inputs_str);
             }
             AST::Operation(o) => {
                 match &**o  {
@@ -789,7 +789,7 @@ impl AST {
                             },
                             AdvancedOperation::Equation { equations, .. } => {
                                 let eqs: Vec<String> = equations.iter().map(|e| format!("{}&={}", e.0.latex_print(), e.1.latex_print())).collect();
-                                return format!("\\left\\{{ \\begin{{align}}{}\\end{{align}}\\right\\}}.", eqs.join("\\"))
+                                return format!("\\left|\\begin{{align}}{}\\end{{align}}\\right|", eqs.join("\\\\ \n "))
                             }
                         }
                     }

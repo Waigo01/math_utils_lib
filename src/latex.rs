@@ -7,19 +7,20 @@ use crate::{basetypes::AST, Values};
 /// converts the given latex string to a png image, returned as its raw bytes. The function allows
 /// for a change of scale and a change of line color. The line color is defined by a hex string
 /// e.g. "FFFFFF". The background is always transparent.
-pub fn png_from_latex<S: Into<String>>(latex: String, scale: f32, line_color: S) -> Result<Vec<u8>, LatexError> {
+pub fn png_from_latex<S: Into<String>>(latex: String, height_scale: f32, line_color: S) -> Result<Vec<u8>, LatexError> {
     use resvg::{render, tiny_skia::Pixmap, usvg::{Options, Transform, Tree}};
 
     let svg = svg_from_latex(latex, line_color)?;
 
     let tree = Tree::from_str(&svg, &Options::default())?;
 
-    let dest_width = (tree.size().width() * scale).ceil();
-    let dest_height = (tree.size().height() * scale).ceil();
+    let dest_height = (tree.size().height() * height_scale).ceil();
+    let dest_width = ((tree.size().width()/tree.size().height()) * dest_height).ceil();
+    let width_scale = tree.size().width()/dest_width;
 
     let mut pixmap = Pixmap::new(dest_width as u32, dest_height as u32).unwrap();
 
-    render(&tree, Transform::from_row(scale, 0., 0., scale, 0., 0.), &mut pixmap.as_mut());
+    render(&tree, Transform::from_row(width_scale, 0., 0., height_scale, 0., 0.), &mut pixmap.as_mut());
 
     Ok(pixmap.encode_png().ok().unwrap())
 }
@@ -66,7 +67,7 @@ pub enum Step {
 impl Step {
     /// converts a step to latex with an added equation tag, which number is given by the equation
     /// number. This function also adds a "&" aligner before the "=".
-    pub fn to_latex_with_tag(&self, equation_number: i32) -> String {
+    pub fn as_latex_with_tag(&self, equation_number: i32) -> String {
         match self {
             Step::Calc{term, result, variable_save} => {
                 let mut aligner = "&";
@@ -92,7 +93,7 @@ impl Step {
         }
     }
     /// converts a step to latex. This function also adds a "&" aligner before the "=".
-    pub fn to_latex(&self) -> String {
+    pub fn as_latex(&self) -> String {
         match self {
             Step::Calc{term, result, variable_save} => {
                 let mut aligner = "&";
@@ -116,7 +117,7 @@ impl Step {
         }
     }
     /// converts a step to inline latex (without the "&" aligner).
-    pub fn to_latex_inline(&self) -> String {
+    pub fn as_latex_inline(&self) -> String {
         match self {
             Step::Calc{term, result, variable_save} => {
                 let mut latex = "".to_string();
@@ -155,7 +156,7 @@ pub enum ExportType {
 pub fn export_history(history: Vec<Step>, export_type: ExportType) -> Result<Vec<u8>, LatexError> {
     let mut output_string = "\\documentclass[12pt, letterpaper]{article}\n\\usepackage{amsmath}\n\\usepackage[margin=1in]{geometry}\n\\allowdisplaybreaks\n\\begin{document}\n\\begin{align*}\n".to_string();
     for (i, s) in history.iter().enumerate() {
-        output_string += &s.to_latex_with_tag(i as i32+1);
+        output_string += &s.as_latex_with_tag(i as i32+1);
     }
     output_string += "\\end{align*}\n\\end{document}";
 
