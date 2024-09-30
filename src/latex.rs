@@ -40,8 +40,8 @@ pub fn svg_from_latex<S: Into<String>>(latex: String, line_color: S) -> Result<S
 
 /// provides a way of saving a step. A step can either be a: 
 ///
-/// - Calculation, specified by the AST of the calculation, its results and a possible Variable Name in which it is saved.
-/// - Function, specified by the AST, the names of the input variables and the name of the
+/// - Calculation, specified by the AST of the calculation, its results and a possible variable name in which it is saved.
+/// - Function declaration, specified by the AST, the names of the input variables and the name of the
 /// function.
 ///
 /// # Example

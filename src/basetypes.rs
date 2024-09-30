@@ -17,7 +17,7 @@ const VAR_SYMBOLS: [(&str, &str); 48] = [("\\alpha", "𝛼"), ("\\Alpha", "𝛢"
 /// \pi but just pi) will get replaced with their unicode counterparts when pretty printing.
 /// 
 /// Variable Names are not allowed to contain numbers outside of LaTeX style subscript. Additionally
-/// they must start with an alphabetical letter or a \.
+/// they must start with an alphabetical letter or a "\\".
 /// 
 /// # Example
 /// 
@@ -98,7 +98,7 @@ impl Context {
             Variable::new("e", vec![Value::Scalar(std::f64::consts::E)])
         ])
     }
-    /// creates a context with given variables and functions.
+    /// creates a context with the given variables and functions.
     pub fn new<V: AsRef<[Variable]>, F: AsRef<[Function]>>(vars: V, funs: F) -> Context {
         Context {vars: vars.as_ref().to_vec(), funs: funs.as_ref().to_vec()}
     }

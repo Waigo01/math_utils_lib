@@ -1,4 +1,7 @@
-# Math utilities library
+<p align="center">
+  <img src="./images/Icon.png" />
+</p>
+
 
 [![crates.io](https://img.shields.io/badge/crates.io-orange?style=for-the-badge&logo=rust)](https://crates.io/crates/math_utils_lib)
 [![docs.rs](https://img.shields.io/badge/docs.rs-gray?style=for-the-badge&logo=docs.rs)](https://docs.rs/math_utils_lib/latest/math_utils_lib/)
@@ -21,7 +24,10 @@ This repo/crate provides a number of math utilities:
 
 ## Usage
 
-**For usage information and more examples, please take a look at [the wiki](https://github.com/Waigo01/math_utils_lib/wiki).**
+**For usage information concerning the mathematical properties of the evaluator and more examples, please take a look at [the wiki](https://github.com/Waigo01/math_utils_lib/wiki).**
+
+**For programming documentation, please take a look at [docs.rs](https://docs.rs/math_utils_lib/latest/math_utils_lib/)**
+
 
 ## Examples
 ```rust
@@ -96,4 +102,4 @@ When opening an issue, please specify the following:
 - The error (or lack of it), be it a MathLibError or any other kind of error
 - The expected behavior
 
-When it comes to contributions you are free to fork this repo and open pull requests.
+When it comes to contributions, feel free to fork this repo and open pull requests.
