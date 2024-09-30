@@ -26,7 +26,7 @@ tectonic = { git = "https://github.com/tectonic-typesetting/tectonic.git", branc
 resvg = { version = "0.43.0", optional = true }
 
 [features]
-default = ["output"]
+default = []
 doc-images = ["dep:embed-doc-image"]
 high-prec = []
 row-major = []
