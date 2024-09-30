@@ -16,7 +16,7 @@ pub fn png_from_latex<S: Into<String>>(latex: String, height_scale: f32, line_co
 
     let dest_height = (tree.size().height() * height_scale).ceil();
     let dest_width = ((tree.size().width()/tree.size().height()) * dest_height).ceil();
-    let width_scale = tree.size().width()/dest_width;
+    let width_scale = dest_width/tree.size().width();
 
     let mut pixmap = Pixmap::new(dest_width as u32, dest_height as u32).unwrap();
 
