@@ -4,21 +4,20 @@ use crate::errors::LatexError;
 use crate::{basetypes::AST, Values};
 
 #[cfg(feature = "output")]
-/// converts the given latex string to a png image, returned as its raw bytes. The function allows
-/// for a change of scale and a change of line color. The line color is defined by a hex string
+/// converts the given latex string to a png image with the given height in pixels, returned as its raw bytes/// . This function allows for a change of line color. The line color is defined by a hex string
 /// e.g. "FFFFFF". The background is always transparent.
-pub fn png_from_latex<S: Into<String>>(latex: String, height_scale: f32, line_color: S) -> Result<Vec<u8>, LatexError> {
+pub fn png_from_latex<S: Into<String>>(latex: String, height: u32, line_color: S) -> Result<Vec<u8>, LatexError> {
     use resvg::{render, tiny_skia::Pixmap, usvg::{Options, Transform, Tree}};
 
     let svg = svg_from_latex(latex, line_color)?;
 
     let tree = Tree::from_str(&svg, &Options::default())?;
 
-    let dest_height = (tree.size().height() * height_scale).ceil();
-    let dest_width = ((tree.size().width()/tree.size().height()) * dest_height).ceil();
+    let dest_width = ((tree.size().width()/tree.size().height()) * height as f32).ceil();
     let width_scale = dest_width/tree.size().width();
+    let height_scale = height as f32/tree.size().height();
 
-    let mut pixmap = Pixmap::new(dest_width as u32, dest_height as u32).unwrap();
+    let mut pixmap = Pixmap::new(dest_width as u32, height as u32).unwrap();
 
     render(&tree, Transform::from_row(width_scale, 0., 0., height_scale, 0., 0.), &mut pixmap.as_mut());
 
