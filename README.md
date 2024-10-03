@@ -26,7 +26,7 @@ This repo/crate provides a number of math utilities:
 
 **For usage information concerning the mathematical properties of the evaluator and more examples, please take a look at [the wiki](https://github.com/Waigo01/math_utils_lib/wiki).**
 
-**For programming documentation, please take a look at [docs.rs](https://docs.rs/math_utils_lib/latest/math_utils_lib/)**
+**For programming documentation, please take a look at [docs.rs](https://docs.rs/math_utils_lib/latest/math_utils_lib/).**
 
 
 ## Examples

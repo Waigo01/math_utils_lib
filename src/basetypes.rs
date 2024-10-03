@@ -32,8 +32,8 @@ pub struct Variable {
 
 impl Variable {
     /// creates a new variable from a Vec of [Value].
-    pub fn new<S: Into<String>, V: AsRef<[Value]>>(name: S, values: V) -> Self {
-        Variable { name: name.into(), values: Values::from_vec(values.as_ref().to_vec())}
+    pub fn new<S: Into<String>, V: Into<Values>>(name: S, values: V) -> Self {
+        Variable { name: name.into(), values: values.into()}
     }
     /// creates a new variable from [Values].
     pub fn new_from_values<S: Into<String>>(name: S, values: Values) -> Self {
@@ -94,8 +94,8 @@ impl Context {
     /// creates a context with the variables pi and e and no functions.
     pub fn default() -> Self {
         Context::from_vars(vec![
-            Variable::new("pi", vec![Value::Scalar(std::f64::consts::PI)]),
-            Variable::new("e", vec![Value::Scalar(std::f64::consts::E)])
+            Variable::new("pi", Value::Scalar(std::f64::consts::PI)),
+            Variable::new("e", Value::Scalar(std::f64::consts::E))
         ])
     }
     /// creates a context with the given variables and functions.
@@ -146,6 +146,35 @@ impl Context {
             .map(|f| f.to_owned())
             .collect()
     }
+}
+
+#[macro_export]
+macro_rules! value {
+    ( $x:expr ) => {
+        Value::Scalar($x)
+    };
+    ( $($x:expr),+ ) => {
+        {
+            let mut vector = Vec::new();
+            $(
+                vector.push($x);
+            )*
+            Value::Vector(vector)
+        }
+    };
+    ( $($($x:expr),+);+ ) => {
+        {
+            let mut vector = Vec::new();
+            $(
+                let mut row = Vec::new();
+                $(
+                    row.push($x);
+                )*
+                vector.push(row);
+            )*
+            Value::Matrix(vector)
+        }
+    };
 }
 
 /// specifies a Value that can be a Matrix, Vector or a Scalar.
@@ -487,6 +516,18 @@ impl Value {
                 return output_string;
             }
         }
+    }
+}
+
+impl Into<Values> for Value {
+    fn into(self) -> Values {
+        return Values::from_vec(vec![self]);
+    }
+}
+
+impl Into<Values> for Vec<Value> {
+    fn into(self) -> Values {
+        return Values::from_vec(self);
     }
 }
 
