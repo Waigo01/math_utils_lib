@@ -155,10 +155,9 @@ fn parse_inner(expr: &str) -> Result<AST, ParserError> {
         }
     }
 
-
     //is it an operation?
     
-    let op_types = vec![SimpleOpType::Add, SimpleOpType::Sub, SimpleOpType::AddSub, SimpleOpType::Mult, SimpleOpType::Div, SimpleOpType::Cross, SimpleOpType::HiddenMult, SimpleOpType::Pow, SimpleOpType::Get];
+    let op_types = vec![SimpleOpType::Add, SimpleOpType::Sub, SimpleOpType::AddSub, SimpleOpType::Mult, SimpleOpType::Neg, SimpleOpType::Div, SimpleOpType::Cross, SimpleOpType::HiddenMult, SimpleOpType::Pow, SimpleOpType::Get];
     let mut ops_in_expr: Vec<(SimpleOpType, usize, usize, usize)> = vec![];
     let mut highest_op = 7;
     let mut last_char = '\\';
@@ -201,8 +200,13 @@ fn parse_inner(expr: &str) -> Result<AST, ParserError> {
             continue;
         }
         let symbol = get_op_symbol(expr_chars[i]);
-        if parenths_open == 0 && brackets_open == 0 && curly_brackets_open == 0 && i != 0 && i != expr_chars.len()-1 && symbol.is_some() {
-            ops_in_expr.push((symbol.unwrap(), i, 0, 1));
+        if parenths_open == 0 && brackets_open == 0 && curly_brackets_open == 0 && i != expr_chars.len()-1 && symbol.is_some() {
+            let operation = symbol.unwrap();
+            if i == 0 && operation == SimpleOpType::Sub {
+                ops_in_expr.push((SimpleOpType::Neg, i, 0, 1));
+            } else {
+                ops_in_expr.push((operation, i, 0, 1));
+            }
         } 
     }
 
@@ -222,8 +226,17 @@ fn parse_inner(expr: &str) -> Result<AST, ParserError> {
     for o in op_types {
         for i in &ops_in_expr {
             if i.0 == o {
+                let left_s: String = expr_chars[0..(i.1-i.2)].to_vec().iter().collect();
+                let right_s: String = expr_chars[(i.1+i.3)..].to_vec().iter().collect();
+                let right_b = parse_inner(&right_s)?; 
+                if left_s.is_empty() {
+                    return Ok(AST::from_operation(Operation::SimpleOperation {
+                        op_type: i.0.clone(), 
+                        left: AST::Scalar(0.), 
+                        right: right_b
+                    }));
+                }
                 let left_b = parse_inner(&expr_chars[0..(i.1-i.2)].to_vec().iter().collect::<String>())?;
-                let right_b = parse_inner(&expr_chars[(i.1+i.3)..].to_vec().iter().collect::<String>())?; 
                 return Ok(AST::from_operation(Operation::SimpleOperation {
                     op_type: i.0.clone(),
                     left: left_b,
@@ -231,26 +244,6 @@ fn parse_inner(expr: &str) -> Result<AST, ParserError> {
                 }));
             }
         }
-    }
-
-    // is it a negation?
-
-    if expr_chars[0] == '-' {
-        return Ok(AST::from_operation(Operation::SimpleOperation {
-            op_type: SimpleOpType::Neg,
-            left: parse_inner(&expr_chars[1..].to_vec().iter().collect::<String>())?,
-            right: AST::from_value(Value::Scalar(0.))
-        }));
-    }
-
-    // is it a plus minus?
-    
-    if expr_chars[0] == '&' {
-        return Ok(AST::from_operation(Operation::SimpleOperation { 
-            op_type: SimpleOpType::AddSub, 
-            left: AST::from_value(Value::Scalar(0.)), 
-            right: parse_inner(&expr_chars[1..].to_vec().iter().collect::<String>())? 
-        }));
     }
 
     // is it a function?
@@ -518,7 +511,7 @@ fn eval_rec(b: &AST, context: &Context, last_fn: &str) -> Result<Vec<Value>, Eva
                                 SimpleOpType::Sub => res.push(maths::sub(&i, &j)?),
                                 SimpleOpType::AddSub => res.append(&mut vec![maths::add(&i, &j)?, maths::sub(&i, &j)?]),
                                 SimpleOpType::Mult => res.push(maths::mult(&i, &j)?),
-                                SimpleOpType::Neg => res.push(maths::neg(&i)?),
+                                SimpleOpType::Neg => res.push(maths::neg(&j)?),
                                 SimpleOpType::Div => res.push(maths::div(&i, &j)?),
                                 SimpleOpType::Cross => res.push(maths::cross(&i, &j)?),
                                 SimpleOpType::HiddenMult => res.push(maths::mult(&i, &j)?),

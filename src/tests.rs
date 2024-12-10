@@ -356,6 +356,17 @@ fn calculus_eval2() -> Result<(), MathLibError> {
 }
 
 #[test]
+fn calculus_eval3() -> Result<(), MathLibError> {
+    let parsed = parse("e^(-(x-4000)^2/(2*250^2))").unwrap();
+    println!("{:.?}", parsed);
+    let res = quick_eval("1/sqrt(2*250^2*pi)*I(e^(-(x-4000)^2/(2*250^2)), x, 3500, 4500)", &Context::default())?.to_vec();
+
+    assert_eq!(res[0].round(4), value!(0.9545));
+
+    Ok(())
+}
+
+#[test]
 fn hard_eval1() -> Result<(), MathLibError> {
     let x = Variable::new("x", value!(3.));
     let a = Variable::new("A", value!(3., 2., 1.));
