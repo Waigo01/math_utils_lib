@@ -486,7 +486,7 @@ impl Value {
             var = "\\pi".to_string();
         }
 
-        return format!("{} {}= {}", aligner, var, self.as_latex());
+        return format!("{} {}= {}", var, aligner, self.as_latex());
     }
     fn latex_print(&self) -> String {
         match self {
