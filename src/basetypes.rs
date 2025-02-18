@@ -25,6 +25,7 @@ const VAR_SYMBOLS: [(&str, &str); 48] = [("\\alpha", "𝛼"), ("\\Alpha", "𝛢"
 /// let variable = Variable::new("x", vec![Value::Scalar(3.)]);
 /// ```
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Variable {
     pub name: String,
     pub values: Values
@@ -57,6 +58,7 @@ impl Variable {
 /// let function = Function::new("f", parsed_expr, vec!["x"]);
 /// ```
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Function {
     pub name: String,
     pub ast: AST,
@@ -85,6 +87,7 @@ impl Function {
 /// let context = Context::default();
 /// ```
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Context {
     pub vars: Vec<Variable>,
     pub funs: Vec<Function>
@@ -185,6 +188,7 @@ macro_rules! value {
 /// let x: Value = Value::Scalar(3.5);
 /// ```
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Value {
     Matrix(Vec<Vec<f64>>),
     Vector(Vec<f64>),
@@ -539,6 +543,7 @@ impl Into<Values> for Vec<Value> {
 /// let values = Values::from_vec(vec![Value::Scalar(3.)]);
 /// ```
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Values(Vec<Value>);
 
 impl Values {
@@ -617,6 +622,7 @@ impl Values {
 /// - Function
 /// - Operation
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum AST {
     Scalar(f64),
     Vector(Box<Vec<AST>>),
@@ -852,6 +858,7 @@ impl AST {
 /// 
 /// The order of the enum also represents the reverse order of the operation priority.
 #[derive(Debug, PartialEq, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum SimpleOpType { 
     /// Add two scalars, vectors, or matrices (a+b)
     Add,
@@ -904,6 +911,7 @@ pub enum SimpleOpType {
 /// This enum only contains advanced operations with more than 2 arguments. For simple operations,
 /// see [SimpleOpType].
 #[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum AdvancedOpType {
     /// Calculate the derivative of a function f in respect to n at a value m (D(f, n, m))
     Derivative,
@@ -917,6 +925,7 @@ pub enum AdvancedOpType {
 /// used to specify an operation in a parsed string. It is used together with [AST] to
 /// construct an AST from a mathematical expression.
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Operation {
     SimpleOperation {
         op_type: SimpleOpType,
@@ -929,6 +938,7 @@ pub enum Operation {
 /// used to specify an advanced operation for more complex mathematical operations, such as
 /// functions with more than two inputs and the equation solver.
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum AdvancedOperation{
     Integral {
         expr: AST,

@@ -1642,6 +1642,7 @@ dependencies = [
  "embed-doc-image",
  "mathjax_svg",
  "resvg",
+ "serde",
  "tectonic",
 ]
 

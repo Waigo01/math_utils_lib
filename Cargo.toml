@@ -24,6 +24,7 @@ embed-doc-image = { version = "0.1.4", optional = true }
 mathjax_svg = { version = "3.1.2", optional = true }
 tectonic = { version = "0.15.0", features = ["external-harfbuzz"], optional = true }
 resvg = { version = "0.43.0", optional = true }
+serde = { version = "1.0.217", features = ["derive"], optional = true }
 
 [features]
 default = []
@@ -31,3 +32,4 @@ doc-images = ["dep:embed-doc-image"]
 high-prec = []
 row-major = []
 output = ["dep:mathjax_svg", "dep:tectonic", "dep:resvg"]
+serde = ["dep:serde"]
