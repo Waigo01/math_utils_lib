@@ -603,7 +603,7 @@ impl Values {
         if self.len() <= 0 {
             return format!("{}: No solutions", var);
         } else if self.len() == 1 {
-            return format!("{} {}= {}", aligner, var, self.0[0].as_latex());
+            return format!("{} {}= {}", var, aligner, self.0[0].as_latex());
         } else {
             return format!("{} {}= \\left\\{{{}\\right\\}}", var, aligner, self.clone().to_vec().iter().map(|v| v.as_latex()).collect::<Vec<String>>().join("; "));
         }
