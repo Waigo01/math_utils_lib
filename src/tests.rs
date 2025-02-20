@@ -82,6 +82,26 @@ fn easy_eval9() -> Result<(), MathLibError> {
 }
 
 #[test]
+fn easy_eval10() -> Result<(), MathLibError> {
+    let a = Variable::new("A", value!(6., 1., 13., 8.; 4., 3., 9., 10.; 4., 0., 14., 8.));
+    let b = Variable::new("B", value!(3., 0.; 1., 1.; 0., 6.; 2.5, 2.));
+    let res = quick_eval("A*B", &Context::from_vars(vec![a, b]))?.to_vec();
+
+    assert_eq!(res[0], value!(39., 95.; 40., 77.; 32., 100.));
+
+    Ok(())
+}
+
+#[test]
+fn easy_eval11() -> Result<(), MathLibError> {
+    let parsed_ast = parse("-1")?;
+
+    assert_eq!(parsed_ast.as_latex(), "-1".to_string());
+
+    Ok(())
+}
+
+#[test]
 fn medium_eval1() -> Result<(), MathLibError> {
     let x = Variable::new("x", value!(3.));
     let res = quick_eval("3x", &Context::from_vars(vec![x]))?.to_vec();
