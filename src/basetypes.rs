@@ -704,6 +704,7 @@ impl AST {
                             SimpleOpType::Arcsin => return format!("arcsin({})", lv),
                             SimpleOpType::Arccos => return format!("arccos({})", lv),
                             SimpleOpType::Arctan => return format!("arctan({})", lv),
+                            SimpleOpType::Det => return format!("det({})", lv),
                             SimpleOpType::Parenths => return format!("({})", lv),
                         }
                     },
@@ -814,15 +815,16 @@ impl AST {
                             SimpleOpType::Pow => return format!("{}^{{{}}}", lv, rv),
                             SimpleOpType::Cross => return format!("{}\\times {}", lv, rv),
                             SimpleOpType::Abs => return format!("|{}|", lv),
-                            SimpleOpType::Sin => return format!("\\sin{{({})}}", lv),
-                            SimpleOpType::Cos => return format!("\\cos{{({})}}", lv),
-                            SimpleOpType::Tan => return format!("\\tan{{({})}}", lv),
+                            SimpleOpType::Sin => return format!("\\sin\\left({}\\right)", lv),
+                            SimpleOpType::Cos => return format!("\\cos\\left({}\\right)", lv),
+                            SimpleOpType::Tan => return format!("\\tan\\left({}\\right)", lv),
                             SimpleOpType::Sqrt => return format!("\\sqrt{{{}}}", lv),
                             SimpleOpType::Root => return format!("\\sqrt[{}]{{{}}}", rv, lv),
-                            SimpleOpType::Ln => return format!("\\ln{{({})}}", lv),
-                            SimpleOpType::Arcsin => return format!("\\arcsin{{({})}}", lv),
-                            SimpleOpType::Arccos => return format!("\\arccos{{({})}}", lv),
-                            SimpleOpType::Arctan => return format!("\\arctan{{({})}}", lv),
+                            SimpleOpType::Ln => return format!("\\ln\\left({}\\right)", lv),
+                            SimpleOpType::Arcsin => return format!("\\arcsin\\left({}\\right)", lv),
+                            SimpleOpType::Arccos => return format!("\\arccos\\left({}\\right)", lv),
+                            SimpleOpType::Arctan => return format!("\\arctan\\left({}\\right)", lv),
+                            SimpleOpType::Det => return format!("\\det\\left({}\\right)", lv),
                             SimpleOpType::Parenths => return format!("\\left({}\\right)", lv),
                         }
                     },
@@ -901,7 +903,9 @@ pub enum SimpleOpType {
     /// Calculate the arccos of a scalar (arccos(a))
     Arccos,
     /// Calculate the arctan of a scalar (arctan(a))
-    Arctan, 
+    Arctan,
+    /// Calculate the determinant of a matrix (det(M))
+    Det,
     /// Prioritise expressions in parentheses (3*(5+5))
     Parenths
 }

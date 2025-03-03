@@ -4,6 +4,7 @@ pub mod add_sub;
 pub mod mult_div;
 pub mod cross_pow;
 pub mod calculus;
+pub mod special;
 
 #[doc(hidden)]
 pub fn add(lv: &Value, rv: &Value) -> Result<Value, String> {
@@ -203,5 +204,14 @@ pub fn ln(lv: &Value) -> Result<Value, String> {
         Value::Scalar(a) => return Ok(Value::Scalar(a.ln())),
         Value::Vector(_) => return Err("Can't take ln of vector!".to_string()),
         Value::Matrix(_) => return Err("Can't take ln of matrix!".to_string())
+    }
+}
+
+#[doc(hidden)]
+pub fn det(lv: &Value) -> Result<Value, String> {
+    match lv {
+        Value::Scalar(_) => return Err("Can't calculate determinant of a scalar!".to_string()),
+        Value::Vector(_) => return Err("Can't calculate determinant of a vector!".to_string()),
+        Value::Matrix(m) => return special::det_m(m),
     }
 }

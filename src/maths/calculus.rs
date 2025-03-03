@@ -23,11 +23,11 @@ pub fn calculate_integral(expr: &AST, in_terms_of: String, lower_bound: Value, u
                 ub = lb;
                 lb = temp;
             }
-            let dx = (ub-lb)/10f64.powi(PREC as i32-2);
+            let dx = (ub-lb)/10f64.powi(PREC as i32-3);
             let mut sums = vec![];
             let mut b = lb;
             while b < ub {
-                mut_vars.push(Variable::new(&in_terms_of, vec![Value::Scalar(b)]));
+                mut_vars.push(Variable::new(&in_terms_of, vec![Value::Scalar((b+(b-dx))/2.0)]));
                 let evals = eval(expr, &Context::new(&mut_vars, &context.funs))?;
                 for (i, e) in evals.to_vec().iter().enumerate() {
                     if sums.len() <= i {
@@ -39,6 +39,7 @@ pub fn calculate_integral(expr: &AST, in_terms_of: String, lower_bound: Value, u
                 mut_vars.remove(mut_vars.len()-1);
                 b += dx;
             }
+            println!("{:.?}", sums);
             for i in 0..sums.len() {
                 sums[i] = mult(&sums[i], &Value::Scalar(dx))?;
             }

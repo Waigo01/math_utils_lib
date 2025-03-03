@@ -248,7 +248,7 @@ fn parse_inner(expr: &str) -> Result<AST, ParserError> {
 
     // is it a function?
 
-    let function_look_up = vec![(SimpleOpType::Sin, "sin("), (SimpleOpType::Cos, "cos("), (SimpleOpType::Tan, "tan("), (SimpleOpType::Abs, "abs("), (SimpleOpType::Sqrt, "sqrt("), (SimpleOpType::Root, "root("), (SimpleOpType::Ln, "ln("), (SimpleOpType::Arcsin, "arcsin("), (SimpleOpType::Arccos, "arccos("), (SimpleOpType::Arctan, "arctan(")];
+    let function_look_up = vec![(SimpleOpType::Sin, "sin("), (SimpleOpType::Cos, "cos("), (SimpleOpType::Tan, "tan("), (SimpleOpType::Abs, "abs("), (SimpleOpType::Sqrt, "sqrt("), (SimpleOpType::Root, "root("), (SimpleOpType::Ln, "ln("), (SimpleOpType::Arcsin, "arcsin("), (SimpleOpType::Arccos, "arccos("), (SimpleOpType::Arctan, "arctan("), (SimpleOpType::Det, "det(")];
     
     for i in function_look_up {
         if expr_chars.iter().collect::<String>().starts_with(i.1) {
@@ -526,6 +526,7 @@ fn eval_rec(b: &AST, context: &Context, last_fn: &str) -> Result<Vec<Value>, Eva
                                 SimpleOpType::Arcsin => res.push(maths::arcsin(&i)?),
                                 SimpleOpType::Arccos => res.push(maths::arccos(&i)?),
                                 SimpleOpType::Arctan => res.push(maths::arctan(&i)?),
+                                SimpleOpType::Det => res.push(maths::det(&i)?),
                                 SimpleOpType::Parenths => res.push(i.clone()),
                             }
                         }

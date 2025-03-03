@@ -358,6 +358,26 @@ fn medium_eval27() -> Result<(), MathLibError> {
 }
 
 #[test]
+fn medium_eval28() -> Result<(), MathLibError> {
+    let a = Variable::new("A", value!(1., 2., 3.; 4., 5., 6.; 7., 8., 9.));
+    let res = quick_eval("det(A)", &Context::from_vars(vec![a]))?.to_vec();
+
+    assert_eq!(res[0], value!(0.));
+
+    Ok(())
+}
+
+#[test]
+fn medium_eval29() -> Result<(), MathLibError> {
+    let a = Variable::new("A", value!(0., 6., -2., -1., 5.; 0., 0., 0., -9., -7.; 0., 15., 35., 0., 0.; 0., -1., -11., -2., 1.; -2., -2., 3., 0., -2.));
+    let res = quick_eval("det(A)", &Context::from_vars(vec![a]))?.to_vec();
+
+    assert_eq!(res[0], value!(2480.));
+
+    Ok(())
+}
+
+#[test]
 fn calculus_eval1() -> Result<(), MathLibError> {
     let res = quick_eval("D(x^2, x, 3)", &Context::empty())?.to_vec();
 
@@ -377,8 +397,6 @@ fn calculus_eval2() -> Result<(), MathLibError> {
 
 #[test]
 fn calculus_eval3() -> Result<(), MathLibError> {
-    let parsed = parse("e^(-(x-4000)^2/(2*250^2))").unwrap();
-    println!("{:.?}", parsed);
     let res = quick_eval("1/sqrt(2*250^2*pi)*I(e^(-(x-4000)^2/(2*250^2)), x, 3500, 4500)", &Context::default())?.to_vec();
 
     assert_eq!(res[0].round(4), value!(0.9545));
