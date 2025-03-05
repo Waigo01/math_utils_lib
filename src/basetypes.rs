@@ -22,7 +22,7 @@ const VAR_SYMBOLS: [(&str, &str); 48] = [("\\alpha", "𝛼"), ("\\Alpha", "𝛢"
 /// # Example
 /// 
 /// ```
-/// let variable = Variable::new("x", vec![Value::Scalar(3.)]);
+/// let variable = Variable::new("x", value!(3.));
 /// ```
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -151,6 +151,13 @@ impl Context {
     }
 }
 
+/// helps to quickly initialize a [Value].
+///
+/// # Example
+///
+/// ```
+/// let x: Value = value!(3.5);
+/// ```
 #[macro_export]
 macro_rules! value {
     ( $x:expr ) => {
