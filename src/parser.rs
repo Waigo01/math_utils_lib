@@ -248,7 +248,7 @@ fn parse_inner(expr: &str) -> Result<AST, ParserError> {
 
     // is it a function?
 
-    let function_look_up = vec![(SimpleOpType::Sin, "sin("), (SimpleOpType::Cos, "cos("), (SimpleOpType::Tan, "tan("), (SimpleOpType::Abs, "abs("), (SimpleOpType::Sqrt, "sqrt("), (SimpleOpType::Root, "root("), (SimpleOpType::Ln, "ln("), (SimpleOpType::Arcsin, "arcsin("), (SimpleOpType::Arccos, "arccos("), (SimpleOpType::Arctan, "arctan("), (SimpleOpType::Det, "det(")];
+    let function_look_up = vec![(SimpleOpType::Sin, "sin("), (SimpleOpType::Cos, "cos("), (SimpleOpType::Tan, "tan("), (SimpleOpType::Abs, "abs("), (SimpleOpType::Sqrt, "sqrt("), (SimpleOpType::Root, "root("), (SimpleOpType::Ln, "ln("), (SimpleOpType::Arcsin, "arcsin("), (SimpleOpType::Arccos, "arccos("), (SimpleOpType::Arctan, "arctan("), (SimpleOpType::Det, "det("), (SimpleOpType::Inv, "inv(")];
     
     for i in function_look_up {
         if expr_chars.iter().collect::<String>().starts_with(i.1) {
@@ -387,7 +387,7 @@ fn parse_inner(expr: &str) -> Result<AST, ParserError> {
     return Ok(v);
 }
 
-/// used to evaluate a AST in the provided context.
+/// used to evaluate an AST with the provided context.
 ///
 /// If you are searching for a quick and easy way to evaluate an expression, have a look at [quick_eval()](fn@crate::quick_eval).
 pub fn eval(b: &AST, context: &Context) -> Result<Values, EvalError> {
@@ -527,6 +527,7 @@ fn eval_rec(b: &AST, context: &Context, last_fn: &str) -> Result<Vec<Value>, Eva
                                 SimpleOpType::Arccos => res.push(maths::arccos(&i)?),
                                 SimpleOpType::Arctan => res.push(maths::arctan(&i)?),
                                 SimpleOpType::Det => res.push(maths::det(&i)?),
+                                SimpleOpType::Inv => res.push(maths::inv(&i)?),
                                 SimpleOpType::Parenths => res.push(i.clone()),
                             }
                         }

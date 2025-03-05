@@ -102,6 +102,17 @@ fn easy_eval11() -> Result<(), MathLibError> {
 }
 
 #[test]
+fn easy_eval12() -> Result<(), MathLibError> {
+    let a = Variable::new("A", Value::Matrix(vec![vec![2.]]));
+
+    let res = quick_eval("inv(A)", &Context::from_vars(vec![a]))?.to_vec();
+
+    assert_eq!(res[0], Value::Matrix(vec![vec![0.5]]));
+
+    Ok(())
+}
+
+#[test]
 fn medium_eval1() -> Result<(), MathLibError> {
     let x = Variable::new("x", value!(3.));
     let res = quick_eval("3x", &Context::from_vars(vec![x]))?.to_vec();
@@ -378,6 +389,17 @@ fn medium_eval29() -> Result<(), MathLibError> {
 }
 
 #[test]
+fn medium_eval30() -> Result<(), MathLibError> {
+    let a = Variable::new("A", value!(-1., 3./2.; 1., -1.));
+
+    let res = quick_eval("inv(A)", &Context::from_vars(vec![a]))?.round(3).to_vec();
+
+    assert_eq!(res[0], value!(2., 3.; 2., 2.));
+
+    Ok(())
+}
+
+#[test]
 fn calculus_eval1() -> Result<(), MathLibError> {
     let res = quick_eval("D(x^2, x, 3)", &Context::empty())?.to_vec();
 
@@ -412,6 +434,16 @@ fn hard_eval1() -> Result<(), MathLibError> {
     let res = quick_eval("(x*B*A)?1", &Context::from_vars(vec![a, x, b]))?.to_vec();
 
     assert_eq!(res[0], value!(72.));
+
+    Ok(())
+}
+
+#[test]
+fn hard_eval2() -> Result<(), MathLibError> {
+    let a = Variable::new("A", value!(-3., -1., 2., -3.; -3., 1., 2., -2.; -2., 3., 0., 1.; 1., -2., -3., 1.));
+    let res = quick_eval("inv(A)", &Context::from_vars(vec![a]))?.round(3).to_vec();
+
+    assert_eq!(res[0], value!(-11./7., 2., -1., 2./7.; -15./7., 3., -1., 4./7.; 2., -3., 1., -1.; 23./7., -5., 2., -8./7.).round(3));
 
     Ok(())
 }

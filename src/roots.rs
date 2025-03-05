@@ -83,7 +83,7 @@ fn gauss_algorithm(v: &mut Vec<Vec<f64>>) -> Result<Value, EvalError> {
                 return Err(EvalError::InfiniteSolutions);
             }
         }
-    } 
+    }
 
     let mut result_vec = vec![];
 

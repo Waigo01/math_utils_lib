@@ -705,6 +705,7 @@ impl AST {
                             SimpleOpType::Arccos => return format!("arccos({})", lv),
                             SimpleOpType::Arctan => return format!("arctan({})", lv),
                             SimpleOpType::Det => return format!("det({})", lv),
+                            SimpleOpType::Inv => return format!("inv({})", lv),
                             SimpleOpType::Parenths => return format!("({})", lv),
                         }
                     },
@@ -825,6 +826,7 @@ impl AST {
                             SimpleOpType::Arccos => return format!("\\arccos\\left({}\\right)", lv),
                             SimpleOpType::Arctan => return format!("\\arctan\\left({}\\right)", lv),
                             SimpleOpType::Det => return format!("\\det\\left({}\\right)", lv),
+                            SimpleOpType::Inv => return format!("{}^{{-1}}", lv),
                             SimpleOpType::Parenths => return format!("\\left({}\\right)", lv),
                         }
                     },
@@ -906,6 +908,8 @@ pub enum SimpleOpType {
     Arctan,
     /// Calculate the determinant of a matrix (det(M))
     Det,
+    /// Calculate the inverse of a matrix (inv(M))
+    Inv,
     /// Prioritise expressions in parentheses (3*(5+5))
     Parenths
 }

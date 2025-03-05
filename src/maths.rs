@@ -215,3 +215,12 @@ pub fn det(lv: &Value) -> Result<Value, String> {
         Value::Matrix(m) => return special::det_m(m),
     }
 }
+
+#[doc(hidden)]
+pub fn inv(lv: &Value) -> Result<Value, String> {
+    match lv {
+        Value::Scalar(_) => return Err("Can't calculate inverse of a scalar!".to_string()),
+        Value::Vector(_) => return Err("Can't calculate inverse of a vector!".to_string()),
+        Value::Matrix(m) => return special::inv_m(m),
+    }
+}
