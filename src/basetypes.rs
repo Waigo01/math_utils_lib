@@ -889,7 +889,7 @@ pub enum SimpleOpType {
     Cross,
     /// Hidden multiplication between scalar and variable or parentheses (3a, 5(3+3), (3+5)(2+6))
     HiddenMult,
-    /// Take a scalar to the power of another scalar using "^" (a^b)
+    /// Take a scalar or a matrix to the power of a scalar using "^" (a^b)
     Pow,
     /// Index into vector using "?" ([3, 4, 5]?1 = 4)
     Get,

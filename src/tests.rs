@@ -400,6 +400,17 @@ fn medium_eval30() -> Result<(), MathLibError> {
 }
 
 #[test]
+fn medium_eval31() -> Result<(), MathLibError> {
+    let m = Variable::new("M", value!(0.7, 0.1, 0.3; 0.1, 0.5, 0.1; 0.2, 0.4, 0.6));
+
+    let res = quick_eval("M^20", &Context::from_vars(vec![m]))?.round(3).to_vec();
+
+    assert_eq!(res[0], value!(0.444, 0.444, 0.444; 0.167, 0.167, 0.167; 0.389, 0.389, 0.389));
+
+    Ok(())
+}
+
+#[test]
 fn calculus_eval1() -> Result<(), MathLibError> {
     let res = quick_eval("D(x^2, x, 3)", &Context::empty())?.to_vec();
 

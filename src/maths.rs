@@ -103,7 +103,8 @@ pub fn get(lv: &Value, rv: &Value) -> Result<Value, String> {
 pub fn pow(lv: &Value, rv: &Value) -> Result<Value, String> {
     match (lv, rv) {
         (Value::Scalar(a), Value::Scalar(b)) => return cross_pow::sspow(a, b),
-        _ => return Err("Can only raise scalar to the power of scalar!".to_string())
+        (Value::Matrix(m), Value::Scalar(b)) => return cross_pow::mspow(m, b),
+        _ => return Err("Can only raise scalar or matrix to the power of scalar!".to_string())
     }
 }
 
