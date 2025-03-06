@@ -411,6 +411,17 @@ fn medium_eval31() -> Result<(), MathLibError> {
 }
 
 #[test]
+fn medium_eval32() -> Result<(), MathLibError> {
+    let m = Variable::new("M", value!(0., 2., 0.; 0.5, 0., 0.; 0., 0.8, 0.));
+
+    let res = quick_eval("M^2", &Context::from_vars(vec![m]))?.round(3).to_vec();
+
+    assert_eq!(res[0], value!(1., 0., 0.; 0., 1., 0.; 0.4, 0., 0.));
+
+    Ok(())
+}
+
+#[test]
 fn calculus_eval1() -> Result<(), MathLibError> {
     let res = quick_eval("D(x^2, x, 3)", &Context::empty())?.to_vec();
 
