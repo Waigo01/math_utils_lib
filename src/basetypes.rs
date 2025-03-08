@@ -153,21 +153,25 @@ impl Context {
 
 /// helps to quickly initialize a [Value].
 ///
+/// Matrices are processed in a row-major fashion.
+///
 /// # Example
 ///
 /// ```
 /// let x: Value = value!(3.5);
+/// let y: Value = value!(3, 2, 1);
+/// let z: Value = value!(1, 0, 0; 0, 1, 0; 0, 0, 1);
 /// ```
 #[macro_export]
 macro_rules! value {
     ( $x:expr ) => {
-        Value::Scalar($x)
+        Value::Scalar($x as f64)
     };
     ( $($x:expr),+ ) => {
         {
             let mut vector = Vec::new();
             $(
-                vector.push($x);
+                vector.push($x as f64);
             )*
             Value::Vector(vector)
         }
@@ -178,7 +182,7 @@ macro_rules! value {
             $(
                 let mut row = Vec::new();
                 $(
-                    row.push($x);
+                    row.push($x as f64);
                 )*
                 vector.push(row);
             )*

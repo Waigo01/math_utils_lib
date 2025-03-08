@@ -40,20 +40,20 @@ This repo/crate provides a number of math utilities:
 ```rust
 let res = quick_eval("3*3", &Context::empty())?.to_vec();
     
-assert_eq!(res[0], value!(9.));
+assert_eq!(res[0], value!(9));
 ```
 
 ```rust
-let x = Variable::new("x", value!(3.));
+let x = Variable::new("x", value!(3));
 let res = quick_eval("3x", &Context::from_vars(vec![x]))?.to_vec();
 
-assert_eq!(res[0], value!(9.));
+assert_eq!(res[0], value!(9));
 ```
 
 ```rust
 let res = quick_eval("[[3, 4, 5], [1, 2, 3], [5, 6, 7]]", &Context::empty())?.to_vec();
 
-assert_eq!(res[0], value!(3., 1., 5.; 4., 2., 6.; 5., 3., 7.));
+assert_eq!(res[0], value!(3, 1, 5; 4, 2, 6; 5, 3, 7));
 ```
 
 ```rust
@@ -62,13 +62,13 @@ let function_var = Function::new("f", function, vec!["x"]);
 
 let res = quick_eval("f(5)", &Context::from_funs(vec![function_var]))?.to_vec();
 
-assert_eq!(res[0], value!(140.));
+assert_eq!(res[0], value!(140));
 ```
 
 ```rust
 let res = quick_eval("eq(x^2=9, x)", &Context::empty())?.round(3).to_vec();
     
-assert_eq!(res, vec![value!(-3.), value!(3.)]);
+assert_eq!(res, vec![value!(-3), value!(3)]);
 ```
 
 ```rust
@@ -76,7 +76,7 @@ let equation = "eq(2x+5y+2z=-38, 3x-2y+4z=17, -6x+y-7z=-12, x, y, z)";
 
 let res = quick_eval(equation, &Context::empty())?.round(3).to_vec();
 
-assert_eq!(res, vec![value!(3., -8., -2.)]);
+assert_eq!(res, vec![value!(3, -8, -2)]);
 ```
 
 > [!CAUTION]
