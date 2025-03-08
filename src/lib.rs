@@ -22,6 +22,14 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //! - An evaluator based on combinatorics for combining multiple results from equations or sqrt with other operations.
 //! - Inbuilt quality of life functions for exporting results to latex.
 //!
+//! ## Crate features
+//!
+//! - high-prec: uses a precision of 13 instead of 8 (will slow down execution).
+//! - row-major: parses matrices in a row major format.
+//! - output: enables dependencies in order to provide rendered PDFs, PNGs and SVGs. (currently
+//! broken)
+//! - serde: enables serde::Serialize and serde::Deserialize on most structs and enums.
+//!
 //! ## Usage
 //!
 //! **For usage information concerning the mathematical properties of the evaluator and more examples, please take a look at [the wiki](https://github.com/Waigo01/math_utils_lib/wiki).**
@@ -34,20 +42,20 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //! ```rust
 //! let res = quick_eval("3*3", &Context::empty())?.to_vec();
 //!     
-//! assert_eq!(res[0], Value::Scalar(9.));
+//! assert_eq!(res[0], value!(9));
 //! ```
 //!
 //! ```rust
-//! let x = Variable::new("x", vec![Value::Scalar(3.)]);
+//! let x = Variable::new("x", value!(3)]);
 //! let res = quick_eval("3x", &Context::from_vars(vec![x]))?.to_vec();
 //!
-//! assert_eq!(res[0], Value::Scalar(9.));
+//! assert_eq!(res[0], value!(9));
 //! ```
 //!
 //! ```rust
 //! let res = quick_eval("[[3, 4, 5], [1, 2, 3], [5, 6, 7]]", &Context::empty())?.to_vec();
 //!
-//! assert_eq!(res[0], Value::Matrix(vec![vec![3., 1., 5.], vec![4., 2., 6.], vec![5., 3., 7.]]));
+//! assert_eq!(res[0], value!(3, 1, 5; 4, 2, 6; 5, 3, 7));
 //! ```
 //!
 //! ```rust
@@ -56,13 +64,13 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //!
 //! let res = quick_eval("f(5)", &Context::from_funs(vec![function_var]))?.to_vec();
 //!
-//! assert_eq!(res[0], Value::Scalar(140.));
+//! assert_eq!(res[0], value!(140));
 //! ```
 //!
 //! ```rust
 //! let res = quick_eval("eq(x^2=9, x)", &Context::empty())?.round(3).to_vec();
 //!     
-//! assert_eq!(res, vec![Value::Scalar(-3.), Value::Scalar(3.)]);
+//! assert_eq!(res, vec![value!(-3), value!(3)]);
 //! ```
 //!
 //! ```rust
@@ -70,8 +78,10 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //!
 //! let res = quick_eval(equation, &Context::empty())?.round(3).to_vec();
 //!
-//! assert_eq!(res, vec![Value::Vector(vec![3., -8., -2.])]);
+//! assert_eq!(res, vec![value!(3, -8, -2)]);
 //! ```
+//!
+//! <div class="warning">Due to dependency issues output is currently broken.</div>
 //!
 //! ```rust
 //! let parsed_expr = parse("3*3+6^5")?;
@@ -129,11 +139,11 @@ pub use parser::{parse, eval};
 pub use errors::MathLibError;
 
 #[cfg(feature = "high-prec")]
-/// defines the precision used by the equation solver and the printing precision, which is PREC-2.
+/// defines the precision used by the equation solver. The printing precision is PREC - 2.
 pub const PREC: usize = 13;
 
 #[cfg(not(feature = "high-prec"))]
-/// defines the precision used by the equation solver and the printing precision, which is PREC - 2.
+/// defines the precision used by the equation solver. The printing precision is PREC - 2.
 pub const PREC: usize = 8;
 
 /// evaluates a given expression in the given context. If you just want the AST, have a look at [parse()].
@@ -147,14 +157,14 @@ pub const PREC: usize = 8;
 /// ```
 /// let res = quick_eval("3*3", Context::default())?.to_vec();
 ///
-/// assert_eq!(res, vec![Value::Scalar(9.)]);
+/// assert_eq!(res[0], value!(9.));
 /// ```
 ///
 /// ```
-/// let x = Variable::new("x".to_string(), vec![Value::Scalar(3.)]);
+/// let x = Variable::new("x".to_string(), value!(3.));
 /// let res = quick_eval("3x".to_string(), &Context::from_vars(vec![x]))?.to_vec();
 ///
-/// assert_eq!(res, vec![Value::Scalar(9.)]);
+/// assert_eq!(res[0], value!(9.));
 /// ```
 pub fn quick_eval<S: Into<String>>(expr: S, context: &Context) -> Result<Values, QuickEvalError> {
     let expr = expr.into();

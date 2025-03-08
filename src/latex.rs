@@ -49,6 +49,7 @@ pub fn svg_from_latex<S: Into<String>>(latex: String, line_color: S) -> Result<S
 /// let step = Step::Calc { term: parsed_expr, result: res, variable_save: Some("x".to_string()) };
 /// ```
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Step {
     Calc{
         term: AST,
@@ -143,6 +144,7 @@ impl Step {
 /// - Pdf: Save as a pdf file.
 /// - Tex: Save as the generated .tex file.
 #[cfg(feature = "output")]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum ExportType {
     Pdf,
     Tex

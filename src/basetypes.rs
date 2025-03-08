@@ -22,9 +22,10 @@ const VAR_SYMBOLS: [(&str, &str); 48] = [("\\alpha", "𝛼"), ("\\Alpha", "𝛢"
 /// # Example
 /// 
 /// ```
-/// let variable = Variable::new("x", vec![Value::Scalar(3.)]);
+/// let variable = Variable::new("x", value!(3.));
 /// ```
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Variable {
     pub name: String,
     pub values: Values
@@ -32,8 +33,8 @@ pub struct Variable {
 
 impl Variable {
     /// creates a new variable from a Vec of [Value].
-    pub fn new<S: Into<String>, V: AsRef<[Value]>>(name: S, values: V) -> Self {
-        Variable { name: name.into(), values: Values::from_vec(values.as_ref().to_vec())}
+    pub fn new<S: Into<String>, V: Into<Values>>(name: S, values: V) -> Self {
+        Variable { name: name.into(), values: values.into()}
     }
     /// creates a new variable from [Values].
     pub fn new_from_values<S: Into<String>>(name: S, values: Values) -> Self {
@@ -57,6 +58,7 @@ impl Variable {
 /// let function = Function::new("f", parsed_expr, vec!["x"]);
 /// ```
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Function {
     pub name: String,
     pub ast: AST,
@@ -85,6 +87,7 @@ impl Function {
 /// let context = Context::default();
 /// ```
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Context {
     pub vars: Vec<Variable>,
     pub funs: Vec<Function>
@@ -94,8 +97,8 @@ impl Context {
     /// creates a context with the variables pi and e and no functions.
     pub fn default() -> Self {
         Context::from_vars(vec![
-            Variable::new("pi", vec![Value::Scalar(std::f64::consts::PI)]),
-            Variable::new("e", vec![Value::Scalar(std::f64::consts::E)])
+            Variable::new("pi", Value::Scalar(std::f64::consts::PI)),
+            Variable::new("e", Value::Scalar(std::f64::consts::E))
         ])
     }
     /// creates a context with the given variables and functions.
@@ -148,6 +151,46 @@ impl Context {
     }
 }
 
+/// helps to quickly initialize a [Value].
+///
+/// Matrices are processed in a row-major fashion.
+///
+/// # Example
+///
+/// ```
+/// let x: Value = value!(3.5);
+/// let y: Value = value!(3, 2, 1);
+/// let z: Value = value!(1, 0, 0; 0, 1, 0; 0, 0, 1);
+/// ```
+#[macro_export]
+macro_rules! value {
+    ( $x:expr ) => {
+        Value::Scalar($x as f64)
+    };
+    ( $($x:expr),+ ) => {
+        {
+            let mut vector = Vec::new();
+            $(
+                vector.push($x as f64);
+            )*
+            Value::Vector(vector)
+        }
+    };
+    ( $($($x:expr),+);+ ) => {
+        {
+            let mut vector = Vec::new();
+            $(
+                let mut row = Vec::new();
+                $(
+                    row.push($x as f64);
+                )*
+                vector.push(row);
+            )*
+            Value::Matrix(vector)
+        }
+    };
+}
+
 /// specifies a Value that can be a Matrix, Vector or a Scalar.
 /// 
 /// # Example
@@ -156,6 +199,7 @@ impl Context {
 /// let x: Value = Value::Scalar(3.5);
 /// ```
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Value {
     Matrix(Vec<Vec<f64>>),
     Vector(Vec<f64>),
@@ -453,7 +497,7 @@ impl Value {
             var = "\\pi".to_string();
         }
 
-        return format!("{} {}= {}", aligner, var, self.as_latex());
+        return format!("{} {}= {}", var, aligner, self.as_latex());
     }
     fn latex_print(&self) -> String {
         match self {
@@ -490,6 +534,18 @@ impl Value {
     }
 }
 
+impl Into<Values> for Value {
+    fn into(self) -> Values {
+        return Values::from_vec(vec![self]);
+    }
+}
+
+impl Into<Values> for Vec<Value> {
+    fn into(self) -> Values {
+        return Values::from_vec(self);
+    }
+}
+
 /// provides a wrapper around Vec of Value with some quality of life implementations.
 ///
 /// # Example
@@ -498,6 +554,7 @@ impl Value {
 /// let values = Values::from_vec(vec![Value::Scalar(3.)]);
 /// ```
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Values(Vec<Value>);
 
 impl Values {
@@ -557,7 +614,7 @@ impl Values {
         if self.len() <= 0 {
             return format!("{}: No solutions", var);
         } else if self.len() == 1 {
-            return format!("{} {}= {}", aligner, var, self.0[0].as_latex());
+            return format!("{} {}= {}", var, aligner, self.0[0].as_latex());
         } else {
             return format!("{} {}= \\left\\{{{}\\right\\}}", var, aligner, self.clone().to_vec().iter().map(|v| v.as_latex()).collect::<Vec<String>>().join("; "));
         }
@@ -576,6 +633,7 @@ impl Values {
 /// - Function
 /// - Operation
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum AST {
     Scalar(f64),
     Vector(Box<Vec<AST>>),
@@ -642,7 +700,7 @@ impl AST {
                             SimpleOpType::Sub => return format!("{} - {}", lv, rv),
                             SimpleOpType::AddSub => return format!("{} +- {}", lv, rv),
                             SimpleOpType::Mult => return format!("{} * {}", lv, rv),
-                            SimpleOpType::Neg => return format!("-{}", lv),
+                            SimpleOpType::Neg => return format!("-{}", rv),
                             SimpleOpType::Div => return format!("{} / {}", lv, rv),
                             SimpleOpType::HiddenMult => return format!("{}{}", lv, rv),
                             SimpleOpType::Pow => return format!("{}^({})", lv, rv),
@@ -657,6 +715,8 @@ impl AST {
                             SimpleOpType::Arcsin => return format!("arcsin({})", lv),
                             SimpleOpType::Arccos => return format!("arccos({})", lv),
                             SimpleOpType::Arctan => return format!("arctan({})", lv),
+                            SimpleOpType::Det => return format!("det({})", lv),
+                            SimpleOpType::Inv => return format!("inv({})", lv),
                             SimpleOpType::Parenths => return format!("({})", lv),
                         }
                     },
@@ -761,21 +821,23 @@ impl AST {
                             SimpleOpType::Sub => return format!("{}-{}", lv, rv),
                             SimpleOpType::AddSub => return format!("{}\\pm{}", lv, rv),
                             SimpleOpType::Mult => return format!("{}\\cdot {}", lv, rv),
-                            SimpleOpType::Neg => return format!("-{}", lv),
+                            SimpleOpType::Neg => return format!("-{}", rv),
                             SimpleOpType::Div => return format!("\\frac{{{}}}{{{}}}", lv, rv),
                             SimpleOpType::HiddenMult => return format!("{}{}", lv, rv),
                             SimpleOpType::Pow => return format!("{}^{{{}}}", lv, rv),
                             SimpleOpType::Cross => return format!("{}\\times {}", lv, rv),
                             SimpleOpType::Abs => return format!("|{}|", lv),
-                            SimpleOpType::Sin => return format!("\\sin{{({})}}", lv),
-                            SimpleOpType::Cos => return format!("\\cos{{({})}}", lv),
-                            SimpleOpType::Tan => return format!("\\tan{{({})}}", lv),
+                            SimpleOpType::Sin => return format!("\\sin\\left({}\\right)", lv),
+                            SimpleOpType::Cos => return format!("\\cos\\left({}\\right)", lv),
+                            SimpleOpType::Tan => return format!("\\tan\\left({}\\right)", lv),
                             SimpleOpType::Sqrt => return format!("\\sqrt{{{}}}", lv),
                             SimpleOpType::Root => return format!("\\sqrt[{}]{{{}}}", rv, lv),
-                            SimpleOpType::Ln => return format!("\\ln{{({})}}", lv),
-                            SimpleOpType::Arcsin => return format!("\\arcsin{{({})}}", lv),
-                            SimpleOpType::Arccos => return format!("\\arccos{{({})}}", lv),
-                            SimpleOpType::Arctan => return format!("\\arctan{{({})}}", lv),
+                            SimpleOpType::Ln => return format!("\\ln\\left({}\\right)", lv),
+                            SimpleOpType::Arcsin => return format!("\\arcsin\\left({}\\right)", lv),
+                            SimpleOpType::Arccos => return format!("\\arccos\\left({}\\right)", lv),
+                            SimpleOpType::Arctan => return format!("\\arctan\\left({}\\right)", lv),
+                            SimpleOpType::Det => return format!("\\det\\left({}\\right)", lv),
+                            SimpleOpType::Inv => return format!("{}^{{-1}}", lv),
                             SimpleOpType::Parenths => return format!("\\left({}\\right)", lv),
                         }
                     },
@@ -811,6 +873,7 @@ impl AST {
 /// 
 /// The order of the enum also represents the reverse order of the operation priority.
 #[derive(Debug, PartialEq, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum SimpleOpType { 
     /// Add two scalars, vectors, or matrices (a+b)
     Add,
@@ -830,7 +893,7 @@ pub enum SimpleOpType {
     Cross,
     /// Hidden multiplication between scalar and variable or parentheses (3a, 5(3+3), (3+5)(2+6))
     HiddenMult,
-    /// Take a scalar to the power of another scalar using "^" (a^b)
+    /// Take a scalar or a matrix to the power of a scalar using "^" (a^b)
     Pow,
     /// Index into vector using "?" ([3, 4, 5]?1 = 4)
     Get,
@@ -853,7 +916,11 @@ pub enum SimpleOpType {
     /// Calculate the arccos of a scalar (arccos(a))
     Arccos,
     /// Calculate the arctan of a scalar (arctan(a))
-    Arctan, 
+    Arctan,
+    /// Calculate the determinant of a matrix (det(M))
+    Det,
+    /// Calculate the inverse of a matrix (inv(M))
+    Inv,
     /// Prioritise expressions in parentheses (3*(5+5))
     Parenths
 }
@@ -863,6 +930,7 @@ pub enum SimpleOpType {
 /// This enum only contains advanced operations with more than 2 arguments. For simple operations,
 /// see [SimpleOpType].
 #[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum AdvancedOpType {
     /// Calculate the derivative of a function f in respect to n at a value m (D(f, n, m))
     Derivative,
@@ -876,6 +944,7 @@ pub enum AdvancedOpType {
 /// used to specify an operation in a parsed string. It is used together with [AST] to
 /// construct an AST from a mathematical expression.
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Operation {
     SimpleOperation {
         op_type: SimpleOpType,
@@ -888,6 +957,7 @@ pub enum Operation {
 /// used to specify an advanced operation for more complex mathematical operations, such as
 /// functions with more than two inputs and the equation solver.
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum AdvancedOperation{
     Integral {
         expr: AST,

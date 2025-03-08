@@ -22,31 +22,38 @@ This repo/crate provides a number of math utilities:
 - An evaluator based on combinatorics for combining multiple results from equations or sqrt with other operations.
 - Inbuilt quality of life functions for exporting results to latex.
 
+## Crate features
+
+- high-prec: uses a precision of 13 instead of 8 (will slow down execution).
+- row-major: parses matrices in a row major format.
+- output: enables dependencies in order to provide rendered PDFs, PNGs and SVGs. (currently broken)
+- serde: enables serde::Serialize and serde::Deserialize on most structs and enums.
+
 ## Usage
 
 **For usage information concerning the mathematical properties of the evaluator and more examples, please take a look at [the wiki](https://github.com/Waigo01/math_utils_lib/wiki).**
 
-**For programming documentation, please take a look at [docs.rs](https://docs.rs/math_utils_lib/latest/math_utils_lib/)**
+**For programming documentation, please take a look at [docs.rs](https://docs.rs/math_utils_lib/latest/math_utils_lib/).**
 
 
 ## Examples
 ```rust
 let res = quick_eval("3*3", &Context::empty())?.to_vec();
     
-assert_eq!(res[0], Value::Scalar(9.));
+assert_eq!(res[0], value!(9));
 ```
 
 ```rust
-let x = Variable::new("x", vec![Value::Scalar(3.)]);
+let x = Variable::new("x", value!(3));
 let res = quick_eval("3x", &Context::from_vars(vec![x]))?.to_vec();
 
-assert_eq!(res[0], Value::Scalar(9.));
+assert_eq!(res[0], value!(9));
 ```
 
 ```rust
 let res = quick_eval("[[3, 4, 5], [1, 2, 3], [5, 6, 7]]", &Context::empty())?.to_vec();
 
-assert_eq!(res[0], Value::Matrix(vec![vec![3., 1., 5.], vec![4., 2., 6.], vec![5., 3., 7.]]));
+assert_eq!(res[0], value!(3, 1, 5; 4, 2, 6; 5, 3, 7));
 ```
 
 ```rust
@@ -55,13 +62,13 @@ let function_var = Function::new("f", function, vec!["x"]);
 
 let res = quick_eval("f(5)", &Context::from_funs(vec![function_var]))?.to_vec();
 
-assert_eq!(res[0], Value::Scalar(140.));
+assert_eq!(res[0], value!(140));
 ```
 
 ```rust
 let res = quick_eval("eq(x^2=9, x)", &Context::empty())?.round(3).to_vec();
     
-assert_eq!(res, vec![Value::Scalar(-3.), Value::Scalar(3.)]);
+assert_eq!(res, vec![value!(-3), value!(3)]);
 ```
 
 ```rust
@@ -69,8 +76,11 @@ let equation = "eq(2x+5y+2z=-38, 3x-2y+4z=17, -6x+y-7z=-12, x, y, z)";
 
 let res = quick_eval(equation, &Context::empty())?.round(3).to_vec();
 
-assert_eq!(res, vec![Value::Vector(vec![3., -8., -2.])]);
+assert_eq!(res, vec![value!(3, -8, -2)]);
 ```
+
+> [!CAUTION]
+> Due to dependency issues output is currently broken!
 
 ```rust
 let parsed_expr = parse("3*3+6^5")?;

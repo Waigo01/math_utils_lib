@@ -1,7 +1,7 @@
 [package]
 name = "math_utils_lib"
 description = "A library providing math utilities such as a parser/evaluator and a LaTeX export to export a history of parsed expressions and solved equations to LaTeX."
-version = "0.4.0"
+version = "0.4.1"
 edition = "2021"
 license-file = "LICENSE.txt"
 documentation = "https://docs.rs/math_utils_lib/latest/math_utils_lib/"
@@ -13,7 +13,7 @@ categories = ["mathematics", "parser-implementations"]
 [package.metadata.docs.rs]
 # docs.rs uses a nightly compiler, so by instructing it to use our `doc-images` feature we
 # ensure that it will render any images that we may have in inner attribute documentation.
-features = ["doc-images", "output"]
+features = ["doc-images", "serde"]
 
 [lib]
 doctest = false
@@ -24,6 +24,7 @@ embed-doc-image = { version = "0.1.4", optional = true }
 mathjax_svg = { version = "3.1.2", optional = true }
 tectonic = { version = "0.15.0", features = ["external-harfbuzz"], optional = true }
 resvg = { version = "0.43.0", optional = true }
+serde = { version = "1.0.217", features = ["derive"], optional = true }
 
 [features]
 default = []
@@ -31,3 +32,4 @@ doc-images = ["dep:embed-doc-image"]
 high-prec = []
 row-major = []
 output = ["dep:mathjax_svg", "dep:tectonic", "dep:resvg"]
+serde = ["dep:serde"]
