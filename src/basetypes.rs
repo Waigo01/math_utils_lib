@@ -46,6 +46,10 @@ impl Variable {
     pub fn as_latex(&self, add_aligner: bool) -> String {
         self.values.as_latex_at_var(self.name.clone(), add_aligner)
     }
+    /// converts the variable to a string using basic string formatting.
+    pub fn as_string(&self) -> String {
+        format!("{} = {}", self.name, self.values.as_string())
+    }
 }
 
 /// describes a function that can be used in the context of an evaluation.
@@ -78,6 +82,10 @@ impl Function {
     /// the "=".
     pub fn as_latex(&self, add_aligner: bool) -> String {
         self.ast.as_latex_at_fun(self.name.clone(), self.inputs.clone(), add_aligner)
+    }
+    /// converts the function to a string using basic string formatting.
+    pub fn as_string(&self) -> String {
+        format!("{}({}) = {}", self.name, self.inputs.join(", "), self.ast.as_string())
     }
 }
 
@@ -597,7 +605,11 @@ impl Values {
     /// converts the values to a string using "{}" and "," to print multiple Values. This is a crude
     /// way to convert [Values] as it uses [Value::as_string].
     pub fn as_string(&self) -> String {
-        format!("{{{}}}", self.clone().to_vec().iter().map(|v| v.as_string()).collect::<Vec<String>>().join(", "))
+        if self.len() == 1 {
+            return self.get(0).unwrap().as_string();
+        } else {
+            return format!("{{{}}}", self.0.iter().map(|v| v.as_string()).collect::<Vec<String>>().join(", "));
+        }
     }
     /// converts the values to latex using "{}" and ";" to print multiple Values.
     pub fn as_latex(&self) -> String {
@@ -710,7 +722,7 @@ impl AST {
                         let lv = &left.as_string();
                         let rv = &right.as_string(); 
                         match op_type {
-                            SimpleOpType::Assign => return format!("{}={}", lv, rv),
+                            SimpleOpType::Assign => return format!("{} = {}", lv, rv),
                             SimpleOpType::Get => return format!("{}_{}", lv, rv),
                             SimpleOpType::Add => return format!("{} + {}", lv, rv),
                             SimpleOpType::Sub => return format!("{} - {}", lv, rv),

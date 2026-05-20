@@ -106,7 +106,7 @@ impl Step {
             expression.clone()
         };
 
-        let res = if self.result.len() == 1 {self.result.get(0).unwrap().as_string()} else {self.result.as_string()};
+        let res = self.result.as_string();
 
         let output = if self.result.len() != 0 && result_expression != res {
             format!("{} = {}", expression, res)
