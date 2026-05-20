@@ -98,15 +98,15 @@ impl Step {
     }
     /// converts a step to a string using basic formatting.
     pub fn as_string(&self) -> String {
-        let expression = self.term.as_latex();
+        let expression = self.term.as_string();
 
         let result_expression = if let AST::Operation(ref op) = self.term && let Operation::SimpleOperation{ref op_type, ref right, ..} = **op && *op_type == SimpleOpType::Assign {
-            right.as_latex()
+            right.as_string()
         } else {
             expression.clone()
         };
 
-        let res = self.result.as_latex();
+        let res = self.result.as_string();
 
         let output = if self.result.len() != 0 && result_expression != res {
             format!("{} = {}", expression, res)
