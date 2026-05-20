@@ -22,7 +22,8 @@ const VAR_SYMBOLS: [(&str, &str); 48] = [("\\alpha", "𝛼"), ("\\Alpha", "𝛢"
 /// # Example
 /// 
 /// ```
-/// let variable = Variable::new("x", value!(3.));
+/// # use math_utils_lib::{Variable, value, Value};
+/// let variable = Variable::new("x", vec![value!(3.)]);
 /// ```
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -54,8 +55,10 @@ impl Variable {
 /// # Example
 ///
 /// ```
+/// # use math_utils_lib::{parse, Function, MathLibError};
 /// let parsed_expr = parse("x^2")?;
 /// let function = Function::new("f", parsed_expr, vec!["x"]);
+/// # Ok::<(), MathLibError>(())
 /// ```
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -84,6 +87,7 @@ impl Function {
 /// # Example
 ///
 /// ```
+/// # use math_utils_lib::Context;
 /// let context = Context::default();
 /// ```
 #[derive(Debug, Clone, PartialEq)]
@@ -149,6 +153,14 @@ impl Context {
             .map(|f| f.to_owned())
             .collect()
     }
+    /// returns the variable with the given name or None if it does not exist in the context.
+    pub fn get_var<S: Into<String> + Clone>(&self, var_name: S) -> Option<Variable> {
+        self.vars.iter().filter(|v| v.name == var_name.clone().into()).map(|v| v.to_owned()).nth(0)
+    }
+    /// returns the function with the given name or None if it does not exist in the context.
+    pub fn get_fun<S: Into<String> + Clone>(&self, fun_name: S) -> Option<Function> {
+        self.funs.iter().filter(|f| f.name == fun_name.clone().into()).map(|f| f.to_owned()).nth(0)
+    }
 }
 
 /// helps to quickly initialize a [Value].
@@ -158,6 +170,7 @@ impl Context {
 /// # Example
 ///
 /// ```
+/// # use math_utils_lib::{Value, value};
 /// let x: Value = value!(3.5);
 /// let y: Value = value!(3, 2, 1);
 /// let z: Value = value!(1, 0, 0; 0, 1, 0; 0, 0, 1);
@@ -196,6 +209,7 @@ macro_rules! value {
 /// # Example
 /// 
 /// ```
+/// # use math_utils_lib::Value;
 /// let x: Value = Value::Scalar(3.5);
 /// ```
 #[derive(Debug, Clone, PartialEq)]
@@ -551,6 +565,7 @@ impl Into<Values> for Vec<Value> {
 /// # Example
 ///
 /// ```
+/// # use math_utils_lib::{Values, Value};
 /// let values = Values::from_vec(vec![Value::Scalar(3.)]);
 /// ```
 #[derive(Debug, Clone, PartialEq)]
@@ -695,6 +710,7 @@ impl AST {
                         let lv = &left.as_string();
                         let rv = &right.as_string(); 
                         match op_type {
+                            SimpleOpType::Assign => return format!("{}={}", lv, rv),
                             SimpleOpType::Get => return format!("{}_{}", lv, rv),
                             SimpleOpType::Add => return format!("{} + {}", lv, rv),
                             SimpleOpType::Sub => return format!("{} - {}", lv, rv),
@@ -816,6 +832,7 @@ impl AST {
                         let lv = &left.latex_print();
                         let rv = &right.latex_print(); 
                         match op_type {
+                            SimpleOpType::Assign => return format!("{}={}", lv, rv),
                             SimpleOpType::Get => return format!("{}_{{{}}}", lv, rv),
                             SimpleOpType::Add => return format!("{}+{}", lv, rv),
                             SimpleOpType::Sub => return format!("{}-{}", lv, rv),
@@ -874,7 +891,10 @@ impl AST {
 /// The order of the enum also represents the reverse order of the operation priority.
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum SimpleOpType { 
+pub enum SimpleOpType {
+    /// Assign the result of an expression to a variable or assign an expression to a function (x =
+    /// 10, f(x) = x^2)
+    Assign,
     /// Add two scalars, vectors, or matrices (a+b)
     Add,
     /// Subtract two scalars, vectors, or matrices (a-b)

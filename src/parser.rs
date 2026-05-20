@@ -1,4 +1,4 @@
-use crate::{basetypes::{AdvancedOpType, AdvancedOperation, Operation, SimpleOpType, Value, Variable, AST}, errors::{EvalError, ParserError}, helpers::{cart_prod, get_args}, maths, roots::RootFinder, Context, Values};
+use crate::{basetypes::{AST, AdvancedOpType, AdvancedOperation, Operation, SimpleOpType, Value}, errors::ParserError, helpers::get_args};
 
 fn get_op_symbol(c: char) -> Option<SimpleOpType> {
     match c {
@@ -10,6 +10,7 @@ fn get_op_symbol(c: char) -> Option<SimpleOpType> {
         '/' => Some(SimpleOpType::Div),
         '^' => Some(SimpleOpType::Pow),
         '#' => Some(SimpleOpType::Cross),
+        '=' => Some(SimpleOpType::Assign),
         _ => None
     }
 }
@@ -157,9 +158,9 @@ fn parse_inner(expr: &str) -> Result<AST, ParserError> {
 
     //is it an operation?
     
-    let op_types = vec![SimpleOpType::Add, SimpleOpType::Sub, SimpleOpType::AddSub, SimpleOpType::Mult, SimpleOpType::Neg, SimpleOpType::Div, SimpleOpType::Cross, SimpleOpType::HiddenMult, SimpleOpType::Pow, SimpleOpType::Get];
+    let op_types = vec![SimpleOpType::Assign, SimpleOpType::Add, SimpleOpType::Sub, SimpleOpType::AddSub, SimpleOpType::Mult, SimpleOpType::Neg, SimpleOpType::Div, SimpleOpType::Cross, SimpleOpType::HiddenMult, SimpleOpType::Pow, SimpleOpType::Get];
     let mut ops_in_expr: Vec<(SimpleOpType, usize, usize, usize)> = vec![];
-    let mut highest_op = 7;
+    let mut highest_op = op_types.len()-1;
     let mut last_char = '\\';
     let mut brackets_open = 0;
     let mut curly_brackets_open = 0;
@@ -219,30 +220,55 @@ fn parse_inner(expr: &str) -> Result<AST, ParserError> {
         }
     }
 
-    if highest_op == 1 || highest_op == 3 {
+    if op_types[highest_op] == SimpleOpType::Sub || op_types[highest_op] == SimpleOpType::Div {
         ops_in_expr.reverse();
     }
 
-    for o in op_types {
-        for i in &ops_in_expr {
-            if i.0 == o {
-                let left_s: String = expr_chars[0..(i.1-i.2)].to_vec().iter().collect();
-                let right_s: String = expr_chars[(i.1+i.3)..].to_vec().iter().collect();
-                let right_b = parse_inner(&right_s)?; 
-                if left_s.is_empty() {
-                    return Ok(AST::from_operation(Operation::SimpleOperation {
-                        op_type: i.0.clone(), 
-                        left: AST::Scalar(0.), 
-                        right: right_b
-                    }));
-                }
-                let left_b = parse_inner(&expr_chars[0..(i.1-i.2)].to_vec().iter().collect::<String>())?;
+    for op in &ops_in_expr {
+        if op.0 == op_types[highest_op] {
+            let left_s: String = expr_chars[0..(op.1-op.2)].to_vec().iter().collect();
+            let right_s: String = expr_chars[(op.1+op.3)..].to_vec().iter().collect();
+            let right_b = parse_inner(&right_s)?; 
+            if left_s.is_empty() && (op.0 == SimpleOpType::AddSub || op.0 == SimpleOpType::Neg) {
                 return Ok(AST::from_operation(Operation::SimpleOperation {
-                    op_type: i.0.clone(),
-                    left: left_b,
+                    op_type: op.0.clone(), 
+                    left: AST::Scalar(0.), 
                     right: right_b
                 }));
+            } else if left_s.is_empty() {
+                return Err(ParserError::OperationNeedsLeftValue);
             }
+            let left_b = parse_inner(&expr_chars[0..(op.1-op.2)].to_vec().iter().collect::<String>())?;
+            if op.0 == SimpleOpType::Assign {
+                let mut is_ok = false;
+                if let AST::Function { ref inputs, .. } = left_b {
+                    is_ok = true;
+                    for input in inputs.iter() {
+                        if let AST::Variable(_) = input {} else {
+                            is_ok = false;
+                            break;
+                        }
+                    }
+                } else if let AST::Variable(_) = left_b {is_ok = true}
+                else if let AST::List(ref list) = left_b {
+                    is_ok = true;
+                    for ast in list.iter() {
+                        if let AST::Variable(_) = ast {} else {
+                            is_ok = false;
+                            break;
+                        }
+                    }
+                }
+
+                if !is_ok {
+                    return Err(ParserError::LeftSideOfAssignmentIncorrect);
+                }
+            }
+            return Ok(AST::from_operation(Operation::SimpleOperation {
+                op_type: op.0.clone(),
+                left: left_b,
+                right: right_b
+            }));
         }
     }
 
@@ -385,202 +411,4 @@ fn parse_inner(expr: &str) -> Result<AST, ParserError> {
     let v = parse_value(expr_chars.iter().collect())?;
 
     return Ok(v);
-}
-
-/// used to evaluate an AST with the provided context.
-///
-/// If you are searching for a quick and easy way to evaluate an expression, have a look at [quick_eval()](fn@crate::quick_eval).
-pub fn eval(b: &AST, context: &Context) -> Result<Values, EvalError> {
-   Ok(Values::from_vec(eval_rec(b, context, "")?))
-}
-
-fn eval_rec(b: &AST, context: &Context, last_fn: &str) -> Result<Vec<Value>, EvalError> {
-    match b {
-        AST::Scalar(s) => return Ok(vec![Value::Scalar(*s)]),
-        AST::Vector(v) => {
-            let mut evaled_fields: Vec<Vec<f64>> = vec![];
-            for i in &**v {
-                let values = eval_rec(i, context, last_fn)?;
-                for i in &values {
-                    if i.get_scalar().is_none() {
-                        return Err(EvalError::NonScalarInVector);
-                    }
-                }
-                evaled_fields.push(values.iter().map(|v| v.get_scalar().unwrap()).collect());
-            }
-
-            let permuts: Vec<Vec<f64>> = cart_prod(&evaled_fields);
-
-            return Ok(permuts.iter().map(|p| Value::Vector(p.to_vec())).collect());
-        },
-        AST::Matrix(m) => {
-            let mut evaled_rows: Vec<Vec<Vec<f64>>> = vec![];
-            for i in &**m {
-                let mut row = vec![];
-                for j in i {
-                    let values = eval_rec(j, context, last_fn)?;
-                    for i in &values {
-                        if i.get_scalar().is_none() {
-                            return Err(EvalError::NonScalarInMatrix);
-                        }
-                    }
-                    row.push(values.iter().map(|v| v.get_scalar().unwrap()).collect());
-                }
-                evaled_rows.push(row);
-            }
-            let mut permuts_row: Vec<Vec<Vec<f64>>> = vec![];
-            for i in evaled_rows {
-                permuts_row.push(cart_prod(&i));
-            }
-
-            let permuts = cart_prod(&permuts_row);
-            
-            Ok(permuts.iter().map(|m| Value::Matrix(m.to_vec())).collect())
-        },
-        AST::List(l) => {
-            return Ok(l.iter().map(|e| eval_rec(e, context, last_fn)).collect::<Result<Vec<Vec<Value>>, EvalError>>()?.into_iter().flatten().collect());
-        }
-        AST::Variable(v) => {
-            for i in context.vars.iter() {
-                if &i.name == v {
-                    return Ok(i.values.clone().to_vec());
-                }
-            }
-
-            return Err(EvalError::NoVariable(v.to_string()));
-        },
-        AST::Function { name, inputs } => {
-            if last_fn == name {
-                return Err(EvalError::RecursiveFunction);
-            }
-            let mut function = None;
-            for i in context.funs.iter() {
-                if i.name == name.to_string() {
-                    function = Some(i);
-                    break;
-                } 
-            }
-            if function.is_none() {
-                return Err(EvalError::NoFunction(name.to_string()));
-            }
-
-            let function = function.unwrap();
-            
-            if inputs.len() != function.inputs.len() {
-                return Err(EvalError::WrongNumberOfArgs((function.inputs.len(), inputs.len())));
-            }
-
-            let mut eval_inputs = vec![];
-            for i in inputs.iter() {
-                eval_inputs.push(eval_rec(i, context, last_fn)?);
-            }
-
-            let permuts = cart_prod(&eval_inputs);
-
-            let mut res = vec![];
-
-            for p in permuts {
-                let mut f_vars = vec![];
-                for i in 0..inputs.len() {
-                    f_vars.push(Variable::new(&function.inputs[i], vec![p[i].clone()]));
-                }
-
-                for i in context.vars.iter() {
-                    if !f_vars.iter().map(|v| v.name.to_string()).collect::<Vec<String>>().contains(&i.name) {
-                        f_vars.push(i.clone());
-                    }
-                }
-                res.push(eval_rec(&function.ast, &Context::new(&f_vars, &context.funs), name)?);
-            }
-
-            return Ok(res.into_iter().flatten().collect());
-        },
-        AST::Operation(o) => {
-            match &**o {
-                Operation::SimpleOperation {op_type, left, right} => {
-                    let lv = eval_rec(&left, context, last_fn)?;
-                    let rv = eval_rec(&right, context, last_fn)?;
-
-                    let mut res = vec![];
-
-                    for i in lv {
-                        for j in &rv {
-                            match op_type {
-                                SimpleOpType::Get => res.push(maths::get(&i, &j)?),
-                                SimpleOpType::Add => res.push(maths::add(&i, &j)?),
-                                SimpleOpType::Sub => res.push(maths::sub(&i, &j)?),
-                                SimpleOpType::AddSub => res.append(&mut vec![maths::add(&i, &j)?, maths::sub(&i, &j)?]),
-                                SimpleOpType::Mult => res.push(maths::mult(&i, &j)?),
-                                SimpleOpType::Neg => res.push(maths::neg(&j)?),
-                                SimpleOpType::Div => res.push(maths::div(&i, &j)?),
-                                SimpleOpType::Cross => res.push(maths::cross(&i, &j)?),
-                                SimpleOpType::HiddenMult => res.push(maths::mult(&i, &j)?),
-                                SimpleOpType::Pow => res.push(maths::pow(&i, &j)?),
-                                SimpleOpType::Sin => res.push(maths::sin(&i)?),
-                                SimpleOpType::Cos => res.push(maths::cos(&i)?),
-                                SimpleOpType::Tan => res.push(maths::tan(&i)?),
-                                SimpleOpType::Abs => res.push(maths::abs(&i)?),
-                                SimpleOpType::Sqrt => res.push(maths::sqrt(&i)?),
-                                SimpleOpType::Root => res.push(maths::root(&i, &j)?),
-                                SimpleOpType::Ln => res.push(maths::ln(&i)?),
-                                SimpleOpType::Arcsin => res.push(maths::arcsin(&i)?),
-                                SimpleOpType::Arccos => res.push(maths::arccos(&i)?),
-                                SimpleOpType::Arctan => res.push(maths::arctan(&i)?),
-                                SimpleOpType::Det => res.push(maths::det(&i)?),
-                                SimpleOpType::Inv => res.push(maths::inv(&i)?),
-                                SimpleOpType::Parenths => res.push(i.clone()),
-                            }
-                        }
-                    }
-
-                    return Ok(res);
-                },
-                Operation::AdvancedOperation(a) => {
-                    match a {
-                        AdvancedOperation::Integral {expr, in_terms_of, lower_bound, upper_bound} => {
-                            let lb = eval_rec(&lower_bound, context, last_fn)?;
-                            let ub = eval_rec(&upper_bound, context, last_fn)?;
-
-                            let mut res = vec![];
-
-                            for i in lb {
-                                for j in &ub {
-                                    res.push(maths::calculus::calculate_integral(&expr, in_terms_of.clone(), i.clone(), j.clone(), context)?);
-                                }
-                            }
-
-                            return Ok(res.into_iter().flatten().collect());
-                        },
-                        AdvancedOperation::Derivative {expr, in_terms_of, at} => {
-                            let eat = eval_rec(&at, context, last_fn)?;
-
-                            let mut res = vec![];
-
-                            for i in eat {
-                                let mut new_context = context.to_owned();
-                                res.push(maths::calculus::calculate_derivative(&expr, &in_terms_of, &i, &mut new_context)?);
-                            }
-
-                            return Ok(res.into_iter().flatten().collect());
-                        },
-                        AdvancedOperation::Equation { equations, search_vars } => {
-                            let mut final_expressions = vec![];
-
-                            for i in equations {
-                                let root_b = AST::from_operation(Operation::SimpleOperation {
-                                    op_type: SimpleOpType::Sub,
-                                    left: i.0.clone(),
-                                    right: i.1.clone()
-                                });
-
-                                final_expressions.push(root_b);
-                            }
-                            let root_finder = RootFinder::new(final_expressions, context.to_owned(), search_vars.to_vec())?;
-                            return root_finder.find_roots();
-                        }
-                    }
-                }
-            } 
-        }
-    }
 }

@@ -1,7 +1,7 @@
 #[cfg(feature = "output")]
 use crate::errors::LatexError;
 
-use crate::{basetypes::AST, Values};
+use crate::{Values, basetypes::{AST, Operation, SimpleOpType}};
 
 #[cfg(feature = "output")]
 /// converts the given latex string to a png image with the given height in pixels, returned as its raw bytes. 
@@ -40,102 +40,63 @@ pub fn svg_from_latex<S: Into<String>>(latex: String, line_color: S) -> Result<S
 
 /// provides a way of saving a step. A step can either be a: 
 ///
-/// - Calculation, specified by the AST of the calculation, its results and a possible variable name in which it is saved.
-/// - Function declaration, specified by the AST, the names of the input variables and the name of the
-/// function.
-///
 /// # Example
 /// ```
-/// let step = Step::Calc { term: parsed_expr, result: res, variable_save: Some("x".to_string()) };
+/// # use math_utils_lib::{parse, eval, Step, Context, MathLibError, Value};
+/// let parsed_expr = parse("3*3+6^5")?;
+/// let res = eval(&parsed_expr, &mut Context::empty())?;
+/// let step = Step::new(parsed_expr, res);
+/// # Ok::<(), MathLibError>(())
 /// ```
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum Step {
-    Calc{
-        term: AST,
-        result: Values,
-        variable_save: Option<String>
-    },
-    Fun{
-        term: AST,
-        inputs: Vec<String>,
-        name: String
-    }
+pub struct Step {
+    term: AST,
+    result: Values
 }
 
 impl Step {
+    /// creates a new step based on a term and the associated results.
+    pub fn new(term: AST, result: Values) -> Step {
+        return Step { term, result };
+    }
+    fn as_latex_base(&self, with_align: bool, with_equation_number: Option<i32>) -> String {
+        let aligner = if with_align {"&"} else {""};
+
+        let tag_with_label = if let Some(equation_number) = with_equation_number {format!("\\tag{{{}}}\\label{{eq:{}}} \\\\ \\\\ \n", equation_number, equation_number)} else {String::new()};
+
+        let mut latex = "".to_string();
+        
+        let expression = self.term.as_latex();
+
+        let result_expression = if let AST::Operation(ref op) = self.term && let Operation::SimpleOperation{ref op_type, ref right, ..} = **op && *op_type == SimpleOpType::Assign {
+            right.as_latex()
+        } else {
+            expression.clone()
+        };
+
+        let res = self.result.as_latex();
+
+        if self.result.len() != 0 && result_expression != res {
+            latex += &format!("{} {}= {} {}", expression, aligner, res, tag_with_label);
+        } else {
+            latex += &format!("{} {}", expression, tag_with_label);
+        }
+
+        return latex;
+    }
     /// converts a step to latex with an added equation tag, which number is given by the equation
     /// number. This function also adds a "&" aligner before the "=".
     pub fn as_latex_with_tag(&self, equation_number: i32) -> String {
-        match self {
-            Step::Calc{term, result, variable_save} => {
-                let mut aligner = "&";
-                let mut latex = "".to_string();
-                if variable_save.is_some() {
-                    latex += &format!("{} &= ", variable_save.clone().unwrap());
-                    aligner = "";
-                }
-                let expression = term.as_latex();
-                let res = result.as_latex();
-
-                if expression != res {
-                    latex += &format!("{} {}= {} \\tag{{{}}}\\label{{eq:{}}} \\\\ \\\\ \n", expression, aligner, res, equation_number, equation_number);
-                } else {
-                    latex += &format!("{} \\tag{{{}}}\\label{{eq:{}}} \\\\ \\\\ \n", expression, equation_number, equation_number);
-                }
-
-                return latex;
-            }, 
-            Step::Fun{term, inputs, name} => {
-                return term.as_latex_at_fun(name, inputs.iter().collect(), true) + &format!(" \\tag{{{}}}\\label{{eq:{}}} \\\\ \\\\ \n", equation_number, equation_number);
-            }
-        }
+        return self.as_latex_base(true, Some(equation_number));
     }
     /// converts a step to latex. This function also adds a "&" aligner before the "=".
     pub fn as_latex(&self) -> String {
-        match self {
-            Step::Calc{term, result, variable_save} => {
-                let mut aligner = "&";
-                let mut latex = "".to_string();
-                if variable_save.is_some() {
-                    latex += &format!("{} &= ", variable_save.clone().unwrap());
-                    aligner = "";
-                }
-                let expression = term.as_latex();
-                let res = result.as_latex();
-
-                if expression != res {
-                    latex += &format!("{} {}= {}", expression, aligner, res);
-                } else {
-                    latex += &format!("{}", expression);
-                }
-
-                return latex;
-            },
-            Step::Fun{term, inputs, name} => return term.as_latex_at_fun(name, inputs.iter().collect(), true)
-        }
+        return self.as_latex_base(true, None);
     }
     /// converts a step to inline latex (without the "&" aligner).
     pub fn as_latex_inline(&self) -> String {
-        match self {
-            Step::Calc{term, result, variable_save} => {
-                let mut latex = "".to_string();
-                if variable_save.is_some() {
-                    latex += &format!("{} = ", variable_save.clone().unwrap());
-                }
-                let expression = term.as_latex();
-                let res = result.as_latex();
-
-                if expression != res {
-                    latex += &format!("{} = {}", expression, res);
-                } else {
-                    latex += &format!("{}", expression);
-                }
-
-                return latex;
-            },
-            Step::Fun{term, inputs, name} => return term.as_latex_at_fun(name, inputs.iter().collect(), true)
-        }
+        return self.as_latex_base(false, None);
     }
 }
 

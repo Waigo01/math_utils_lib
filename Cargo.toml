@@ -1,8 +1,8 @@
 [package]
 name = "math_utils_lib"
 description = "A library providing math utilities such as a parser/evaluator and a LaTeX export to export a history of parsed expressions and solved equations to LaTeX."
-version = "0.4.1"
-edition = "2021"
+version = "0.5.0"
+edition = "2024"
 license-file = "LICENSE.txt"
 documentation = "https://docs.rs/math_utils_lib/latest/math_utils_lib/"
 repository="https://github.com/Waigo01/math_utils_lib"
@@ -15,19 +15,16 @@ categories = ["mathematics", "parser-implementations"]
 # ensure that it will render any images that we may have in inner attribute documentation.
 features = ["doc-images", "serde"]
 
-[lib]
-doctest = false
-
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
 embed-doc-image = { version = "0.1.4", optional = true }
 mathjax_svg = { version = "3.1.2", optional = true }
-tectonic = { version = "0.15.0", features = ["external-harfbuzz"], optional = true }
+tectonic = { version = "0.16.9", features = ["external-harfbuzz"], optional = true }
 resvg = { version = "0.43.0", optional = true }
 serde = { version = "1.0.217", features = ["derive"], optional = true }
 
 [features]
-default = []
+default = ["output"]
 doc-images = ["dep:embed-doc-image"]
 high-prec = []
 row-major = []

@@ -66,6 +66,8 @@ pub enum ParserError {
     InvalidVariableName(String),
     InvalidFunctionName(String),
     WrongNumberOfArgs(String),
+    OperationNeedsLeftValue,
+    LeftSideOfAssignmentIncorrect
 }
 
 impl ParserError {
@@ -84,6 +86,8 @@ impl ParserError {
             ParserError::InvalidVariableName(s) => return format!("Found invalid variable name: {}!", s),
             ParserError::InvalidFunctionName(s) => return format!("Found invalid function name: {}!", s),
             ParserError::WrongNumberOfArgs(s) => return format!("Wrong number of arguments for {} operation!", s),
+            ParserError::OperationNeedsLeftValue => return "The operation needs to have a left side!".to_string(),
+            ParserError::LeftSideOfAssignmentIncorrect => return "The left side of an assignment needs to be a variable or a function!".to_string(),
         }
     } 
 }
@@ -107,6 +111,7 @@ pub enum EvalError {
     NaNOrInf,
     ExpressionCheckFailed,
     SearchVarsInVars,
+    MultiVariableAssignmentItemNumber,
     NoVariable(String),
     NoFunction(String),
     WrongNumberOfArgs((usize, usize)),
@@ -131,6 +136,7 @@ impl EvalError {
             EvalError::NoFunction(s) => return format!("Could not find function {}!", s),
             EvalError::WrongNumberOfArgs((e, g)) => return format!("Wrong number of arguments! Expected {} arguments, {} were given!", e, g),
             EvalError::MathError(s) => return s.to_string(),
+            EvalError::MultiVariableAssignmentItemNumber => return "Number of variables does not match number of results on the right side of the assignment!".to_string(),
         }
     }
 }

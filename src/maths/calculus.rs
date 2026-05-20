@@ -28,7 +28,7 @@ pub fn calculate_integral(expr: &AST, in_terms_of: String, lower_bound: Value, u
             let mut b = lb;
             while b < ub {
                 mut_vars.push(Variable::new(&in_terms_of, vec![Value::Scalar((b+(b-dx))/2.0)]));
-                let evals = eval(expr, &Context::new(&mut_vars, &context.funs))?;
+                let evals = eval(expr, &mut Context::new(&mut_vars, &context.funs))?;
                 for (i, e) in evals.to_vec().iter().enumerate() {
                     if sums.len() <= i {
                         sums.push(e.clone());
@@ -84,7 +84,7 @@ pub fn calculate_derivative(expr: &AST, in_terms_of: &str, at: &Value, context: 
                     }),
                     right: AST::from_value(Value::Scalar(10f64.powi(-(PREC as i32))))
                 });
-                res.push(eval(&h, &context)?.to_vec());
+                res.push(eval(&h, context)?.to_vec());
             }
 
             context.remove_var(in_terms_of);

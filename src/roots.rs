@@ -1,4 +1,4 @@
-use crate::{basetypes::{Value, Variable, AST}, errors::EvalError, maths::calculus::calculate_derivative_newton, parser::eval, Context, PREC};
+use crate::{basetypes::{Value, Variable, AST}, errors::EvalError, maths::calculus::calculate_derivative_newton, evaluator::eval, Context, PREC};
 
 fn clean_results(res: &[Value]) -> Vec<Value> {
     if res.len() == 0 {
@@ -245,7 +245,7 @@ impl RootFinder {
             context.add_var(&Variable::new(i, vec![Value::Scalar(8.21785)]));
         }
 
-        let initial_res = eval(&expressions[0], &context)?;
+        let initial_res = eval(&expressions[0], &mut context)?;
 
         for i in &search_vars_names {
             context.remove_var(i);
