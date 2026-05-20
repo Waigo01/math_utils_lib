@@ -65,8 +65,6 @@ impl Step {
 
         let tag_with_label = if let Some(equation_number) = with_equation_number {format!("\\tag{{{}}}\\label{{eq:{}}} \\\\ \\\\ \n", equation_number, equation_number)} else {String::new()};
 
-        let mut latex = "".to_string();
-        
         let expression = self.term.as_latex();
 
         let result_expression = if let AST::Operation(ref op) = self.term && let Operation::SimpleOperation{ref op_type, ref right, ..} = **op && *op_type == SimpleOpType::Assign {
@@ -77,11 +75,11 @@ impl Step {
 
         let res = self.result.as_latex();
 
-        if self.result.len() != 0 && result_expression != res {
-            latex += &format!("{} {}= {} {}", expression, aligner, res, tag_with_label);
+        let latex = if self.result.len() != 0 && result_expression != res {
+            format!("{} {}= {} {}", expression, aligner, res, tag_with_label)
         } else {
-            latex += &format!("{} {}", expression, tag_with_label);
-        }
+            format!("{} {}", expression, tag_with_label)
+        };
 
         return latex;
     }
@@ -98,17 +96,39 @@ impl Step {
     pub fn as_latex_inline(&self) -> String {
         return self.as_latex_base(false, None);
     }
+    /// converts a step to a string using basic formatting.
+    pub fn as_string(&self) -> String {
+        let expression = self.term.as_latex();
+
+        let result_expression = if let AST::Operation(ref op) = self.term && let Operation::SimpleOperation{ref op_type, ref right, ..} = **op && *op_type == SimpleOpType::Assign {
+            right.as_latex()
+        } else {
+            expression.clone()
+        };
+
+        let res = self.result.as_latex();
+
+        let output = if self.result.len() != 0 && result_expression != res {
+            format!("{} = {}", expression, res)
+        } else {
+            format!("{}", expression)
+        };
+
+        return output;
+    }
 }
 
 /// describes the type of export done by the [export()] function:
 ///
 /// - Pdf: Save as a pdf file.
 /// - Tex: Save as the generated .tex file.
+/// - Png: Save as the generated .png file.
 #[cfg(feature = "output")]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum ExportType {
     Pdf,
-    Tex
+    Tex,
+    Png
 }
 
 /// exports a history of [Step] to a file named <file_name> with the file type defined
@@ -123,11 +143,34 @@ pub fn export_history(history: Vec<Step>, export_type: ExportType) -> Result<Vec
 
     match export_type {
         ExportType::Pdf => {
+            let mut output_string = "\\documentclass[12pt, letterpaper]{article}\n\\usepackage{amsmath}\n\\usepackage[margin=1in]{geometry}\n\\allowdisplaybreaks\n\\begin{document}\n\\begin{align*}\n".to_string();
+            for (i, s) in history.iter().enumerate() {
+                output_string += &s.as_latex_with_tag(i as i32+1);
+            }
+            output_string += "\\end{align*}\n\\end{document}";
+
             let pdf = tectonic::latex_to_pdf(output_string)?;
             return Ok(pdf.to_vec());
         },
         ExportType::Tex => {
+            let mut output_string = "\\documentclass[12pt, letterpaper]{article}\n\\usepackage{amsmath}\n\\usepackage[margin=1in]{geometry}\n\\allowdisplaybreaks\n\\begin{document}\n\\begin{align*}\n".to_string();
+            for (i, s) in history.iter().enumerate() {
+                output_string += &s.as_latex_with_tag(i as i32+1);
+            }
+            output_string += "\\end{align*}\n\\end{document}";
+
             return Ok(output_string.into_bytes());
         },
+        ExportType::Png => {
+            let mut output_string = "\\begin{align*}\n".to_string();
+            for (i, s) in history.iter().enumerate() {
+                output_string += &s.as_latex_with_tag(i as i32+1);
+            }
+            output_string += "\\end{align*}";
+
+            let png = png_from_latex(output_string, 1080, "#FFFFFF")?;
+
+            return Ok(png)
+        }
     } 
 }
