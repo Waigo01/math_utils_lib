@@ -585,7 +585,7 @@ impl Values {
     pub fn get(&self, i: usize) -> Option<&Value> {
         self.0.iter().nth(i)
     }
-    /// returns the length of the values.
+    /// returns the amount of values.
     pub fn len(&self) -> usize {
         return self.0.len()
     }
