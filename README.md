@@ -22,7 +22,7 @@ This repo/crate provides a number of math utilities:
 - An evaluator based on combinatorics for combining multiple results from equations or sqrts with other operations.
 - Assigning values to variables and defining custom functions.
 - Custom functions with side effects.
-- Boolean operators (==, <, >, etc.).
+- Boolean operations (==, <, >, etc.).
 - Conditional statements.
 - Inbuilt quality of life functions for exporting results to latex.
 
