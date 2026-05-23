@@ -519,7 +519,7 @@ impl Value {
             var = "\\pi".to_string();
         }
 
-        return format!("{} {}= {}", var, aligner, self.as_latex());
+        return format!("{} {}:= {}", var, aligner, self.as_latex());
     }
     fn latex_print(&self) -> String {
         match self {
@@ -611,17 +611,17 @@ impl Values {
             return format!("{{{}}}", self.0.iter().map(|v| v.as_string()).collect::<Vec<String>>().join(", "));
         }
     }
-    /// converts the values to latex using "{}" and ";" to print multiple Values.
+    /// converts the values to latex using "{}" and "," to print multiple Values.
     pub fn as_latex(&self) -> String {
         if self.len() == 1 {
             return format!("{}", self.0[0].as_latex());
         } else if self.len() <= 0 {
             return "No solutions".to_string();
         } else {
-            return format!("\\left\\{{{}\\right\\}}", self.clone().to_vec().iter().map(|v| v.as_latex()).collect::<Vec<String>>().join("; "));
+            return format!("\\left\\{{{}\\right\\}}", self.clone().to_vec().iter().map(|v| v.as_latex()).collect::<Vec<String>>().join(", "));
         }
     }
-    /// converts the values to latex using "{}" and ";" to print multiple Values. This functions
+    /// converts the values to latex using "{}" and "," to print multiple Values. This functions
     /// additionally adds a variable name in front of the Values. The function also provides the option to
     /// add a "&" aligner before the "=".
     pub fn as_latex_at_var<S: Into<String>>(&self, var_name: S, add_aligner: bool) -> String {
@@ -639,16 +639,16 @@ impl Values {
         }
 
         if self.len() <= 0 {
-            return format!("{}: No solutions", var);
+            return format!("{}:= {{}}", var);
         } else if self.len() == 1 {
-            return format!("{} {}= {}", var, aligner, self.0[0].as_latex());
+            return format!("{} {}:= {}", var, aligner, self.0[0].as_latex());
         } else {
-            return format!("{} {}= \\left\\{{{}\\right\\}}", var, aligner, self.clone().to_vec().iter().map(|v| v.as_latex()).collect::<Vec<String>>().join("; "));
+            return format!("{} {}:= \\left\\{{{}\\right\\}}", var, aligner, self.clone().to_vec().iter().map(|v| v.as_latex()).collect::<Vec<String>>().join(", "));
         }
     }
 }
 
-/// used to construct an AST which is recursively evaluated by the [eval](crate::parser::eval) function.
+/// used to construct an AST which is recursively evaluated by the [eval](crate::evaluator::eval) function.
 /// 
 /// Each node of the AST can be a:
 /// 
@@ -663,13 +663,13 @@ impl Values {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum AST {
     Scalar(f64),
-    Vector(Box<Vec<AST>>),
-    Matrix(Box<Vec<Vec<AST>>>),
+    Vector(Vec<AST>),
+    Matrix(Vec<Vec<AST>>),
     List(Vec<AST>),
     Variable(String),
     Function {
         name: String,
-        inputs: Box<Vec<AST>>
+        inputs: Vec<AST>
     },
     Operation(Box<Operation>),
 }
@@ -684,7 +684,7 @@ impl AST {
                 for i in v {
                     parsed_values.push(AST::Scalar(i))
                 }
-                return AST::Vector(Box::new(parsed_values))
+                return AST::Vector(parsed_values)
             },
             Value::Matrix(m) => {
                 let mut parsed_rows = vec![];
@@ -695,7 +695,7 @@ impl AST {
                     }
                     parsed_rows.push(row);
                 }
-                return AST::Matrix(Box::new(parsed_rows));
+                return AST::Matrix(parsed_rows);
             }
         }
     }
@@ -781,7 +781,7 @@ impl AST {
     pub fn as_latex(&self) -> String {
         self.latex_print(true)
     }
-    /// converts the AST to latex.
+    /// converts the AST to latex but without an aligner if the AST contains an assignment.
     pub fn as_latex_inline(&self) -> String {
         self.latex_print(false)
     }
@@ -794,7 +794,7 @@ impl AST {
         } else {
             aligner = String::new();
         }
-        format!("{}({}) {}= {}", fun_name.into(), fun_inputs.into_iter().map(|s| s.into()).collect::<Vec<String>>().join(", "), aligner, self.latex_print(add_aligner))
+        format!("{}({}) {}:= {}", fun_name.into(), fun_inputs.into_iter().map(|s| s.into()).collect::<Vec<String>>().join(", "), aligner, self.latex_print(add_aligner))
     }
     fn latex_print(&self, add_aligner: bool) -> String {
         match self {
@@ -892,7 +892,7 @@ impl AST {
                             },
                             AdvancedOperation::Equation { equations, .. } => {
                                 let eqs: Vec<String> = equations.iter().map(|e| format!("{}&={}", e.0.latex_print(false), e.1.latex_print(false))).collect();
-                                return format!("\\left|\\begin{{align}}{}\\end{{align}}\\right|", eqs.join("\\\\ \n "))
+                                return format!("\\left{{\\begin{{array}}{{ c l }}{}\\end{{array}}\\right.", eqs.join("\\\\ \n"))
                             },
                             AdvancedOperation::Conditional { condition, then, r#else } => {
                                 let (conditionals, r#else) = flatten_conditional(condition, then, r#else);

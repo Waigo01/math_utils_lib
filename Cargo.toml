@@ -8,7 +8,7 @@ documentation = "https://docs.rs/math_utils_lib/latest/math_utils_lib/"
 repository="https://github.com/Waigo01/math_utils_lib"
 readme = "README.md"
 keywords = ["mathparsing", "parser", "eval", "math_lib", "math_utils"]
-categories = ["mathematics", "parser-implementations"]
+categories = ["mathematics", "parser-implementations", "compilers"]
 
 [package.metadata.docs.rs]
 # docs.rs uses a nightly compiler, so by instructing it to use our `doc-images` feature we

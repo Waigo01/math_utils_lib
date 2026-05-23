@@ -509,7 +509,7 @@ fn function_side_effects1() -> Result<(), MathLibError> {
 
     quick_eval("f(5)", &mut c)?;
 
-    assert_eq!(c.get_var("y".to_string()), Some(Variable { name: "y".to_string(), values: Values::from_vec(vec![value!(5)]) }));
+    assert_eq!(c.get_var("y".to_string()).unwrap().values.to_vec()[0], value!(5));
 
     Ok(())
 }

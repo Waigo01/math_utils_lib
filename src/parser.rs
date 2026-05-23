@@ -52,7 +52,7 @@ fn parse_value(s: &Token) -> Result<AST, ParserError> {
         }
 
         if is_vec && is_mat {
-            return Ok(AST::Vector(Box::new(output_v)))
+            return Ok(AST::Vector(output_v))
         } else if is_mat && !is_vec {
             let output_m = output_v.iter().map(|v| {
                 match v {
@@ -77,9 +77,9 @@ fn parse_value(s: &Token) -> Result<AST, ParserError> {
                 col_matrix.push(row);
             }
             #[cfg(not(feature = "row-major"))]
-            return Ok(AST::Matrix(Box::new(col_matrix)));
+            return Ok(AST::Matrix(col_matrix));
             #[cfg(feature = "row-major")]
-            return Ok(AST::Matrix(Box::new(output_m)));
+            return Ok(AST::Matrix(output_m));
         } else {
             return Err(ParserError::ParseValue(s.to_string()));
         }
@@ -284,7 +284,7 @@ fn parse_inner(tokens: &[Box<Token>]) -> Result<AST, ParserError> {
 
                 let parsed_args: Vec<AST> = args.iter().map(|a| parse_inner(a)).collect::<Result<Vec<AST>, ParserError>>()?;
 
-                return Ok(AST::Function { name: ident.to_string(), inputs: Box::new(parsed_args) })
+                return Ok(AST::Function { name: ident.to_string(), inputs: parsed_args })
             }
         }
 

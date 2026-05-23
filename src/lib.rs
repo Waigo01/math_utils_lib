@@ -19,7 +19,11 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //! - Parsing and evaluating calculations with matrices, vectors and scalars.
 //! - A recursive parsing implementation allowing for calculations withing matrices and vectors.
 //! - An inbuilt equation solver for solving linear and non-linear systems of equations, accessible through a custom "function".
-//! - An evaluator based on combinatorics for combining multiple results from equations or sqrt with other operations.
+//! - An evaluator based on combinatorics for combining multiple results from equations or sqrts with other operations.
+//! - Assigning values to variables and defining custom functions.
+//! - Custom functions with side effects.
+//! - Boolean operations (==, <, >, etc.).
+//! - Conditional evaluation.
 //! - Inbuilt quality of life functions for exporting results to latex.
 //!
 //! ## Crate features
@@ -31,7 +35,7 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //!
 //! ## Usage
 //!
-//! **For usage information concerning the mathematical properties of the evaluator and more examples, please take a look at [the wiki](https://github.com/Waigo01/math_utils_lib/wiki).**
+//! **For usage information concerning the mathematical syntax used by the parser and more examples, please take a look at [the wiki](https://github.com/Waigo01/math_utils_lib/wiki).**
 //!
 //! ## Error types
 //!
@@ -78,7 +82,8 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //! // The library also has full matrix and vector support.
 //! let res = quick_eval("[[3, 4, 5], [1, 2, 3], [5, 6, 7]]", &mut Context::empty())?.to_vec();
 //!
-//! // Notice that the matrix is by default parsed in a column major format, whereas internally the library uses a row-major format.
+//! // Notice that the matrix is by default parsed in a column major format,
+//! // whereas internally the library uses a row-major format.
 //! assert_eq!(res[0], value!(3, 1, 5; 4, 2, 6; 5, 3, 7));
 //! # Ok::<(), MathLibError>(())
 //! ```
@@ -111,6 +116,22 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //!
 //! ```rust
 //! # use math_utils_lib::{MathLibError, quick_eval, value, Context, Value};
+//! let mut c = Context::default();
+//! 
+//! // Defined functions can even have side effects,
+//! // like setting a variable in the context, when called.
+//! quick_eval("f(x) = y=x", &mut c)?;
+//!
+//! quick_eval("f(5)", &mut c)?;
+//!
+//! assert_eq!(c.get_var("y".to_string()).unwrap().values.to_vec()[0], value!(5));
+//!
+//! # Ok::<(), MathLibError>(())
+//! ```
+//!
+//!
+//! ```rust
+//! # use math_utils_lib::{MathLibError, quick_eval, value, Context, Value};
 //! // The library also has an inbuilt equation solver, based on newtons method. It can be accessed
 //! // using the eq "function"
 //! let res = quick_eval("eq(x^2=9, x)", &mut Context::empty())?.round(3).to_vec();
@@ -127,6 +148,77 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //! let res = quick_eval(equation, &mut Context::empty())?.round(3).to_vec();
 //!
 //! assert_eq!(res, vec![value!(3, -8, -2)]);
+//! # Ok::<(), MathLibError>(())
+//! ```
+//!
+//! ```rust
+//! # use math_utils_lib::{MathLibError, quick_eval, value, Context, Value};
+//! let mut c = Context::empty();
+//!
+//! quick_eval("a = 6", &mut c)?;
+//! quick_eval("b = 10", &mut c)?;
+//! 
+//! // The evaluator also supports boolean expressions where 0 = false and !0 = true.
+//! // The and (&) and or (|) operation will always return 1 for true and 0 for false.
+//! let res = quick_eval("!(a != 10 | b != 10) | b != 5", &mut c)?.to_vec();
+//!
+//! assert_eq!(res[0], value!(1));
+//!
+//! # Ok::<(), MathLibError>(())
+//! ```
+//!
+//! ```rust
+//! # use math_utils_lib::{MathLibError, quick_eval, value, Context, Value};
+//! // The evaluator can also make case destinctions using an if statement and a boolean expression.
+//! let res = quick_eval("if(eq(x^2 = 9, x) == -3, 5, 2)", &mut Context::empty())?.to_vec();
+//!
+//! // Since there are two solutions to x^2 = 9
+//! // and the first one is indeed -3 but the second one is not, the resulting Values are 5, 2.
+//! assert_eq!(res, vec![value!(5), value!(2)]);
+//!
+//! # Ok::<(), MathLibError>(())
+//! ```
+//!
+//! ```rust
+//! # use math_utils_lib::{MathLibError, quick_eval, value, Context, Value};
+//!
+//! let mut c = Context::empty();
+//! quick_eval("state = 0", &mut c)?;
+//!
+//! // Using the power of lists, side effects in functions and if statements,
+//! // we can even build simple state machines.
+//!
+//! // This one recognizes the word 'math' with m = 0, a = 1, t = 2 and h = 3.
+//!
+//! quick_eval("f(x) =
+//! if(x == 0 & state == 0,
+//!    state = 1,
+//! if(x == 1 & state == 1,
+//!    state = 2,
+//! if(x == 2 & state == 2,
+//!    state = 3,
+//! if(x == 3 & state == 3,
+//!    state = 4,
+//! state = 0))))", &mut c)?;
+//!
+//! // This is the word 'math'.
+//!
+//! quick_eval("f({0, 1, 2, 3})", &mut c)?;
+//!
+//! let res = quick_eval("state", &mut c)?.to_vec();
+//!
+//! assert_eq!(res[0], value!(4));
+//! 
+//! quick_eval("state = 0", &mut c)?;
+//!
+//! // This is NOT the word 'math'.
+//!
+//! quick_eval("f({0, 1, 4, 2})", &mut c)?.to_vec();
+//! 
+//! let res = quick_eval("state", &mut c)?.to_vec();
+//!
+//! assert_ne!(res[0], value!(4));
+//!
 //! # Ok::<(), MathLibError>(())
 //! ```
 //!
@@ -156,6 +248,9 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //! - [x] Calculations in vectors and matrices
 //! - [x] Equations as operators -> eval can handle multiple values
 //! - [x] Variable/Function assignment as operator -> mutable context for evaluator
+//! - [x] Function side effects
+//! - [x] Boolean operations
+//! - [x] Conditional evaluation
 //! - [ ] Complex numbers
 //! - [ ] Possible tensor support
 //! - [ ] Stable API that makes everyone happy (very hard)
@@ -177,7 +272,7 @@ pub mod maths;
 #[doc(hidden)]
 pub mod helpers;
 pub mod basetypes;
-pub mod latex;
+pub mod output;
 pub mod parser;
 pub mod errors;
 pub mod roots;
@@ -189,9 +284,9 @@ pub mod tokenizer;
 mod tests;
 
 pub use basetypes::{Value, Values, Variable, Context, Function};
-pub use latex::Step;
+pub use output::Step;
 #[cfg(feature = "output")]
-pub use latex::{export_history, ExportType, svg_from_latex, png_from_latex};
+pub use output::{export_history, ExportType, png_from_latex, svg_from_latex};
 pub use parser::parse;
 pub use evaluator::eval;
 pub use errors::MathLibError;
