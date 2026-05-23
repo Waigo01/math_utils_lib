@@ -66,16 +66,6 @@ fn eval_rec(b: &AST, context: &mut Context, last_fn: &str) -> Result<Vec<Value>,
             if last_fn == name {
                 return Err(EvalError::RecursiveFunction);
             }
-            let function = context.get_fun(name);
-            if function.is_none() {
-                return Err(EvalError::NoFunction(name.to_string()));
-            }
-
-            let function = function.unwrap();
-            
-            if inputs.len() != function.inputs.len() {
-                return Err(EvalError::WrongNumberOfArgs((function.inputs.len(), inputs.len())));
-            }
 
             let mut eval_inputs = vec![];
             for i in inputs.iter() {
@@ -86,21 +76,62 @@ fn eval_rec(b: &AST, context: &mut Context, last_fn: &str) -> Result<Vec<Value>,
 
             let mut res = vec![];
 
-            for p in permuts {
-                let mut f_vars = vec![];
-                for i in 0..inputs.len() {
-                    f_vars.push(Variable::new(&function.inputs[i], vec![p[i].clone()]));
-                }
-
-                for i in context.vars.iter() {
-                    if !f_vars.iter().map(|v| v.name.to_string()).collect::<Vec<String>>().contains(&i.name) {
-                        f_vars.push(i.clone());
+            match name.as_str() {
+                "sin" if eval_inputs.len() == 1 => for p in permuts {res.push(maths::sin(&p[0])?)},
+                "sin" => return Err(EvalError::WrongNumberOfArgs((1, eval_inputs.len()))),
+                "cos" if eval_inputs.len() == 1 => for p in permuts {res.push(maths::cos(&p[0])?)},
+                "cos" => return Err(EvalError::WrongNumberOfArgs((1, eval_inputs.len()))),
+                "tan" if eval_inputs.len() == 1 => for p in permuts {res.push(maths::tan(&p[0])?)},
+                "tan" => return Err(EvalError::WrongNumberOfArgs((1, eval_inputs.len()))),
+                "abs" if eval_inputs.len() == 1 => for p in permuts {res.push(maths::abs(&p[0])?)},
+                "abs" => return Err(EvalError::WrongNumberOfArgs((1, eval_inputs.len()))),
+                "sqrt" if eval_inputs.len() == 1 => for p in permuts {res.push(maths::sqrt(&p[0])?)},
+                "sqrt" => return Err(EvalError::WrongNumberOfArgs((1, eval_inputs.len()))),
+                "root" if eval_inputs.len() == 2 => for p in permuts {res.push(maths::root(&p[0], &p[1])?)},
+                "root" => return Err(EvalError::WrongNumberOfArgs((2, eval_inputs.len()))),
+                "ln" if eval_inputs.len() == 1 => for p in permuts {res.push(maths::ln(&p[0])?)},
+                "ln" => return Err(EvalError::WrongNumberOfArgs((1, eval_inputs.len()))),
+                "arcsin" if eval_inputs.len() == 1 => for p in permuts {res.push(maths::arcsin(&p[0])?)},
+                "arcsin" => return Err(EvalError::WrongNumberOfArgs((1, eval_inputs.len()))),
+                "arccos" if eval_inputs.len() == 1 => for p in permuts {res.push(maths::arccos(&p[0])?)},
+                "arccos" => return Err(EvalError::WrongNumberOfArgs((1, eval_inputs.len()))),
+                "arctan" if eval_inputs.len() == 1 => for p in permuts {res.push(maths::arctan(&p[0])?)},
+                "arctan" => return Err(EvalError::WrongNumberOfArgs((1, eval_inputs.len()))),
+                "det" if eval_inputs.len() == 1 => for p in permuts {res.push(maths::det(&p[0])?)},
+                "det" => return Err(EvalError::WrongNumberOfArgs((1, eval_inputs.len()))),
+                "inv" if eval_inputs.len() == 1 => for p in permuts {res.push(maths::inv(&p[0])?)},
+                "inv" => return Err(EvalError::WrongNumberOfArgs((1, eval_inputs.len()))),
+                _ if let Some(function) = context.get_fun(name) => {
+                    if inputs.len() != function.inputs.len() {
+                        return Err(EvalError::WrongNumberOfArgs((function.inputs.len(), inputs.len())));
                     }
-                }
-                res.push(eval_rec(&function.ast, &mut Context::new(&f_vars, &context.funs), name)?);
+
+                    for p in permuts {
+                        let mut copied_vars: Vec<Variable> = vec![];
+                        for i in 0..inputs.len() {
+                            let var_name = &function.inputs[i];
+                            if let Some(var) = context.get_var(var_name) {
+                                copied_vars.push(var);
+                            }
+
+                            context.add_var(&Variable::new(var_name, vec![p[i].clone()]));
+                        }
+
+                        res.append(&mut eval_rec(&function.ast, context, name)?);
+
+                        for var_name in &function.inputs {
+                            context.remove_var(var_name);
+                        }
+
+                        for var in copied_vars {
+                            context.add_var(&var);
+                        }
+                    }
+                },
+                _ => {return Err(EvalError::NoFunction(name.to_string()))}
             }
 
-            return Ok(res.into_iter().flatten().collect());
+            return Ok(res);
         },
         AST::Operation(o) => {
             match &**o {
@@ -135,32 +166,29 @@ fn eval_rec(b: &AST, context: &mut Context, last_fn: &str) -> Result<Vec<Value>,
 
                     let mut res = vec![];
 
-                    for i in lv {
+                    for i in &lv {
                         for j in &rv {
                             match op_type {
-                                SimpleOpType::Get => res.push(maths::get(&i, &j)?),
-                                SimpleOpType::Add => res.push(maths::add(&i, &j)?),
-                                SimpleOpType::Sub => res.push(maths::sub(&i, &j)?),
-                                SimpleOpType::AddSub => res.append(&mut vec![maths::add(&i, &j)?, maths::sub(&i, &j)?]),
-                                SimpleOpType::Mult => res.push(maths::mult(&i, &j)?),
-                                SimpleOpType::Neg => res.push(maths::neg(&j)?),
-                                SimpleOpType::Div => res.push(maths::div(&i, &j)?),
-                                SimpleOpType::Cross => res.push(maths::cross(&i, &j)?),
-                                SimpleOpType::HiddenMult => res.push(maths::mult(&i, &j)?),
-                                SimpleOpType::Pow => res.push(maths::pow(&i, &j)?),
-                                SimpleOpType::Sin => res.push(maths::sin(&i)?),
-                                SimpleOpType::Cos => res.push(maths::cos(&i)?),
-                                SimpleOpType::Tan => res.push(maths::tan(&i)?),
-                                SimpleOpType::Abs => res.push(maths::abs(&i)?),
-                                SimpleOpType::Sqrt => res.push(maths::sqrt(&i)?),
-                                SimpleOpType::Root => res.push(maths::root(&i, &j)?),
-                                SimpleOpType::Ln => res.push(maths::ln(&i)?),
-                                SimpleOpType::Arcsin => res.push(maths::arcsin(&i)?),
-                                SimpleOpType::Arccos => res.push(maths::arccos(&i)?),
-                                SimpleOpType::Arctan => res.push(maths::arctan(&i)?),
-                                SimpleOpType::Det => res.push(maths::det(&i)?),
-                                SimpleOpType::Inv => res.push(maths::inv(&i)?),
+                                SimpleOpType::Get => res.push(maths::get(i, j)?),
+                                SimpleOpType::Add => res.push(maths::add(i, j)?),
+                                SimpleOpType::Sub => res.push(maths::sub(i, j)?),
+                                SimpleOpType::AddSub => res.append(&mut vec![maths::add(i, j)?, maths::sub(i, j)?]),
+                                SimpleOpType::Mult => res.push(maths::mult(i, j)?),
+                                SimpleOpType::Neg => res.push(maths::neg(j)?),
+                                SimpleOpType::Div => res.push(maths::div(i, j)?),
+                                SimpleOpType::Cross => res.push(maths::cross(i, j)?),
+                                SimpleOpType::HiddenMult => res.push(maths::mult(i, j)?),
+                                SimpleOpType::Pow => res.push(maths::pow(i, j)?),
                                 SimpleOpType::Parenths => res.push(i.clone()),
+                                SimpleOpType::BoolEq => res.push(maths::bool::eq(i, j)?),
+                                SimpleOpType::BoolNEq => res.push(maths::bool::not_eq(i, j)?),
+                                SimpleOpType::BoolLt => res.push(maths::bool::lt(i, j)?),
+                                SimpleOpType::BoolGt => res.push(maths::bool::gt(i, j)?),
+                                SimpleOpType::BoolLtEq => res.push(maths::bool::lteq(i, j)?),
+                                SimpleOpType::BoolGtEq => res.push(maths::bool::gteq(i, j)?),
+                                SimpleOpType::BoolNot => res.push(maths::bool::not(j)?),
+                                SimpleOpType::BoolAnd => res.push(maths::bool::and(i, j)?),
+                                SimpleOpType::BoolOr => res.push(maths::bool::or(i, j)?),
                                 SimpleOpType::Assign => {},
                             }
                         }
@@ -210,6 +238,26 @@ fn eval_rec(b: &AST, context: &mut Context, last_fn: &str) -> Result<Vec<Value>,
                             }
                             let root_finder = RootFinder::new(final_expressions, context.to_owned(), search_vars.to_vec())?;
                             return root_finder.find_roots();
+                        },
+                        AdvancedOperation::Conditional { condition, then, r#else } => {
+                            let econdition = eval_rec(&condition, context, last_fn)?;
+
+                            let mut res = vec![];
+
+                            for con in econdition {
+                                if maths::bool::eq(&con, &Value::Scalar(0.))? == Value::Scalar(0.) {
+                                    let ethen = eval_rec(&then, context, last_fn)?;
+                                    res.push(ethen);
+                                } else {
+                                    let eelse = if let Some(r#else) = r#else {Some(eval_rec(r#else, context, last_fn)?)} else {None};
+                                    if let Some(eelse) = eelse {
+                                        res.push(eelse);
+                                    }
+                                }
+                                
+                            }
+
+                            return Ok(res.into_iter().flatten().collect());
                         }
                     }
                 }

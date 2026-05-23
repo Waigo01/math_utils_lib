@@ -1,244 +1,163 @@
-use crate::{basetypes::{AST, AdvancedOpType, AdvancedOperation, Operation, SimpleOpType, Value}, errors::ParserError, helpers::get_args};
+use crate::{basetypes::{AST, AdvancedOperation, Operation, SimpleOpType, Value}, errors::ParserError, helpers::get_args, tokenizer::{Delimiter, Token, Tokenizer}, value};
 
-fn get_op_symbol(c: char) -> Option<SimpleOpType> {
-    match c {
-        '?' => Some(SimpleOpType::Get),
-        '+' => Some(SimpleOpType::Add),
-        '-' => Some(SimpleOpType::Sub),
-        '&' => Some(SimpleOpType::AddSub),
-        '*' => Some(SimpleOpType::Mult),
-        '/' => Some(SimpleOpType::Div),
-        '^' => Some(SimpleOpType::Pow),
-        '#' => Some(SimpleOpType::Cross),
-        '=' => Some(SimpleOpType::Assign),
+fn get_op_symbol(punct: &str) -> Option<SimpleOpType> {
+    match punct {
+        "=" => Some(SimpleOpType::Assign),
+        "&" => Some(SimpleOpType::BoolAnd),
+        "|" => Some(SimpleOpType::BoolOr),
+        "==" => Some(SimpleOpType::BoolEq),
+        "!=" => Some(SimpleOpType::BoolNEq),
+        "<" => Some(SimpleOpType::BoolLt),
+        ">" => Some(SimpleOpType::BoolGt),
+        "<=" => Some(SimpleOpType::BoolLtEq),
+        ">=" => Some(SimpleOpType::BoolGtEq),
+        "!" => Some(SimpleOpType::BoolNot),
+        "+" => Some(SimpleOpType::Add),
+        "-" => Some(SimpleOpType::Sub),
+        "+-" => Some(SimpleOpType::AddSub),
+        "*" => Some(SimpleOpType::Mult),
+        "/" => Some(SimpleOpType::Div),
+        "#" => Some(SimpleOpType::Cross),
+        "^" => Some(SimpleOpType::Pow),
+        "@" => Some(SimpleOpType::Get),
         _ => None
     }
 }
 
-/// checks if the given variable name is a valid variable name.
-pub fn is_valid_var_name(var: String) -> bool {
-    let var_chars: Vec<char> = var.chars().collect();
-    if !var_chars[0].is_alphabetic() && var_chars[0] != '\\' {
-        return false;
-    }
-    let mut parenths_open = 0;
-    let mut previous_char = '\\';
-    for i in var_chars {
-        if i == '{' {
-            parenths_open += 1;
-        }
-        if i == '}' {
-            parenths_open -= 1;
-        }
-        if (i == '?'
-            || i == '+'
-            || i == '-'
-            || i == '&'
-            || i == '*'
-            || i == '/'
-            || i == '^'
-            || i == '#' 
-            || i == '=')
-            && parenths_open == 0{
-            return false
-        }
-        if i.is_numeric() && parenths_open == 0 && previous_char != '_' {
-            return false;
-        }
-        previous_char = i;
-    }
-    return true;
-}
-
-fn parse_value(s: String) -> Result<AST, ParserError> {
-    if !s.contains(&"[") {
-        let p = match s.parse::<f64>() {
+fn parse_value(s: &Token) -> Result<AST, ParserError> {
+    if let Token::Literal(literal) = s {
+        let p = match literal.parse::<f64>() {
             Ok(f) => f,
-            Err(_) => return Err(ParserError::ParseValue(s))
+            Err(_) => return Err(ParserError::ParseValue(literal.to_string()))
         };
         return Ok(AST::Scalar(p));
-    } else if s.len() >= 2 {
-        if s.chars().nth(0).unwrap() == '[' && s.chars().nth(s.len()-1).unwrap() == ']' {
-            let args = get_args(&s.chars().collect::<Vec<char>>()[1..s.len()-1]);
-            if args.is_empty() || args[0].is_empty() {
-                return Err(ParserError::EmptyVec);
+    } else if let Token::Group(group) = s {
+        let args = get_args(&group.stream);
+
+        if args.is_empty() || args[0].is_empty() {
+            return Err(ParserError::EmptyVec);
+        }
+
+        let output_v = args.iter().map(|v| parse_inner(v)).collect::<Result<Vec<AST>, ParserError>>()?;
+        
+        let mut is_vec = true;
+        let mut is_mat = true;
+
+        for ast in &output_v {
+            match ast {
+                AST::Vector(_) => is_vec = false,
+                AST::Matrix(_) => is_mat = false,
+                _ => {}
             }
-            let output_v = args.iter().map(|v| parse_inner(v)).collect::<Result<Vec<AST>, ParserError>>()?;
-            let mut is_vec = true;
-            let mut is_mat = true;
-            for i in &output_v {
-                match i {
-                    AST::Vector(_) => is_vec = false,
-                    AST::Matrix(_) => is_mat = false,
-                    _ => {}
+        }
+
+        if is_vec && is_mat {
+            return Ok(AST::Vector(Box::new(output_v)))
+        } else if is_mat && !is_vec {
+            let output_m = output_v.iter().map(|v| {
+                match v {
+                    AST::Vector(v) => return Ok(v.to_vec()),
+                    _ => return Err(ParserError::NotRectMatrix)
+                }
+            }).collect::<Result<Vec<Vec<AST>>, ParserError>>()?;
+            let size = output_m[0].len();
+            for i in &output_m {
+                if i.len() != size {
+                    return Err(ParserError::NotRectMatrix);
                 }
             }
-            if is_vec && is_mat {
-                return Ok(AST::Vector(Box::new(output_v)));
-            } else if is_mat && !is_vec {
-                let output_m = output_v.iter().map(|v| {
-                    match v {
-                        AST::Vector(v) => return Ok(v.to_vec()),
-                        _ => return Err(ParserError::NotRectMatrix)
-                    }
-                }).collect::<Result<Vec<Vec<AST>>, ParserError>>()?;
-                let size = output_m[0].len();
-                for i in &output_m {
-                    if i.len() != size {
-                        return Err(ParserError::NotRectMatrix);
-                    }
+            #[cfg(not(feature = "row-major"))]
+            let mut col_matrix = vec![];
+            #[cfg(not(feature = "row-major"))]
+            for i in 0..output_m[0].len() {
+                let mut row = vec![];
+                for j in 0..output_m.len() {
+                    row.push(output_m[j][i].clone());
                 }
-                #[cfg(not(feature = "row-major"))]
-                let mut col_matrix = vec![];
-                #[cfg(not(feature = "row-major"))]
-                for i in 0..output_m[0].len() {
-                    let mut row = vec![];
-                    for j in 0..output_m.len() {
-                        row.push(output_m[j][i].clone());
-                    }
-                    col_matrix.push(row);
-                }
-                #[cfg(not(feature = "row-major"))]
-                return Ok(AST::Matrix(Box::new(col_matrix)));
-                #[cfg(feature = "row-major")]
-                return Ok(AST::Matrix(Box::new(output_m)));
-            } else {
-                return Err(ParserError::ParseValue(s))
+                col_matrix.push(row);
             }
+            #[cfg(not(feature = "row-major"))]
+            return Ok(AST::Matrix(Box::new(col_matrix)));
+            #[cfg(feature = "row-major")]
+            return Ok(AST::Matrix(Box::new(output_m)));
         } else {
-            return Err(ParserError::MissingBracket)
+            return Err(ParserError::ParseValue(s.to_string()));
         }
     } else {
-        return Err(ParserError::ParseValue(s));
+        return Err(ParserError::ParseValue(s.to_string()));
     }
 }
 
 /// used to construct an AST from a string.
-pub fn parse<S: Into<String>>(expr: S) -> Result<AST, ParserError> {
-    let whitespaced_string: String = expr.into().trim().split(" ").filter(|s| !s.is_empty()).collect();
-    parse_inner(&whitespaced_string)
+pub fn parse<S: Into<String> + Clone>(expr: S) -> Result<AST, ParserError> {
+    let mut tokenizer = Tokenizer::new();
+    let tokens = tokenizer.tokenize(expr)?;
+
+    parse_inner(&tokens)
 }
 
-fn parse_inner(expr: &str) -> Result<AST, ParserError> {
-    if expr.is_empty() {
+fn parse_inner(tokens: &[Box<Token>]) -> Result<AST, ParserError> {
+    if tokens.len() == 0 {
         return Err(ParserError::EmptyExpr);
     }
-    let mut expr_chars = expr.chars().collect::<Vec<char>>();
 
-    let mut parenths_open = 0;
-    let mut check_parenths = true;
-    for i in 0..expr_chars.len() {
-        if expr_chars[i] == '(' {
-            parenths_open += 1;
-        }
-        if expr_chars[i] == ')' {
-            parenths_open -= 1;
-            if parenths_open == 0 && i != expr_chars.len()-1 {
-                check_parenths = false;
-            }
-        }
-    }
-
-    if parenths_open > 0 {
-        return Err(ParserError::UnmatchedOpenDelimiter);
-    } else if parenths_open < 0 {
-        return Err(ParserError::UnmatchedCloseDelimiter);
-    }
-
-    if check_parenths {
-        if expr_chars[0] == '(' && expr_chars[expr_chars.len()-1] == ')' {
-            expr_chars = expr_chars[1..expr_chars.len()-1].iter().map(|c| *c).collect::<Vec<char>>();
-            return Ok(AST::from_operation(Operation::SimpleOperation {
+    if tokens.len() == 1 && let Some(boxed) = tokens.get(0) && let Token::Group(ref group) = **boxed {
+        if group.delimiter == Delimiter::Parenthesis {
+            return Ok(AST::from_operation(Operation::SimpleOperation{
                 op_type: SimpleOpType::Parenths,
-                left: parse_inner(&expr_chars.iter().collect::<String>())?,
-                right: AST::from_value(Value::Scalar(0.)) 
-            }));
+                left: parse_inner(&group.stream)?,
+                right: AST::from_value(value!(0))
+            }))
+        } else if group.delimiter == Delimiter::Brace {
+            let args = get_args(&group.stream);
+            return Ok(AST::List(args.into_iter().map(|s| parse_inner(&s)).collect::<Result<Vec<AST>, ParserError>>()?));
         }
     }
 
-    //is it an operation?
-    
-    let op_types = vec![SimpleOpType::Assign, SimpleOpType::Add, SimpleOpType::Sub, SimpleOpType::AddSub, SimpleOpType::Mult, SimpleOpType::Neg, SimpleOpType::Div, SimpleOpType::Cross, SimpleOpType::HiddenMult, SimpleOpType::Pow, SimpleOpType::Get];
-    let mut ops_in_expr: Vec<(SimpleOpType, usize, usize, usize)> = vec![];
-    let mut highest_op = op_types.len()-1;
-    let mut last_char = '\\';
-    let mut brackets_open = 0;
-    let mut curly_brackets_open = 0;
-    for i in 0..expr_chars.len() {
-        let mut is_hidden_mult = false;
-        if (last_char.is_digit(10) && (expr_chars[i].is_alphabetic() || expr_chars[i] == '\\' || expr_chars[i] == '(' || expr_chars[i] == '['))||(last_char == ')' && expr_chars[i] == '(') {
-            is_hidden_mult = true;
-            if i as i32-2 > 0 && expr_chars[i-2] == '_' {
-                is_hidden_mult = false;
-            }
-        }
-        if parenths_open == 0 && brackets_open == 0 && curly_brackets_open == 0 && is_hidden_mult {
-            ops_in_expr.push((SimpleOpType::HiddenMult, i, 0, 0));
-        }
-        last_char = expr_chars[i];
-        if expr_chars[i] == '(' {
-            parenths_open += 1;
-            continue;
-        }
-        if expr_chars[i] == ')' {
-            parenths_open -= 1;
-            continue;
-        }
-        if expr_chars[i] == '[' {
-            brackets_open += 1;
-            continue;
-        }
-        if expr_chars[i] == ']' {
-            brackets_open -= 1;
-            continue;
-        }
-        if expr_chars[i] == '{' {
-            curly_brackets_open += 1;
-            continue;
-        }
-        if expr_chars[i] == '}' {
-            curly_brackets_open -= 1;
-            continue;
-        }
-        let symbol = get_op_symbol(expr_chars[i]);
-        if parenths_open == 0 && brackets_open == 0 && curly_brackets_open == 0 && i != expr_chars.len()-1 && symbol.is_some() {
-            let operation = symbol.unwrap();
+    //is it an operation? 
+    let mut ops_in_expr: Vec<(SimpleOpType, usize, usize)> = vec![];
+    let mut highest_op = usize::MAX;
+
+    for i in 0..tokens.len() {
+        if i != 0 && ((tokens[i-1].is_literal() && (tokens[i].is_group() || tokens[i].is_ident())) || (tokens[i-1].is_group() && (tokens[i].is_group()))) {
+            ops_in_expr.push((SimpleOpType::HiddenMult, i, 0));
+            if (SimpleOpType::HiddenMult as usize) < highest_op {highest_op = SimpleOpType::HiddenMult as usize}
+        } else if let Token::Punct(ref punct) = *tokens[i] {
+            let symbol = get_op_symbol(&punct);
+            let Some(operation) = symbol else {return Err(ParserError::UnrecognizedPunct)};
             if i == 0 && operation == SimpleOpType::Sub {
-                ops_in_expr.push((SimpleOpType::Neg, i, 0, 1));
+                ops_in_expr.push((SimpleOpType::Neg, i, 1));
+                if (SimpleOpType::Neg as usize) < highest_op {highest_op = SimpleOpType::Neg as usize}
             } else {
-                ops_in_expr.push((operation, i, 0, 1));
+                ops_in_expr.push((operation.clone(), i, 1));
+                if (operation.clone() as usize) < highest_op {highest_op = operation as usize}
             }
-        } 
-    }
-
-    for i in &ops_in_expr {
-        for (j, o) in op_types.iter().enumerate() {
-            if *o == i.0 && j < highest_op {
-                highest_op = j;
-                break;
-            }
+            
         }
     }
 
-    if op_types[highest_op] == SimpleOpType::Sub || op_types[highest_op] == SimpleOpType::Div {
+    if highest_op == SimpleOpType::Sub as usize || highest_op == SimpleOpType::Div as usize {
         ops_in_expr.reverse();
     }
 
     for op in &ops_in_expr {
-        if op.0 == op_types[highest_op] {
-            let left_s: String = expr_chars[0..(op.1-op.2)].to_vec().iter().collect();
-            let right_s: String = expr_chars[(op.1+op.3)..].to_vec().iter().collect();
-            let right_b = parse_inner(&right_s)?; 
-            if left_s.is_empty() && (op.0 == SimpleOpType::AddSub || op.0 == SimpleOpType::Neg) {
+        if op.0.clone() as usize == highest_op {
+            let left_ts = tokens[0..op.1].to_vec();
+            let right_ts = tokens[(op.1+op.2)..].to_vec();
+            let right_b = parse_inner(&right_ts)?;
+
+            if left_ts.is_empty() && (op.0 == SimpleOpType::AddSub || op.0 == SimpleOpType::Neg || op.0 == SimpleOpType::BoolNot) {
                 return Ok(AST::from_operation(Operation::SimpleOperation {
                     op_type: op.0.clone(), 
                     left: AST::Scalar(0.), 
                     right: right_b
                 }));
-            } else if left_s.is_empty() {
+            } else if left_ts.is_empty() {
                 return Err(ParserError::OperationNeedsLeftValue);
             }
-            let left_b = parse_inner(&expr_chars[0..(op.1-op.2)].to_vec().iter().collect::<String>())?;
+
+            let left_b = parse_inner(&left_ts)?;
+
             if op.0 == SimpleOpType::Assign {
                 let mut is_ok = false;
                 if let AST::Function { ref inputs, .. } = left_b {
@@ -264,6 +183,7 @@ fn parse_inner(expr: &str) -> Result<AST, ParserError> {
                     return Err(ParserError::LeftSideOfAssignmentIncorrect);
                 }
             }
+
             return Ok(AST::from_operation(Operation::SimpleOperation {
                 op_type: op.0.clone(),
                 left: left_b,
@@ -272,143 +192,115 @@ fn parse_inner(expr: &str) -> Result<AST, ParserError> {
         }
     }
 
-    // is it a function?
-
-    let function_look_up = vec![(SimpleOpType::Sin, "sin("), (SimpleOpType::Cos, "cos("), (SimpleOpType::Tan, "tan("), (SimpleOpType::Abs, "abs("), (SimpleOpType::Sqrt, "sqrt("), (SimpleOpType::Root, "root("), (SimpleOpType::Ln, "ln("), (SimpleOpType::Arcsin, "arcsin("), (SimpleOpType::Arccos, "arccos("), (SimpleOpType::Arctan, "arctan("), (SimpleOpType::Det, "det("), (SimpleOpType::Inv, "inv(")];
+    // is it a function/advanced op?
     
-    for i in function_look_up {
-        if expr_chars.iter().collect::<String>().starts_with(i.1) {
-            if i.0 == SimpleOpType::Root {
-                let args = get_args(&expr_chars[i.1.len()..expr_chars.len()-1]);
-
-                if args.len() != 2 {
-                    return Err(ParserError::WrongNumberOfArgs("root".to_string()));
-                } else {
-                    let left_b = parse_inner(&args[0].clone())?;
-                    let right_b = parse_inner(&args[1].clone())?;
-
-                    return Ok(AST::from_operation(Operation::SimpleOperation { 
-                        op_type: i.0,
-                        left: left_b,
-                        right: right_b
-                    }));
+    if tokens.len() == 2 && let Token::Ident(ref ident) = *tokens[0] && let Token::Group(ref group) = *tokens[1] && group.delimiter == Delimiter::Parenthesis {
+        match ident.as_str() {
+            "D" => {
+                let args = get_args(&group.stream);
+                
+                if args.len() != 3 {
+                    return Err(ParserError::WrongNumberOfArgs("derivative".to_string()));
                 }
-            } else {
-                let left_b = parse_inner(&expr_chars[i.1.len()..expr_chars.len()-1].to_vec().iter().collect::<String>())?;
-                return Ok(AST::from_operation(Operation::SimpleOperation {
-                    op_type: i.0,
-                    left: left_b,
-                    right: AST::from_value(Value::Scalar(0.))
-                }));
+                let parsed_function = parse_inner(&args[0])?;
+                let Ok(AST::Variable(in_terms_of)) = parse_inner(&args[1]) else {
+                    return Err(ParserError::DerivNotITOVar);
+                };
+                let parsed_value_at = parse_inner(&args[2])?;
+                return Ok(AST::from_operation(Operation::AdvancedOperation(AdvancedOperation::Derivative {
+                    expr: parsed_function,
+                    in_terms_of,
+                    at: parsed_value_at
+                })));
+            },
+            "I" => {
+                let args = get_args(&group.stream);
+                
+                if args.len() != 4 {
+                    return Err(ParserError::WrongNumberOfArgs("integral".to_string()));
+                }
+                let parsed_function = parse_inner(&args[0])?;
+                let Ok(AST::Variable(in_terms_of)) = parse_inner(&args[1]) else {
+                    return Err(ParserError::DerivNotITOVar);
+                };
+                let parsed_lower_b = parse_inner(&args[2])?;
+                let parsed_upper_b = parse_inner(&args[3])?;
+                return Ok(AST::from_operation(Operation::AdvancedOperation(AdvancedOperation::Integral {
+                    expr: parsed_function,
+                    in_terms_of,
+                    lower_bound: parsed_lower_b,
+                    upper_bound: parsed_upper_b
+                })));
+            },
+            "eq" => {
+                let entries = get_args(&group.stream);
+
+                let mut parsed_equations = vec![];
+                let mut search_vars = vec![];
+
+                for i in entries {
+                    if i.len() == 1 && let Token::Ident(ref ident) = *i[0] {
+                        search_vars.push(ident.to_string());
+                        continue;
+                    }
+
+                    let left = i.split(|s| if let Token::Punct(ref punct) = **s && punct == "=" {true} else {false}).nth(0).unwrap();
+                    let right = i.split(|s| if let Token::Punct(ref punct) = **s && punct == "=" {true} else {false}).nth(1).unwrap();
+
+                    let left_b;
+                    let right_b;
+                    if left.len() >= right.len() {
+                        left_b = parse_inner(&left)?;
+                        right_b = parse_inner(&right)?;
+                    } else {
+                        left_b = parse_inner(&right)?;
+                        right_b = parse_inner(&left)?;
+                    }
+
+                    parsed_equations.push((left_b, right_b));
+                }
+
+                return Ok(AST::from_operation(Operation::AdvancedOperation(AdvancedOperation::Equation { equations: parsed_equations, search_vars })));
+            },
+            "if" => {
+                let args = get_args(&group.stream);
+
+                if args.len() != 2 && args.len() != 3 {
+                    return Err(ParserError::WrongNumberOfArgs("if".to_string()));
+                }
+
+                let parsed_condition = parse_inner(&args[0])?;
+                let parsed_then = parse_inner(&args[1])?;
+                let parsed_else = if args.len() == 3 {Some(parse_inner(&args[2])?)} else {None};
+
+                return Ok(AST::from_operation(Operation::AdvancedOperation(AdvancedOperation::Conditional {
+                    condition: parsed_condition,
+                    then: parsed_then,
+                    r#else: parsed_else
+                })));
+            }
+            _ => {
+                let args = get_args(&group.stream);
+
+                let parsed_args: Vec<AST> = args.iter().map(|a| parse_inner(a)).collect::<Result<Vec<AST>, ParserError>>()?;
+
+                return Ok(AST::Function { name: ident.to_string(), inputs: Box::new(parsed_args) })
             }
         }
-    }
 
-    // is it an advanced operation?
-
-    let advanced_op_look_up = vec![(AdvancedOpType::Integral, "I("), (AdvancedOpType::Derivative, "D("), (AdvancedOpType::Equation, "eq(")];
-
-    for i in advanced_op_look_up {
-        if expr_chars.iter().collect::<String>().starts_with(i.1) {
-            match i.0 {
-                AdvancedOpType::Derivative => {
-                    let args = get_args(&expr_chars[i.1.len()..expr_chars.len()-1]);
-                    
-                    if args.len() != 3 {
-                        return Err(ParserError::WrongNumberOfArgs("derivative".to_string()));
-                    }
-                    let parsed_function = parse_inner(&args[0])?;
-                    let parsed_value_at = parse_inner(&args[2])?;
-                    return Ok(AST::from_operation(Operation::AdvancedOperation(AdvancedOperation::Derivative {
-                        expr: parsed_function,
-                        in_terms_of: args[1].clone(),
-                        at: parsed_value_at
-                    })));
-                },
-                AdvancedOpType::Integral => {
-                    let args = get_args(&expr_chars[i.1.len()..expr_chars.len()-1]);
-                    
-                    if args.len() != 4 {
-                        return Err(ParserError::WrongNumberOfArgs("integral".to_string()));
-                    }
-                    let parsed_function = parse_inner(&args[0])?;
-                    let parsed_lower_b = parse_inner(&args[2])?;
-                    let parsed_upper_b = parse_inner(&args[3])?;
-                    return Ok(AST::from_operation(Operation::AdvancedOperation(AdvancedOperation::Integral {
-                        expr: parsed_function,
-                        in_terms_of: args[1].clone(),
-                        lower_bound: parsed_lower_b,
-                        upper_bound: parsed_upper_b
-                    })));
-                },
-                AdvancedOpType::Equation => {
-                    let entries = get_args(&expr_chars[i.1.len()..expr_chars.len()-1]);
-
-                    let mut parsed_equations = vec![];
-                    let mut search_vars = vec![];
-
-                    for i in entries {
-                        if !i.contains("=") {
-                            search_vars.push(i.clone());
-                            continue;
-                        }
-
-                        let left = i.split("=").nth(0).unwrap().to_string();
-                        let right = i.split("=").nth(1).unwrap().to_string();
-
-                        let left_b;
-                        let right_b;
-                        if left.len() >= right.len() {
-                            left_b = parse_inner(&left)?;
-                            right_b = parse_inner(&right)?;
-                        } else {
-                            left_b = parse_inner(&right)?;
-                            right_b = parse_inner(&left)?;
-                        }
-
-                        parsed_equations.push((left_b, right_b));
-                    }
-
-                    return Ok(AST::from_operation(Operation::AdvancedOperation(AdvancedOperation::Equation { equations: parsed_equations, search_vars })));
-                }
-            }
-        }
-    }
-    
-    // is it a custom function?
-
-    if expr.contains("(") && expr.find("(").unwrap() != 0 && *expr_chars.last().unwrap() == ')' {
-        let first_parenth = expr.find("(").unwrap();
-        let args = get_args(&expr_chars[first_parenth+1..expr_chars.len()-1]);
-
-        let parsed_args: Vec<AST> = args.iter().map(|a| parse_inner(a)).collect::<Result<Vec<AST>, ParserError>>()?;
-
-        let func_name = expr.split("(").nth(0).unwrap().to_string(); 
-
-        if is_valid_var_name(func_name.clone()) == false {
-            return Err(ParserError::InvalidFunctionName(func_name));
-        }
-
-        return Ok(AST::Function { name: func_name, inputs: Box::new(parsed_args) })
     }
     
     // is it a variable?
 
-    if expr_chars[0].is_alphabetic() || expr_chars[0] == '\\' {
-        if is_valid_var_name(expr.to_string()) == false {
-            return Err(ParserError::InvalidVariableName(expr.to_string()));
-        }
-
-        return Ok(AST::from_variable_name(expr));
+    if tokens.len() == 1 && let Token::Ident(ref ident) = *tokens[0] {
+        return Ok(AST::from_variable_name(ident));
     }
-
-    // is it a list of values?
     
-    if expr_chars[0] == '{' && expr_chars[expr_chars.len()-1] == '}' {
-        return Ok(AST::List(get_args(&expr_chars[1..expr_chars.len()-1]).iter().map(|s| parse_inner(s)).collect::<Result<Vec<AST>, ParserError>>()?));
+
+    if tokens.len() == 1 {
+        return Ok(parse_value(&tokens[0])?);
     }
+    
 
-    let v = parse_value(expr_chars.iter().collect())?;
-
-    return Ok(v);
+    return Err(ParserError::InvalidState);
 }

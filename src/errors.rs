@@ -9,6 +9,7 @@ pub enum MathLibError {
     QuickEvalError(QuickEvalError),
     #[cfg(feature = "output")]
     LatexError(LatexError),
+    TokenizerError(TokenizerError),
     Other(String)
 }
 
@@ -21,7 +22,8 @@ impl MathLibError {
             MathLibError::QuickEvalError(s) => return s.get_reason(),
             #[cfg(feature = "output")]
             MathLibError::LatexError(s) => return s.get_reason(),
-            MathLibError::Other(s) => return s.to_string(),
+            MathLibError::TokenizerError(s) => return s.get_reason(),
+            MathLibError::Other(s) => return s.to_string()
         }
     }
 }
@@ -44,6 +46,12 @@ impl From<QuickEvalError> for MathLibError {
     }
 }
 
+impl From<TokenizerError> for MathLibError {
+    fn from(value: TokenizerError) -> Self {
+        MathLibError::TokenizerError(value)
+    }
+}
+
 #[cfg(feature = "output")]
 impl From<LatexError> for MathLibError {
     fn from(value: LatexError) -> Self {
@@ -54,45 +62,78 @@ impl From<LatexError> for MathLibError {
 #[derive(Debug, PartialEq, Clone)]
 pub enum ParserError {
     ParseValue(String),
-    MissingBracket,
     EmptyVec,
     NotRectMatrix,
     EmptyExpr,
-    UnmatchedOpenDelimiter,
-    UnmatchedCloseDelimiter,
     EquationWithoutEqual,
     TooManyEquals,
     NoEquation,
-    InvalidVariableName(String),
-    InvalidFunctionName(String),
+    UnrecognizedPunct,
+    InvalidArg(String),
     WrongNumberOfArgs(String),
     OperationNeedsLeftValue,
-    LeftSideOfAssignmentIncorrect
+    DerivNotITOVar,
+    LeftSideOfAssignmentIncorrect,
+    InvalidState,
+    TokenizerError(TokenizerError)
 }
 
 impl ParserError {
     pub fn get_reason(&self) -> String {
         match self {
             ParserError::ParseValue(s) => return format!("Could not parse value {}!", s),
-            ParserError::MissingBracket => return "Could not parse vector/matrix because of missing brackets!".to_string(),
             ParserError::EmptyVec => return "Could not parse vector/matrix because it is (partially) empty!".to_string(),
             ParserError::NotRectMatrix => return "Could not parse matrix because it is not rectangular!".to_string(),
             ParserError::EmptyExpr => return "Could not parse empty expression!".to_string(),
-            ParserError::UnmatchedOpenDelimiter => return "Unmatched opening delimiter!".to_string(),
-            ParserError::UnmatchedCloseDelimiter => return "Unmatched closing delimiter!".to_string(),
+            ParserError::UnrecognizedPunct => return "Unrecognized punctuation!".to_string(),
             ParserError::EquationWithoutEqual => return "Must have = in equation!".to_string(),
             ParserError::TooManyEquals => return "Too many = in equation. If you want to specify a system of equations please seperate each equation with a ','.".to_string(),
             ParserError::NoEquation => return "Equation does not contain an '='!".to_string(),
-            ParserError::InvalidVariableName(s) => return format!("Found invalid variable name: {}!", s),
-            ParserError::InvalidFunctionName(s) => return format!("Found invalid function name: {}!", s),
+            ParserError::InvalidArg(s) => return format!("Invalid argument for operation {s}!"),
             ParserError::WrongNumberOfArgs(s) => return format!("Wrong number of arguments for {} operation!", s),
             ParserError::OperationNeedsLeftValue => return "The operation needs to have a left side!".to_string(),
             ParserError::LeftSideOfAssignmentIncorrect => return "The left side of an assignment needs to be a variable or a function!".to_string(),
+            ParserError::InvalidState => return "An invalid state was reached!".to_string(),
+            ParserError::DerivNotITOVar => return "Second input (in terms of) to derivative/integral function must be a variable!".to_string(),
+            ParserError::TokenizerError(e) => return e.get_reason()
         }
     } 
 }
 
+impl From<TokenizerError> for ParserError {
+    fn from(value: TokenizerError) -> Self {
+        ParserError::TokenizerError(value)
+    }
+}
+
 impl Display for ParserError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.get_reason())
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum TokenizerError {
+    InvalidIdentName,
+    UnmatchedDelimiter,
+    InvalidLiteral(String),
+    InvalidPunct(char),
+    InvalidState
+}
+
+impl TokenizerError {
+    pub fn get_reason(&self) -> String {
+        match self {
+            TokenizerError::InvalidIdentName => return "A function/variable name is invalid!".to_string(),
+            TokenizerError::UnmatchedDelimiter => return "Unmatched delimiter".to_string(),
+            TokenizerError::InvalidLiteral(l) => return format!("Invalid literal {l}!"),
+            TokenizerError::InvalidPunct(c) => return format!("Invalid punt {c}!"),
+            TokenizerError::InvalidState => return "An invalid state was encountered!".to_string()
+        }
+    } 
+}
+
+impl Display for TokenizerError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.get_reason())
     }

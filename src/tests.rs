@@ -1,4 +1,4 @@
-use crate::{basetypes::Function, errors::{EvalError, MathLibError, ParserError, QuickEvalError}, parse, quick_eval, value, Context, Value, Variable};
+use crate::{Context, Value, Values, Variable, basetypes::Function, errors::{EvalError, MathLibError, ParserError, QuickEvalError, TokenizerError}, parse, quick_eval, value};
 
 #[test]
 fn easy_eval1() -> Result<(), MathLibError> {
@@ -56,7 +56,7 @@ fn easy_eval6() -> Result<(), MathLibError> {
 
 #[test]
 fn easy_eval7() -> Result<(), MathLibError> {
-    let res = quick_eval("&root(9, 2)", &mut Context::empty())?.to_vec();
+    let res = quick_eval("+-root(9, 2)", &mut Context::empty())?.to_vec();
 
     assert_eq!(res, vec![value!(3), value!(-3)]);
 
@@ -65,7 +65,7 @@ fn easy_eval7() -> Result<(), MathLibError> {
 
 #[test]
 fn easy_eval8() -> Result<(), MathLibError> {
-    let res = quick_eval("2*(&sqrt(9))", &mut Context::empty())?.to_vec();
+    let res = quick_eval("2*(+-sqrt(9))", &mut Context::empty())?.to_vec();
 
     assert_eq!(res, vec![value!(6), value!(-6)]);
 
@@ -331,7 +331,7 @@ fn medium_eval23() -> Result<(), MathLibError> {
 
 #[test]
 fn medium_eval24() -> Result<(), MathLibError> {
-    let res = quick_eval("[&sqrt(9), &sqrt(9), 0]", &mut Context::empty())?.to_vec();
+    let res = quick_eval("[+-sqrt(9), +-sqrt(9), 0]", &mut Context::empty())?.to_vec();
 
     assert_eq!(res, vec![value!(3, 3, 0), value!(3, -3, 0), value!(-3, 3, 0), value!(-3, -3, 0)]);
 
@@ -340,7 +340,7 @@ fn medium_eval24() -> Result<(), MathLibError> {
 
 #[test]
 fn medium_eval25() -> Result<(), MathLibError> {
-    let res = quick_eval("[[&sqrt(9), 0, 0], [0, 1, 0], [0, 0, 1]]", &mut Context::empty())?.to_vec();
+    let res = quick_eval("[[+-sqrt(9), 0, 0], [0, 1, 0], [0, 0, 1]]", &mut Context::empty())?.to_vec();
 
     assert_eq!(res, vec![value!(3, 0, 0; 0, 1, 0; 0, 0, 1), value!(-3, 0, 0; 0, 1, 0; 0, 0, 1)]);
 
@@ -349,10 +349,10 @@ fn medium_eval25() -> Result<(), MathLibError> {
 
 #[test]
 fn medium_eval26() -> Result<(), MathLibError> {
-    let function = parse("&sqrt(x)+y")?;
+    let function = parse("+-sqrt(x)+y")?;
     let function_var = Function::new("f", function, vec!["x", "y"]);
 
-    let res = quick_eval("f(&sqrt(16), &sqrt(9))", &mut Context::new(vec![], vec![function_var]))?.to_vec();
+    let res = quick_eval("f(+-sqrt(16), +-sqrt(9))", &mut Context::new(vec![], vec![function_var]))?.to_vec();
 
     assert_eq!(res[0..4].to_vec(), vec![value!(5), value!(1), value!(-1), value!(-5)]);
 
@@ -422,10 +422,19 @@ fn medium_eval32() -> Result<(), MathLibError> {
 }
 
 #[test]
+fn medium_eval33() -> Result<(), MathLibError> {
+    let res = quick_eval("eq(((25x^3-96x^2+512x+384)/(x^4+2x^3+90x^2-128x+1664)^(1.5))/(-sqrt(1-(32-x+x^2)/(((x-1)^2+25)(x^2+64)))^2))=0, x)", &mut Context::empty());
+
+    assert_eq!(res, Err(QuickEvalError::ParserError(ParserError::TokenizerError(TokenizerError::UnmatchedDelimiter))));
+
+    Ok(())
+}
+
+#[test]
 fn mutable_context1() -> Result<(), MathLibError> {
     let mut c = Context::default();
 
-    let _ = quick_eval("x = 10", &mut c)?;
+    quick_eval("x = 10", &mut c)?;
 
     assert_eq!(c.get_var("x"), Some(Variable::new("x", vec![value!(10)])));
 
@@ -440,7 +449,7 @@ fn mutable_context1() -> Result<(), MathLibError> {
 fn mutable_context2() -> Result<(), MathLibError> {
     let mut c = Context::default();
 
-    let _ = quick_eval("x = eq(x^2=9, x)", &mut c)?;
+    quick_eval("x = eq(x^2=9, x)", &mut c)?;
 
     let res = quick_eval("x", &mut c)?.round(3).to_vec();
 
@@ -453,7 +462,7 @@ fn mutable_context2() -> Result<(), MathLibError> {
 fn mutable_context3() -> Result<(), MathLibError> {
     let mut c = Context::default();
 
-    let _ = quick_eval("f(x) = x^2", &mut c)?;
+    quick_eval("f(x) = x^2", &mut c)?;
 
     let res = quick_eval("f(5)", &mut c)?.to_vec();
 
@@ -466,7 +475,7 @@ fn mutable_context3() -> Result<(), MathLibError> {
 fn mutable_context4() -> Result<(), MathLibError> {
     let mut c = Context::default();
 
-    let _ = quick_eval("{x, y, z} = {1, 2, 3}", &mut c)?;
+    quick_eval("{x, y, z} = {1, 2, 3}", &mut c)?;
 
     let res = quick_eval("x", &mut c)?.to_vec();
     assert_eq!(res[0], value!(1));
@@ -484,10 +493,261 @@ fn mutable_context4() -> Result<(), MathLibError> {
 fn mutable_context5() -> Result<(), MathLibError> {
     let mut c = Context::default();
 
-    let _ = quick_eval("x = {1, 2, 3}", &mut c)?;
+    quick_eval("x = {1, 2, 3}", &mut c)?;
 
     let res = quick_eval("x", &mut c)?.to_vec();
     assert_eq!(res, vec![value!(1), value!(2), value!(3)]);
+
+    Ok(())
+}
+
+#[test]
+fn function_side_effects1() -> Result<(), MathLibError> {
+    let mut c = Context::default();
+
+    quick_eval("f(x) = y=x", &mut c)?;
+
+    quick_eval("f(5)", &mut c)?;
+
+    assert_eq!(c.get_var("y".to_string()), Some(Variable { name: "y".to_string(), values: Values::from_vec(vec![value!(5)]) }));
+
+    Ok(())
+}
+
+#[test]
+fn function_side_effects2() -> Result<(), MathLibError> {
+    let mut c = Context::default();
+
+    quick_eval("f(x) = z=y=x*2", &mut c)?;
+
+    quick_eval("f(5)", &mut c)?;
+
+    assert_eq!(c.get_var("y".to_string()), Some(Variable { name: "y".to_string(), values: Values::from_vec(vec![value!(10)]) }));
+    assert_eq!(c.get_var("z".to_string()), Some(Variable { name: "z".to_string(), values: Values::from_vec(vec![value!(10)]) }));
+
+    Ok(())
+}
+
+#[test]
+fn boolean1() -> Result<(), MathLibError> {
+    let res = quick_eval("6==6", &mut Context::empty())?.to_vec();
+
+    assert_eq!(res[0], value!(1));
+
+    Ok(())
+}
+
+#[test]
+fn boolean2() -> Result<(), MathLibError> {
+    let res = quick_eval("!(10==6)", &mut Context::empty())?.to_vec();
+
+    assert_eq!(res[0], value!(1));
+
+    Ok(())
+}
+
+#[test]
+fn boolean3() -> Result<(), MathLibError> {
+    let res = quick_eval("6==10 | 10==10", &mut Context::empty())?.to_vec();
+
+    assert_eq!(res[0], value!(1));
+
+    Ok(())
+}
+
+#[test]
+fn boolean4() -> Result<(), MathLibError> {
+    let res = quick_eval("6==6 & 10", &mut Context::empty())?.to_vec();
+
+    assert_eq!(res[0], value!(1));
+
+    Ok(())
+}
+
+#[test]
+fn boolean5() -> Result<(), MathLibError> {
+    let res = quick_eval("6!=10 & 10==10", &mut Context::empty())?.to_vec();
+
+    assert_eq!(res[0], value!(1));
+
+    Ok(())
+}
+
+#[test]
+fn boolean6() -> Result<(), MathLibError> {
+    let res = quick_eval("6==10 | 10!=10", &mut Context::empty())?.to_vec();
+
+    assert_eq!(res[0], value!(0));
+
+    Ok(())
+}
+
+#[test]
+fn boolean7() -> Result<(), MathLibError> {
+    let res = quick_eval("6==6 & 6!=10", &mut Context::empty())?.to_vec();
+
+    assert_eq!(res[0], value!(1));
+
+    Ok(())
+}
+
+#[test]
+fn boolean8() -> Result<(), MathLibError> {
+    let mut c = Context::empty();
+
+    quick_eval("a = 6", &mut c)?;
+    quick_eval("b = 10", &mut c)?;
+
+    let res = quick_eval("!(a!=10 | b!=10)", &mut c)?.to_vec();
+
+    assert_eq!(res[0], value!(0));
+
+    Ok(())
+}
+
+#[test]
+fn boolean9() -> Result<(), MathLibError> {
+    let mut c = Context::empty();
+
+    quick_eval("a = 6", &mut c)?;
+    quick_eval("b = 10", &mut c)?;
+
+    let res = quick_eval("a!=6 & b==10", &mut c)?.to_vec();
+
+    assert_eq!(res[0], value!(0));
+
+    Ok(())
+}
+
+#[test]
+fn boolean10() -> Result<(), MathLibError> {
+    let mut c = Context::empty();
+
+    quick_eval("a = 6", &mut c)?;
+    quick_eval("b = 10", &mut c)?;
+
+    let res = quick_eval("!(a != 10 | b != 10) | b != 5", &mut c)?.to_vec();
+
+    assert_eq!(res[0], value!(1));
+
+    Ok(())
+}
+
+#[test]
+fn boolean11() -> Result<(), MathLibError> {
+    let res = quick_eval("eq(x^2 = 9, x) == -3", &mut Context::empty())?.to_vec();
+
+    assert_eq!(res, vec![value!(1), value!(0)]);
+
+    Ok(())
+}
+
+#[test]
+fn boolean12() -> Result<(), MathLibError> {
+    let res = quick_eval("2<3", &mut Context::empty())?.to_vec();
+
+    assert_eq!(res[0], value!(1));
+
+    Ok(())
+}
+
+#[test]
+fn boolean13() -> Result<(), MathLibError> {
+    let res = quick_eval("(2<3 & 3<2) | 3<=3", &mut Context::empty())?.to_vec();
+
+    assert_eq!(res[0], value!(1));
+
+    Ok(())
+}
+
+#[test]
+fn boolean14() -> Result<(), MathLibError> {
+    let res = quick_eval("abs(eq(x^2 = 0, x)) < 10^(-4)", &mut Context::empty())?.to_vec();
+
+    assert_eq!(res[0], value!(1));
+
+    Ok(())
+}
+
+#[test]
+fn if_statement1() -> Result<(), MathLibError> {
+    let res = quick_eval("if([2, 3, 4]==[2, 3, 4], 5, 2)", &mut Context::empty())?.to_vec();
+
+    assert_eq!(res[0], value!(5));
+
+    Ok(())
+}
+
+#[test]
+fn if_statement2() -> Result<(), MathLibError> {
+    let res = quick_eval("if(eq(x^2 = 9, x) == -3, 5, 2)", &mut Context::empty())?.to_vec();
+
+    assert_eq!(res, vec![value!(5), value!(2)]);
+
+    Ok(())
+}
+
+#[cfg(feature = "output")]
+#[test]
+fn if_statement_export() -> Result<(), MathLibError> {
+    use crate::{eval, png_from_latex, Step};
+
+    let parsed_expr = parse("f(x) =
+    if(x == 0 & state == 0,
+        state = 1,
+    if(x == 1 & state == 1,
+        state = 2,
+    if(x == 2 & state == 2,
+        state = 3,
+    if(x == 3 & state == 3,
+        state = 4,
+    state = 0))))")?;
+
+    let res = eval(&parsed_expr, &mut Context::empty())?;
+
+    let step = Step::new(parsed_expr, res);
+
+    let png = png_from_latex(step.as_latex_inline(), 100, "#FFFFFF")?;
+
+    let _ = std::fs::write("./images/if_test.png", png);
+
+    Ok(())
+}
+
+#[test]
+fn state_machine1() -> Result<(), MathLibError> {
+    //m = 0,
+    //a = 1,
+    //t = 2,
+    //h = 3
+
+    let mut c = Context::empty();
+    quick_eval("state = 0", &mut c)?;
+
+    quick_eval("f(x) =
+    if(x == 0 & state == 0,
+        state = 1,
+    if(x == 1 & state == 1,
+        state = 2,
+    if(x == 2 & state == 2,
+        state = 3,
+    if(x == 3 & state == 3,
+        state = 4,
+    state = 0))))", &mut c)?;
+
+    quick_eval("f({0, 1, 2, 3})", &mut c)?;
+
+    let res = quick_eval("state", &mut c)?.to_vec();
+
+    assert_eq!(res[0], value!(4));
+    
+    quick_eval("state = 0", &mut c)?;
+
+    quick_eval("f({0, 1, 4, 2})", &mut c)?.to_vec();
+    
+    let res = quick_eval("state", &mut c)?.to_vec();
+
+    assert_ne!(res[0], value!(4));
 
     Ok(())
 }
@@ -524,7 +784,7 @@ fn hard_eval1() -> Result<(), MathLibError> {
     let x = Variable::new("x", value!(3));
     let a = Variable::new("A", value!(3, 2, 1));
     let b = Variable::new("B", value!(2, 3, 4; 5, 1, 7; 2, 3, 6));
-    let res = quick_eval("(x*B*A)?1", &mut Context::from_vars(vec![a, x, b]))?.to_vec();
+    let res = quick_eval("(x*B*A)@1", &mut Context::from_vars(vec![a, x, b]))?.to_vec();
 
     assert_eq!(res[0], value!(72));
 
@@ -672,12 +932,19 @@ fn output1() -> Result<(), MathLibError> {
     use crate::{eval, export_history, ExportType, Step};
     use std::fs;
 
+    let mut c = Context::empty();
+
     let parsed_expr = parse("x = 3*3+6^5")?;
-    let res = eval(&parsed_expr, &mut Context::empty())?;
+    let res = eval(&parsed_expr, &mut c)?;
 
-    let step = Step::new(parsed_expr, res);
+    let step1 = Step::new(parsed_expr, res);
 
-    let pdf = export_history(vec![step], ExportType::Pdf)?;
+    let parsed_expr = parse("3x")?;
+    let res = eval(&parsed_expr, &mut c)?;
+
+    let step2 = Step::new(parsed_expr, res);
+
+    let pdf = export_history(vec![step1, step2], ExportType::Pdf)?;
 
     let _ = fs::write("./images/test.pdf", pdf);
 

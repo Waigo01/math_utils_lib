@@ -24,7 +24,7 @@ resvg = { version = "0.43.0", optional = true }
 serde = { version = "1.0.217", features = ["derive"], optional = true }
 
 [features]
-default = ["output"]
+default = []
 doc-images = ["dep:embed-doc-image"]
 high-prec = []
 row-major = []

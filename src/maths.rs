@@ -5,6 +5,7 @@ pub mod mult_div;
 pub mod cross_pow;
 pub mod calculus;
 pub mod special;
+pub mod bool;
 
 #[doc(hidden)]
 pub fn add(lv: &Value, rv: &Value) -> Result<Value, String> {

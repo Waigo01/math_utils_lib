@@ -60,18 +60,20 @@ impl Step {
     pub fn new(term: AST, result: Values) -> Step {
         return Step { term, result };
     }
-    fn as_latex_base(&self, with_align: bool, with_equation_number: Option<i32>) -> String {
-        let aligner = if with_align {"&"} else {""};
+    fn as_latex_base(&self, mut with_align: bool, with_equation_number: Option<i32>) -> String {
 
         let tag_with_label = if let Some(equation_number) = with_equation_number {format!("\\tag{{{}}}\\label{{eq:{}}} \\\\ \\\\ \n", equation_number, equation_number)} else {String::new()};
 
-        let expression = self.term.as_latex();
+        let expression = if with_align {self.term.as_latex()} else {self.term.as_latex_inline()};
 
         let result_expression = if let AST::Operation(ref op) = self.term && let Operation::SimpleOperation{ref op_type, ref right, ..} = **op && *op_type == SimpleOpType::Assign {
+            if with_align {with_align = false}
             right.as_latex()
         } else {
             expression.clone()
         };
+        
+        let aligner = if with_align {"&"} else {""};
 
         let res = self.result.as_latex();
 

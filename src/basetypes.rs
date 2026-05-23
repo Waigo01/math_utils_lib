@@ -1,4 +1,4 @@
-use crate::helpers::{center_in_string, round_and_format};
+use crate::helpers::{center_in_string, flatten_conditional, round_and_format};
 
 #[doc(hidden)]
 const VAR_SYMBOLS: [(&str, &str); 48] = [("\\alpha", "𝛼"), ("\\Alpha", "𝛢"), ("\\beta", "𝛽"), ("\\Beta", "𝛣"), ("\\gamma", "𝛾"), ("\\Gamma", "𝚪"),
@@ -723,6 +723,15 @@ impl AST {
                         let rv = &right.as_string(); 
                         match op_type {
                             SimpleOpType::Assign => return format!("{} = {}", lv, rv),
+                            SimpleOpType::BoolAnd => return format!("{} & {}", lv, rv),
+                            SimpleOpType::BoolOr => return format!("{} | {}", lv, rv),
+                            SimpleOpType::BoolEq => return format!("{} == {}", lv, rv),
+                            SimpleOpType::BoolNEq => return format!("{} != {}", lv, rv),
+                            SimpleOpType::BoolLt => return format!("{} < {}", lv, rv),
+                            SimpleOpType::BoolGt => return format!("{} > {}", lv, rv),
+                            SimpleOpType::BoolLtEq => return format!("{} <= {}", lv, rv),
+                            SimpleOpType::BoolGtEq => return format!("{} >= {}", lv, rv),
+                            SimpleOpType::BoolNot => return format!("!{}", rv),
                             SimpleOpType::Get => return format!("{}_{}", lv, rv),
                             SimpleOpType::Add => return format!("{} + {}", lv, rv),
                             SimpleOpType::Sub => return format!("{} - {}", lv, rv),
@@ -733,18 +742,6 @@ impl AST {
                             SimpleOpType::HiddenMult => return format!("{}{}", lv, rv),
                             SimpleOpType::Pow => return format!("{}^({})", lv, rv),
                             SimpleOpType::Cross => return format!("{}x{}", lv, rv),
-                            SimpleOpType::Abs => return format!("|{}|", lv),
-                            SimpleOpType::Sin => return format!("sin({})", lv),
-                            SimpleOpType::Cos => return format!("cos({})", lv),
-                            SimpleOpType::Tan => return format!("tan({})", lv),
-                            SimpleOpType::Sqrt => return format!("sqrt({})", lv),
-                            SimpleOpType::Root => return format!("root({}, {})", lv, rv),
-                            SimpleOpType::Ln => return format!("ln({})", lv),
-                            SimpleOpType::Arcsin => return format!("arcsin({})", lv),
-                            SimpleOpType::Arccos => return format!("arccos({})", lv),
-                            SimpleOpType::Arctan => return format!("arctan({})", lv),
-                            SimpleOpType::Det => return format!("det({})", lv),
-                            SimpleOpType::Inv => return format!("inv({})", lv),
                             SimpleOpType::Parenths => return format!("({})", lv),
                         }
                     },
@@ -764,6 +761,15 @@ impl AST {
                             AdvancedOperation::Equation { equations, .. } => {
                                 let eqs: Vec<String> = equations.iter().map(|e| format!("{}={}", e.0.as_string(), e.1.as_string())).collect();
                                 return format!("eq({})", eqs.join(","));
+                            },
+                            AdvancedOperation::Conditional { condition, then, r#else } => {
+                                let condition = condition.as_string();
+                                let then = then.as_string();
+                                if let Some(r#else) = r#else {
+                                    return format!("if({}, {}, {})", condition, then, r#else.as_string());
+                                } else {
+                                    return format!("if({}, {})", condition, then);
+                                }
                             }
                         }
                     }
@@ -773,7 +779,11 @@ impl AST {
     }
     /// converts the AST to latex.
     pub fn as_latex(&self) -> String {
-        self.latex_print()
+        self.latex_print(true)
+    }
+    /// converts the AST to latex.
+    pub fn as_latex_inline(&self) -> String {
+        self.latex_print(false)
     }
     /// converts the AST to latex, adding a function identifier in front of the term. The function
     /// also provides the option to add a "&" aligner in front of the "=".
@@ -784,15 +794,15 @@ impl AST {
         } else {
             aligner = String::new();
         }
-        format!("{}({}) {}= {}", fun_name.into(), fun_inputs.into_iter().map(|s| s.into()).collect::<Vec<String>>().join(", "), aligner, self.latex_print())
+        format!("{}({}) {}= {}", fun_name.into(), fun_inputs.into_iter().map(|s| s.into()).collect::<Vec<String>>().join(", "), aligner, self.latex_print(add_aligner))
     }
-    fn latex_print(&self) -> String {
+    fn latex_print(&self, add_aligner: bool) -> String {
         match self {
             AST::Scalar(s) => return round_and_format(*s, true),
             AST::Vector(v) => {
                 let mut output_string = "\\begin{pmatrix}".to_string();
                 for i in 0..v.len() {
-                    let latex_vi = &v[i].latex_print();
+                    let latex_vi = &v[i].latex_print(false);
                     if i != v.len()-1 {
                         output_string += &format!("{}\\\\ ", latex_vi);
                     } else {
@@ -807,7 +817,7 @@ impl AST {
                 for i in 0..m.len(){
                     let mut row_string = "".to_string();
                     for j in 0..m[i].len() {
-                        let matrix_mij = &m[i][j].latex_print();
+                        let matrix_mij = &m[i][j].latex_print(false);
                         if j != m[i].len()-1 {
                             row_string += &format!("{} & ", matrix_mij);
                         } else {
@@ -819,7 +829,7 @@ impl AST {
                 output_string += "\\end{bmatrix}";
                 return output_string;
             },
-            AST::List(l) => return format!("\\left\\{{{}\\right\\}}", l.iter().map(|a| a.latex_print()).collect::<Vec<String>>().join("; ")),
+            AST::List(l) => return format!("\\left\\{{{}\\right\\}}", l.iter().map(|a| a.latex_print(false)).collect::<Vec<String>>().join(", ")),
             AST::Variable(v) => {
                 if v == "pi" {
                     return "\\pi".to_string();
@@ -829,7 +839,7 @@ impl AST {
             AST::Function { name, inputs } => {
                 let mut inputs_str = String::new();
                 for (i, inp) in inputs.iter().enumerate() {
-                    let recursed = inp.latex_print();
+                    let recursed = inp.latex_print(false);
                     if i != inputs.len() - 1 {
                         inputs_str += &format!("{}, ", recursed);
                     } else {
@@ -841,51 +851,71 @@ impl AST {
             AST::Operation(o) => {
                 match &**o  {
                     Operation::SimpleOperation {op_type, left, right} => {
-                        let lv = &left.latex_print();
-                        let rv = &right.latex_print(); 
+                        let lv = &left.latex_print(false);
+                        let rv = &right.latex_print(false); 
                         match op_type {
-                            SimpleOpType::Assign => return format!("{}={}", lv, rv),
+                            SimpleOpType::Assign => return format!("{}{}:={}", lv, if add_aligner {"&"} else {""}, rv),
+                            SimpleOpType::BoolAnd => return format!("{}\\land {}", lv, rv),
+                            SimpleOpType::BoolOr => return format!("{}\\lor {}", lv, rv),
+                            SimpleOpType::BoolEq => return format!("{}={}", lv, rv),
+                            SimpleOpType::BoolNEq => return format!("{}\\neq {}", lv, rv),
+                            SimpleOpType::BoolLt => return format!("{}<{}", lv, rv),
+                            SimpleOpType::BoolGt => return format!("{}>{}", lv, rv),
+                            SimpleOpType::BoolLtEq => return format!("{}\\leq {}", lv, rv),
+                            SimpleOpType::BoolGtEq => return format!("{}\\geq {}", lv, rv),
+                            SimpleOpType::BoolNot => return format!("\\neg {}", rv),
                             SimpleOpType::Get => return format!("{}_{{{}}}", lv, rv),
                             SimpleOpType::Add => return format!("{}+{}", lv, rv),
                             SimpleOpType::Sub => return format!("{}-{}", lv, rv),
-                            SimpleOpType::AddSub => return format!("{}\\pm{}", lv, rv),
+                            SimpleOpType::AddSub => return format!("{}\\pm {}", lv, rv),
                             SimpleOpType::Mult => return format!("{}\\cdot {}", lv, rv),
                             SimpleOpType::Neg => return format!("-{}", rv),
                             SimpleOpType::Div => return format!("\\frac{{{}}}{{{}}}", lv, rv),
                             SimpleOpType::HiddenMult => return format!("{}{}", lv, rv),
                             SimpleOpType::Pow => return format!("{}^{{{}}}", lv, rv),
                             SimpleOpType::Cross => return format!("{}\\times {}", lv, rv),
-                            SimpleOpType::Abs => return format!("|{}|", lv),
-                            SimpleOpType::Sin => return format!("\\sin\\left({}\\right)", lv),
-                            SimpleOpType::Cos => return format!("\\cos\\left({}\\right)", lv),
-                            SimpleOpType::Tan => return format!("\\tan\\left({}\\right)", lv),
-                            SimpleOpType::Sqrt => return format!("\\sqrt{{{}}}", lv),
-                            SimpleOpType::Root => return format!("\\sqrt[{}]{{{}}}", rv, lv),
-                            SimpleOpType::Ln => return format!("\\ln\\left({}\\right)", lv),
-                            SimpleOpType::Arcsin => return format!("\\arcsin\\left({}\\right)", lv),
-                            SimpleOpType::Arccos => return format!("\\arccos\\left({}\\right)", lv),
-                            SimpleOpType::Arctan => return format!("\\arctan\\left({}\\right)", lv),
-                            SimpleOpType::Det => return format!("\\det\\left({}\\right)", lv),
-                            SimpleOpType::Inv => return format!("{}^{{-1}}", lv),
                             SimpleOpType::Parenths => return format!("\\left({}\\right)", lv),
                         }
                     },
                     Operation::AdvancedOperation(a) => {
                         match a {
                             AdvancedOperation::Integral {expr, in_terms_of, lower_bound, upper_bound} => {
-                                let eexpr = &expr.latex_print();
-                                let elower_b = &lower_bound.latex_print();
-                                let eupper_b = &upper_bound.latex_print();
+                                let eexpr = &expr.latex_print(false);
+                                let elower_b = &lower_bound.latex_print(false);
+                                let eupper_b = &upper_bound.latex_print(false);
                                 return format!("\\int_{{{}}}^{{{}}}{} d{}", elower_b, eupper_b, eexpr, in_terms_of);
                             },
                             AdvancedOperation::Derivative {expr, in_terms_of, at} => {
-                                let eexpr = &expr.latex_print();
-                                let eat = &at.latex_print();
+                                let eexpr = &expr.latex_print(false);
+                                let eat = &at.latex_print(false);
                                 return format!("\\frac{{\\partial}}{{\\partial {}}}\\left({}\\right)_{{\\text{{at }}{} = {}}}", in_terms_of, eexpr, in_terms_of, eat);
                             },
                             AdvancedOperation::Equation { equations, .. } => {
-                                let eqs: Vec<String> = equations.iter().map(|e| format!("{}&={}", e.0.latex_print(), e.1.latex_print())).collect();
+                                let eqs: Vec<String> = equations.iter().map(|e| format!("{}&={}", e.0.latex_print(false), e.1.latex_print(false))).collect();
                                 return format!("\\left|\\begin{{align}}{}\\end{{align}}\\right|", eqs.join("\\\\ \n "))
+                            },
+                            AdvancedOperation::Conditional { condition, then, r#else } => {
+                                let (conditionals, r#else) = flatten_conditional(condition, then, r#else);
+
+
+                                let conditionals: Vec<(String, String)> = conditionals.into_iter()
+                                    .map(|c| (c.0.latex_print(false), c.1.latex_print(false))).collect();
+                                
+                                let r#else = if let Some(else_def) = r#else {Some(else_def.latex_print(false))} else {None};
+
+                                let mut return_string = r"\left\{\begin{array}{ c l }".to_string();
+
+                                for conditional in conditionals {
+                                    return_string += &format!("{} & \\quad \\textrm{{if }} {} \\\\", conditional.1, conditional.0);
+                                }
+
+                                if let Some(latex_else) = r#else {
+                                    return_string += &format!("{} & \\quad \\textrm{{otherwise}}", latex_else);
+                                }
+
+                                return_string += r"\end{array}\right.";
+
+                                return return_string;
                             }
                         }
                     }
@@ -904,57 +934,52 @@ impl AST {
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum SimpleOpType {
+    /// Compute the boolean and of two expressions (1==2 & 2==2)
+    BoolAnd = 0,
+    /// Compute the boolean or of two expressions (1==2 | 2==2)
+    BoolOr = 1,
     /// Assign the result of an expression to a variable or assign an expression to a function (x =
     /// 10, f(x) = x^2)
-    Assign,
+    Assign = 2,
+    /// Test for equality, returning 1 if true and 0 if false (3==4)
+    BoolEq = 3,
+    /// Test for inequality, returning 1 if true and 0 if false (3!=4)
+    BoolNEq = 4,
+    /// Test for x less than y, returning 1 if true and 0 if false (3<4)
+    BoolLt = 5,
+    /// Test for x greater than y, returning 1 if true and 0 if false (3>4)
+    BoolGt = 6,
+    /// Test for x less than or equal y, returning 1 if true and 0 if false (3<=4)
+    BoolLtEq = 7,
+    /// Test for x greater than or equal y, returning 1 if true and 0 if false (3>=4)
+    BoolGtEq = 8,
+    /// Calculating the not of a boolean value, turning any number != 0 into a 0 and turning 0 into
+    /// 1 (!3)
+    BoolNot = 9,
     /// Add two scalars, vectors, or matrices (a+b)
-    Add,
+    Add = 10,
     /// Subtract two scalars, vectors, or matrices (a-b)
-    Sub,
-    /// Add and subtract two scalars, vectors or matrices (a&b)
-    AddSub,
+    Sub = 11,
+    /// Add and subtract two scalars, vectors or matrices (a+-b)
+    AddSub = 12,
     /// Negate a scalar, vector or matrix or expression in parentheses (-(3*4))
-    Neg,
+    Neg = 13,
     /// Multiply a scalar, vector or matrix with each other (Dotproduct, Matrix multiplication,
     /// Scalar multiplication, ...) (a*b)
-    Mult,
+    Mult = 14,
     /// Divide two scalars or a vector or matrix with a scalar (a/b)
-    Div,
+    Div = 15,
     /// Calculate the cross product using "#" (V1#V2), only works with dim(V) <= 3. When dim(V) < 3
     /// the vector gets augmented with zeros
-    Cross,
+    Cross = 16,
     /// Hidden multiplication between scalar and variable or parentheses (3a, 5(3+3), (3+5)(2+6))
-    HiddenMult,
+    HiddenMult = 17,
     /// Take a scalar or a matrix to the power of a scalar using "^" (a^b)
-    Pow,
-    /// Index into vector using "?" ([3, 4, 5]?1 = 4)
-    Get,
-    /// Calculate the sin of a scalar (sin(a))
-    Sin,
-    /// Calculate the cos of a scalar (cos(a))
-    Cos,
-    /// Calculate the tan of a scalar (tan(a))
-    Tan,
-    /// Calculate the absolute value of a scalar or the length of a vector (abs(a))
-    Abs,
-    /// Calculate the square root of a scalar (sqrt(a))
-    Sqrt,
-    /// Calculate the nth root of a scalar (root(a, n))
-    Root,
-    /// Calculate the natural log of a scalar (ln(a))
-    Ln,
-    /// Calculate the arcsin of a scalar (arcsin(a))
-    Arcsin,
-    /// Calculate the arccos of a scalar (arccos(a))
-    Arccos,
-    /// Calculate the arctan of a scalar (arctan(a))
-    Arctan,
-    /// Calculate the determinant of a matrix (det(M))
-    Det,
-    /// Calculate the inverse of a matrix (inv(M))
-    Inv,
+    Pow = 18,
+    /// Index into vector using "@" ([3, 4, 5]@1 = 4)
+    Get = 19,
     /// Prioritise expressions in parentheses (3*(5+5))
-    Parenths
+    Parenths = 20
 }
 
 /// specifies the type of operation for the [AdvancedOperation] struct.
@@ -1005,5 +1030,10 @@ pub enum AdvancedOperation{
     Equation {
         equations: Vec<(AST, AST)>,
         search_vars: Vec<String>
+    },
+    Conditional {
+        condition: AST,
+        then: AST,
+        r#else: Option<AST>
     }
 }

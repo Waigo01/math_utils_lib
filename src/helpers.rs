@@ -1,4 +1,4 @@
-use crate::PREC;
+use crate::{PREC, basetypes::{AST, AdvancedOperation, Operation}, tokenizer::{Token, TokenStream}};
 
 #[doc(hidden)]
 pub fn center_in_string(f: String, n: i32) -> String {
@@ -78,23 +78,31 @@ pub fn cart_prod<T: Clone>(arr: &Vec<Vec<T>>) -> Vec<Vec<T>> {
 }
 
 #[doc(hidden)]
-pub fn get_args(chars: &[char]) -> Vec<String> {
+pub fn get_args(stream: &[Box<Token>]) -> Vec<TokenStream> {
     let mut args = vec![];
-    let mut parenths_open = 0;
-    let mut buffer = String::new();
-    for j in chars.into_iter() {
-        if parenths_open == 0 && *j == ',' {
-            args.push(buffer.clone());
-            buffer.clear();
-        } else {
-            buffer.push(*j);
+    let mut arg = vec![];
+    for token in stream {
+        if let Token::Punct(ref s) = **token && s == "," {
+            args.push(TokenStream::from_tokens(arg.clone()));
+            arg.clear();
+            continue;
         }
-        if *j == '(' || *j == '[' || *j == '{' {
-            parenths_open += 1;
-        } else if *j == ')' || *j == ']' || *j == '}' {
-            parenths_open -= 1;
-        }
+        arg.push(token.to_owned());
     }
-    args.push(buffer);
+    args.push(TokenStream::from_tokens(arg));
     args
+}
+
+#[doc(hidden)]
+pub fn flatten_conditional(condition: &AST, then: &AST, mut else_outer: &Option<AST>) -> (Vec<(AST, AST)>, Option<AST>) {
+    let mut conditionals = vec![(condition.clone(), then.clone())];
+
+    while let Some(AST::Operation(op)) = r#else_outer
+    && let Operation::AdvancedOperation(ref aop) = **op
+    && let AdvancedOperation::Conditional { condition, then, r#else } = aop {
+        conditionals.push((condition.clone(), then.clone()));
+        else_outer = r#else;
+    }
+
+    return (conditionals, else_outer.clone())
 }

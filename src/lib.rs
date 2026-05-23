@@ -130,7 +130,7 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //! # Ok::<(), MathLibError>(())
 //! ```
 //!
-//! ```rust
+//! ```ignore
 //! # use math_utils_lib::{parse, eval, Step, png_from_latex, export_history, Context, MathLibError, Value, ExportType};
 //! let parsed_expr = parse("x = 3*3+6^5")?;
 //! let res = eval(&parsed_expr, &mut Context::empty())?;
@@ -183,6 +183,7 @@ pub mod errors;
 pub mod roots;
 pub mod solver;
 pub mod evaluator;
+pub mod tokenizer;
 
 #[cfg(test)]
 mod tests;
