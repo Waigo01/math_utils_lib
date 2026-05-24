@@ -336,12 +336,12 @@ impl Value {
                     for l in 0..s[k].len() {
                         replace_string += &s[k][l].to_string();
                         if l != s[k].len() - 1 {
-                            replace_string += ","
+                            replace_string += ", "
                         }
                     }
                     replace_string += "]";
                     if k != s.len() - 1 {
-                        replace_string += ",";
+                        replace_string += ", ";
                     }
                 }
                 replace_string += "]";
@@ -351,7 +351,7 @@ impl Value {
                 for k in 0..s.len() {
                     replace_string += &s[k].to_string();
                     if k != s.len() - 1 {
-                        replace_string += ",";
+                        replace_string += ", ";
                     }    
                 }
                 replace_string += "]";
