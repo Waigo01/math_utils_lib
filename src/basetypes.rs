@@ -892,7 +892,7 @@ impl AST {
                             },
                             AdvancedOperation::Equation { equations, .. } => {
                                 let eqs: Vec<String> = equations.iter().map(|e| format!("{}&={}", e.0.latex_print(false), e.1.latex_print(false))).collect();
-                                return format!("\\left{{\\begin{{array}}{{ c l }}{}\\end{{array}}\\right.", eqs.join("\\\\ \n"))
+                                return format!("\\left\\{{\\begin{{array}}{{ c l }}{}\\end{{array}}\\right.", eqs.join("\\\\ \n"))
                             },
                             AdvancedOperation::Conditional { condition, then, r#else } => {
                                 let (conditionals, r#else) = flatten_conditional(condition, then, r#else);
