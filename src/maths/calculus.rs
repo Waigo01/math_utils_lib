@@ -39,7 +39,6 @@ pub fn calculate_integral(expr: &AST, in_terms_of: String, lower_bound: Value, u
                 mut_vars.remove(mut_vars.len()-1);
                 b += dx;
             }
-            println!("{:.?}", sums);
             for i in 0..sums.len() {
                 sums[i] = mult(&sums[i], &Value::Scalar(dx))?;
             }

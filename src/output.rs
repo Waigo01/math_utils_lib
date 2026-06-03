@@ -1,7 +1,7 @@
 #[cfg(feature = "output")]
 use crate::errors::LatexError;
 
-use crate::{Values, basetypes::{AST, Operation, SimpleOpType}};
+use crate::{Values, basetypes::{AST, Operation, SimpleOpType}, helpers::find_assignments_in_ast};
 
 #[cfg(feature = "output")]
 /// converts the given latex string to a png image with the given height in pixels, returned as its raw bytes. 
@@ -38,6 +38,13 @@ pub fn svg_from_latex<S: Into<String>>(latex: String, line_color: S) -> Result<S
     Ok(svg)
 }
 
+#[derive(Debug, Clone, PartialEq)]
+/// Used to identify an assignment as assigning a variable or a function
+pub enum AssignmentType {
+    Fun,
+    Var
+}
+
 /// provides a way of saving a step. A step can either be a: 
 ///
 /// # Example
@@ -59,6 +66,10 @@ impl Step {
     /// creates a new step based on a term and the associated results.
     pub fn new(term: AST, result: Values) -> Step {
         return Step { term, result };
+    }
+    /// returns a list of all the assignments created during this step.
+    pub fn get_all_assignments(&self) -> Vec<(String, AssignmentType)> {
+        find_assignments_in_ast(&self.term)
     }
     fn as_latex_base(&self, mut with_align: bool, with_equation_number: Option<i32>) -> String {
 

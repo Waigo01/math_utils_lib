@@ -1,4 +1,4 @@
-use crate::{Context, Value, Values, Variable, basetypes::Function, errors::{EvalError, MathLibError, ParserError, QuickEvalError, TokenizerError}, parse, quick_eval, value};
+use crate::{Context, Step, Value, Values, Variable, basetypes::Function, errors::{EvalError, MathLibError, ParserError, QuickEvalError, TokenizerError}, eval, output::AssignmentType, parse, quick_eval, value};
 
 #[test]
 fn easy_eval1() -> Result<(), MathLibError> {
@@ -687,6 +687,15 @@ fn if_statement2() -> Result<(), MathLibError> {
     Ok(())
 }
 
+#[test]
+fn if_statement3() -> Result<(), MathLibError> {
+    let res = quick_eval("if({1, 2}==1, 2)", &mut Context::empty())?.to_vec();
+
+    assert_eq!(res, vec![value!(2)]);
+
+    Ok(())
+}
+
 #[cfg(feature = "output")]
 #[test]
 fn if_statement_export() -> Result<(), MathLibError> {
@@ -922,6 +931,46 @@ fn hard_solve6() -> Result<(), MathLibError> {
     let res = quick_eval(equation, &mut Context::empty())?.round(3).to_vec();
 
     assert_eq!(res, vec![value!(24./37., -35./37.).round(3), value!(0, 1)]);
+
+    Ok(())
+}
+
+#[test]
+fn assignment_finder1() -> Result<(), MathLibError> {
+    let mut c = Context::empty();
+
+    let expr = "3*(f=2)+(n=I(x^(y=2), x, 0, 2))";
+
+    let parsed_expr = parse(expr)?;
+
+    let result = eval(&parsed_expr, &mut c)?;
+
+    let step = Step::new(parsed_expr, result);
+
+    let found_assignments = step.get_all_assignments();
+    
+    assert_eq!(found_assignments, vec![("f".to_string(), AssignmentType::Var), ("n".to_string(), AssignmentType::Var)]);
+
+
+    Ok(())
+}
+
+#[test]
+fn assignment_finder2() -> Result<(), MathLibError> {
+    let mut c = Context::empty();
+
+    let expr = "f(x)=2x^2";
+
+    let parsed_expr = parse(expr)?;
+
+    let result = eval(&parsed_expr, &mut c)?;
+
+    let step = Step::new(parsed_expr, result);
+
+    let found_assignments = step.get_all_assignments();
+    
+    assert_eq!(found_assignments, vec![("f".to_string(), AssignmentType::Fun)]);
+
 
     Ok(())
 }
