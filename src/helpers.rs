@@ -1,4 +1,4 @@
-use crate::{PREC, basetypes::{AST, AdvancedOperation, Operation, SimpleOpType}, output::AssignmentType, tokenizer::{Token, TokenStream}};
+use crate::{PREC, basetypes::{AST, AdvancedOperation, Operation}, tokenizer::{Token, TokenStream}};
 
 #[doc(hidden)]
 pub fn center_in_string(f: String, n: i32) -> String {
@@ -105,57 +105,4 @@ pub fn flatten_conditional(condition: &AST, then: &AST, mut else_outer: &Option<
     }
 
     return (conditionals, else_outer.clone())
-}
-
-#[doc(hidden)]
-pub fn find_assignments_in_ast(ast: &AST) -> Vec<(String, AssignmentType)> {
-    match ast {
-        AST::List(asts) => asts.into_iter().map(|ast| find_assignments_in_ast(ast)).flatten().collect(),
-        AST::Operation(op) if let Operation::SimpleOperation { op_type, left, right } = &**op && *op_type == SimpleOpType::Assign => {
-            if let AST::Variable(var_name) = left {
-                vec![vec![(var_name.to_string(), AssignmentType::Var)], find_assignments_in_ast(right)].concat()
-            } else if let AST::List(asts) = left {
-                let mut vars = vec![];
-                for ast in asts {
-                    if let AST::Variable(var_name) = ast {
-                        vars.push((var_name.to_string(), AssignmentType::Var));
-                    }
-                }
-                vec![vars, find_assignments_in_ast(right)].concat()
-            } else if let AST::Function{name, ..} = left {
-                vec![vec![(name.to_string(), AssignmentType::Fun)], find_assignments_in_ast(right)].concat()
-            } else {
-                find_assignments_in_ast(right)
-            }
-        },
-        AST::Operation(op) if let Operation::SimpleOperation { left, right, .. } = &**op => {
-            let mut assignments = vec![];
-            assignments.append(&mut find_assignments_in_ast(left));
-            assignments.append(&mut find_assignments_in_ast(right));
-
-            assignments
-        },
-        AST::Operation(op) if let Operation::AdvancedOperation(a_op) = &**op => {
-            match a_op {
-                AdvancedOperation::Integral { lower_bound, upper_bound, .. } => vec![find_assignments_in_ast(lower_bound), find_assignments_in_ast(upper_bound)].concat(),
-                AdvancedOperation::Equation { .. } => vec![],
-                AdvancedOperation::Derivative { at, .. } => vec![find_assignments_in_ast(at)].concat(),
-                AdvancedOperation::Conditional { condition, then, r#else } => {
-                    let mut assignments = vec![find_assignments_in_ast(condition), find_assignments_in_ast(then)].concat();
-
-                    if let Some(else_ast) = r#else {
-                        assignments.append(&mut find_assignments_in_ast(else_ast));
-                    }
-
-                    assignments
-                }
-            }
-        },
-        AST::Operation(_) => vec![],
-        AST::Vector(asts) => asts.into_iter().map(|ast| find_assignments_in_ast(ast)).flatten().collect(),
-        AST::Matrix(asts2) => asts2.into_iter().map(|asts| asts.into_iter().map(|ast| find_assignments_in_ast(ast)).flatten()).flatten().collect(),
-        AST::Variable(_) => vec![],
-        AST::Function { inputs, .. } => inputs.into_iter().map(|ast| find_assignments_in_ast(ast)).flatten().collect(),
-        AST::Scalar(_) => vec![]
-    }
 }

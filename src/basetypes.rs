@@ -519,7 +519,7 @@ impl Value {
             var = "\\pi".to_string();
         }
 
-        return format!("{} {}:= {}", var, aligner, self.as_latex());
+        return format!("{} {}\u{2254} {}", var, aligner, self.as_latex());
     }
     fn latex_print(&self) -> String {
         match self {
@@ -639,11 +639,11 @@ impl Values {
         }
 
         if self.len() <= 0 {
-            return format!("{}:= {{}}", var);
+            return format!("{}\u{2254} {{}}", var);
         } else if self.len() == 1 {
-            return format!("{} {}:= {}", var, aligner, self.0[0].as_latex());
+            return format!("{} {}\u{2254} {}", var, aligner, self.0[0].as_latex());
         } else {
-            return format!("{} {}:= \\left\\{{{}\\right\\}}", var, aligner, self.clone().to_vec().iter().map(|v| v.as_latex()).collect::<Vec<String>>().join(", "));
+            return format!("{} {}\u{2254} \\left\\{{{}\\right\\}}", var, aligner, self.clone().to_vec().iter().map(|v| v.as_latex()).collect::<Vec<String>>().join(", "));
         }
     }
 }
@@ -794,7 +794,7 @@ impl AST {
         } else {
             aligner = String::new();
         }
-        format!("{}({}) {}:= {}", fun_name.into(), fun_inputs.into_iter().map(|s| s.into()).collect::<Vec<String>>().join(", "), aligner, self.latex_print(add_aligner))
+        format!("{}({}) {}\u{2254} {}", fun_name.into(), fun_inputs.into_iter().map(|s| s.into()).collect::<Vec<String>>().join(", "), aligner, self.latex_print(add_aligner))
     }
     fn latex_print(&self, add_aligner: bool) -> String {
         match self {
