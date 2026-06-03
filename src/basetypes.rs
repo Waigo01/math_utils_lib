@@ -722,7 +722,7 @@ impl AST {
                         let lv = &left.as_string();
                         let rv = &right.as_string(); 
                         match op_type {
-                            SimpleOpType::Assign => return format!("{} = {}", lv, rv),
+                            SimpleOpType::Assign => return format!("{} \u{2254} {}", lv, rv),
                             SimpleOpType::BoolAnd => return format!("{} & {}", lv, rv),
                             SimpleOpType::BoolOr => return format!("{} | {}", lv, rv),
                             SimpleOpType::BoolEq => return format!("{} == {}", lv, rv),
@@ -854,7 +854,7 @@ impl AST {
                         let lv = &left.latex_print(false);
                         let rv = &right.latex_print(false); 
                         match op_type {
-                            SimpleOpType::Assign => return format!("{}{}:={}", lv, if add_aligner {"&"} else {""}, rv),
+                            SimpleOpType::Assign => return format!("{}{}\u{2254}{}", lv, if add_aligner {"&"} else {""}, rv),
                             SimpleOpType::BoolAnd => return format!("{}\\land {}", lv, rv),
                             SimpleOpType::BoolOr => return format!("{}\\lor {}", lv, rv),
                             SimpleOpType::BoolEq => return format!("{}={}", lv, rv),
