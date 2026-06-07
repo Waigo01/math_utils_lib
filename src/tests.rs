@@ -1,7 +1,7 @@
-use crate::{Context, Step, Value, Values, Variable, basetypes::Function, errors::{EvalError, MathLibError, ParserError, QuickEvalError, TokenizerError}, eval, parse, quick_eval, value};
+use crate::{Context, Value, Values, Variable, basetypes::Function, errors::{EvalError, MathLibError, ParserError, QuickEvalError, TokenizerError}, parse, quick_eval, value};
 
 #[test]
-fn easy_eval1() -> Result<(), MathLibError> {
+fn simple_multiplication() -> Result<(), MathLibError> {
     let res = quick_eval("3*3", &mut Context::empty())?.to_vec();
     
     assert_eq!(res[0], value!(9));
@@ -10,7 +10,7 @@ fn easy_eval1() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn easy_eval2() -> Result<(), MathLibError> {
+fn subtraction_order() -> Result<(), MathLibError> {
     let res = quick_eval("3-4-5", &mut Context::empty())?.to_vec();
     
     assert_eq!(res[0], value!(-6));
@@ -19,7 +19,7 @@ fn easy_eval2() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn easy_eval3() -> Result<(), MathLibError> {
+fn power_order() -> Result<(), MathLibError> {
     let res = quick_eval("3^2^4", &mut Context::empty())?.to_vec();
 
     assert_eq!(res[0], value!(43_046_721));
@@ -28,7 +28,7 @@ fn easy_eval3() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn easy_eval4() -> Result<(), MathLibError> {
+fn simple_matrix() -> Result<(), MathLibError> {
     let res = quick_eval("[[3, 4, 5], [1, 2, 3], [5, 6, 7]]", &mut Context::empty())?.to_vec();
 
     assert_eq!(res[0], value!(3, 1, 5; 4, 2, 6; 5, 3, 7));
@@ -37,7 +37,7 @@ fn easy_eval4() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn easy_eval5() -> Result<(), MathLibError> {
+fn eval_in_vector1() -> Result<(), MathLibError> {
     let res = quick_eval("[3, 3/4, 6]", &mut Context::empty())?.to_vec();
 
     assert_eq!(res[0], value!(3, 0.75, 6));
@@ -46,7 +46,7 @@ fn easy_eval5() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn easy_eval6() -> Result<(), MathLibError> {
+fn root_function() -> Result<(), MathLibError> {
     let res = quick_eval("root(8, 3)", &mut Context::empty())?.to_vec();
 
     assert_eq!(res[0], value!(2));
@@ -55,7 +55,7 @@ fn easy_eval6() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn easy_eval7() -> Result<(), MathLibError> {
+fn plus_minus_root() -> Result<(), MathLibError> {
     let res = quick_eval("+-root(9, 2)", &mut Context::empty())?.to_vec();
 
     assert_eq!(res, vec![value!(3), value!(-3)]);
@@ -64,7 +64,7 @@ fn easy_eval7() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn easy_eval8() -> Result<(), MathLibError> {
+fn list_eval() -> Result<(), MathLibError> {
     let res = quick_eval("2*(+-sqrt(9))", &mut Context::empty())?.to_vec();
 
     assert_eq!(res, vec![value!(6), value!(-6)]);
@@ -73,7 +73,7 @@ fn easy_eval8() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn easy_eval9() -> Result<(), MathLibError> {
+fn list_in_vector() -> Result<(), MathLibError> {
     let res = quick_eval("[{3, 5}, 0, 0]", &mut Context::empty())?.to_vec();
 
     assert_eq!(res, vec![value!(3, 0, 0), value!(5, 0, 0)]);
@@ -82,7 +82,7 @@ fn easy_eval9() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn easy_eval10() -> Result<(), MathLibError> {
+fn matrix_mult() -> Result<(), MathLibError> {
     let a = Variable::new("A", value!(6, 1, 13, 8; 4, 3, 9, 10; 4, 0, 14, 8));
     let b = Variable::new("B", value!(3, 0; 1, 1; 0, 6; 2.5, 2));
     let res = quick_eval("A*B", &mut Context::from_vars(vec![a, b]))?.to_vec();
@@ -93,7 +93,7 @@ fn easy_eval10() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn easy_eval11() -> Result<(), MathLibError> {
+fn negation() -> Result<(), MathLibError> {
     let parsed_ast = parse("-1")?;
 
     assert_eq!(parsed_ast.as_latex(), "-1".to_string());
@@ -102,7 +102,7 @@ fn easy_eval11() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn easy_eval12() -> Result<(), MathLibError> {
+fn matrix_inverse1() -> Result<(), MathLibError> {
     let a = Variable::new("A", Value::Matrix(vec![vec![2.]]));
 
     let res = quick_eval("inv(A)", &mut Context::from_vars(vec![a]))?.to_vec();
@@ -113,7 +113,7 @@ fn easy_eval12() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn medium_eval1() -> Result<(), MathLibError> {
+fn hidden_mult() -> Result<(), MathLibError> {
     let x = Variable::new("x", value!(3.));
     let res = quick_eval("3x", &mut Context::from_vars(vec![x]))?.to_vec();
 
@@ -122,7 +122,7 @@ fn medium_eval1() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn medium_eval2() -> Result<(), MathLibError> {
+fn hidden_vector_mult() -> Result<(), MathLibError> {
     let a = Variable::new("A", value!(3, 5, 8));
     let res = quick_eval("3A", &mut Context::from_vars(vec![a]))?.to_vec();
 
@@ -132,7 +132,7 @@ fn medium_eval2() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn medium_eval3() -> Result<(), MathLibError> {
+fn matrix_vector_mult1() -> Result<(), MathLibError> {
     let a = Variable::new("A", value!(3, 5, 8));
     let b = Variable::new("B", value!(2, 0, 0; 0, 2, 0; 0, 0, 1));
     let res = quick_eval("B*A", &mut Context::from_vars(vec![a, b]))?.to_vec();
@@ -143,7 +143,7 @@ fn medium_eval3() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn medium_eval4() -> Result<(), MathLibError> {
+fn large_matrix_mult() -> Result<(), MathLibError> {
     let a = Variable::new("A", value!(3, 5, 7; 4, 8, 2; 1, 9, 2));
     let b = Variable::new("B", value!(7, 9, 10; 1, 55, 8; 22, 9, 2));
     let res = quick_eval("A*B", &mut Context::from_vars(vec![a, b]))?.to_vec();
@@ -154,7 +154,7 @@ fn medium_eval4() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn medium_eval5() -> Result<(), MathLibError> {
+fn double_paranth() -> Result<(), MathLibError> {
     let res = quick_eval("((3*3))", &mut Context::empty())?.to_vec();
 
     assert_eq!(res[0], value!(9));
@@ -163,42 +163,42 @@ fn medium_eval5() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn medium_eval6() {
+fn matrix_not_rect() {
     let res = quick_eval("[[3, 0, 5], [2, 4, 5], [1, 2]]", &mut Context::empty());
 
     assert_eq!(res.unwrap_err(), QuickEvalError::ParserError(ParserError::NotRectMatrix))
 }
 
 #[test]
-fn medium_eval7() {
+fn empty_matrix_vector() {
     let res = quick_eval("[[], [], []]", &mut Context::empty());
 
     assert_eq!(res.unwrap_err(), QuickEvalError::ParserError(ParserError::EmptyVec))
 }
 
 #[test]
-fn medium_eval8() {
+fn empty_expr() {
     let res = quick_eval("", &mut Context::empty());
 
     assert_eq!(res.unwrap_err(), QuickEvalError::ParserError(ParserError::EmptyExpr))
 }
 
 #[test]
-fn medium_eval9() {
+fn empty_expr_in_matrix1() {
     let res = quick_eval("[[3, 0,], [2, 4, 5], [1, 2]]", &mut Context::empty());
 
     assert_eq!(res.unwrap_err(), QuickEvalError::ParserError(ParserError::EmptyExpr))
 }
 
 #[test]
-fn medium_eval10() {
+fn empty_expr_in_matrix2() {
     let res = quick_eval("[[3, 0, 5], [2, 4], [1, 2,]]", &mut Context::empty());
 
     assert_eq!(res.unwrap_err(), QuickEvalError::ParserError(ParserError::EmptyExpr))
 }
 
 #[test]
-fn medium_eval11() -> Result<(), MathLibError> {
+fn negation_in_vector() -> Result<(), MathLibError> {
     let res = quick_eval("[-3 ,-5, -2]", &mut Context::empty())?.to_vec();
 
     assert_eq!(res[0], value!(-3, -5, -2));
@@ -207,7 +207,7 @@ fn medium_eval11() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn medium_eval12() -> Result<(), MathLibError> {
+fn eval_in_vector2() -> Result<(), MathLibError> {
     let res = quick_eval("[3, 3*3, -5]", &mut Context::empty())?.to_vec();
 
     assert_eq!(res[0], value!(3, 9, -5));
@@ -216,7 +216,7 @@ fn medium_eval12() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn medium_eval13() -> Result<(), MathLibError> {
+fn weird_variable_name() -> Result<(), MathLibError> {
     let vars = vec![Variable::new("A_{3*6}", Value::Scalar(3.))];
 
     let res = quick_eval("A_{3*6}*3", &mut Context::from_vars(vars))?.to_vec();
@@ -227,7 +227,7 @@ fn medium_eval13() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn medium_eval14() -> Result<(), MathLibError> {
+fn matrix_vector_mult2() -> Result<(), MathLibError> {
     let res = quick_eval("[[1, 0], [0, 6], [0, 0]]*[3, 4, 5]", &mut Context::empty())?.to_vec();
 
     assert_eq!(res[0], value!(3, 24));
@@ -236,7 +236,7 @@ fn medium_eval14() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn medium_eval15() -> Result<(), MathLibError> {
+fn hidden_paranth_mult() -> Result<(), MathLibError> {
     let res = quick_eval("3(6+2)", &mut Context::empty())?.to_vec();
 
     assert_eq!(res[0], value!(24));
@@ -245,7 +245,7 @@ fn medium_eval15() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn medium_eval16() -> Result<(), MathLibError> {
+fn hidden_bracket_mult() -> Result<(), MathLibError> {
     let res = quick_eval("3[4, 5, 6]", &mut Context::empty())?.to_vec();
 
     assert_eq!(res[0], value!(12, 15, 18));
@@ -254,7 +254,7 @@ fn medium_eval16() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn medium_eval17() -> Result<(), MathLibError> {
+fn long_mult_order() -> Result<(), MathLibError> {
     let res = quick_eval("3*[[2, 0, 0], [0, 1, 0], [0, 0, 5]]*[[1, 0, 0], [0, 1, 0], [0, 0, 1]]*[3, 4, 5]", &mut Context::empty())?.to_vec();
 
     assert_eq!(res[0], value!(18, 12, 75));
@@ -263,7 +263,7 @@ fn medium_eval17() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn medium_eval18() -> Result<(), MathLibError> {
+fn eval_in_vector3() -> Result<(), MathLibError> {
     let res = quick_eval("[sqrt(25), 2pi, 3]", &mut Context::default())?.to_vec();
 
     assert_eq!(res[0], value!(5, 2.*std::f64::consts::PI, 3));
@@ -281,7 +281,7 @@ fn medium_eval19() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn medium_eval20() -> Result<(), MathLibError> {
+fn custom_function() -> Result<(), MathLibError> {
     let function = parse("5x^2+2x+x")?;
     let function_var = Function::new("f", function, vec!["x"]);
 
@@ -293,7 +293,7 @@ fn medium_eval20() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn medium_eval21() -> Result<(), MathLibError> {
+fn custom_function_vector_input() -> Result<(), MathLibError> {
     let function = parse("x-A")?;
     let function_var = Function::new("f", function, vec!["x"]);
     let a = Variable::new("A", value!(3., 4., 5.));
@@ -306,7 +306,7 @@ fn medium_eval21() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn medium_eval22() -> Result<(), MathLibError> {
+fn custom_function_recursion() -> Result<(), MathLibError> {
     let function = parse("3*f(x)")?;
     let function_var = Function::new("f", function, vec!["x"]);
     
@@ -318,7 +318,7 @@ fn medium_eval22() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn medium_eval23() -> Result<(), MathLibError> {
+fn custom_function_of_function() -> Result<(), MathLibError> {
     let function = parse("3*x")?;
     let function_var = Function::new("f", function, vec!["x"]);
     
@@ -330,7 +330,7 @@ fn medium_eval23() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn medium_eval24() -> Result<(), MathLibError> {
+fn cartesian_vector_from_lists() -> Result<(), MathLibError> {
     let res = quick_eval("[+-sqrt(9), +-sqrt(9), 0]", &mut Context::empty())?.to_vec();
 
     assert_eq!(res, vec![value!(3, 3, 0), value!(3, -3, 0), value!(-3, 3, 0), value!(-3, -3, 0)]);
@@ -339,7 +339,7 @@ fn medium_eval24() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn medium_eval25() -> Result<(), MathLibError> {
+fn list_in_matrix() -> Result<(), MathLibError> {
     let res = quick_eval("[[+-sqrt(9), 0, 0], [0, 1, 0], [0, 0, 1]]", &mut Context::empty())?.to_vec();
 
     assert_eq!(res, vec![value!(3, 0, 0; 0, 1, 0; 0, 0, 1), value!(-3, 0, 0; 0, 1, 0; 0, 0, 1)]);
@@ -348,7 +348,7 @@ fn medium_eval25() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn medium_eval26() -> Result<(), MathLibError> {
+fn custom_function_list_input_output() -> Result<(), MathLibError> {
     let function = parse("+-sqrt(x)+y")?;
     let function_var = Function::new("f", function, vec!["x", "y"]);
 
@@ -360,7 +360,7 @@ fn medium_eval26() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn medium_eval27() -> Result<(), MathLibError> {
+fn list_mult() -> Result<(), MathLibError> {
     let res = quick_eval("{3, 2}*{7, 3, 2}", &mut Context::empty())?.to_vec();
 
     assert_eq!(res, vec![value!(21), value!(9), value!(6), value!(14), value!(6), value!(4)]);
@@ -369,7 +369,7 @@ fn medium_eval27() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn medium_eval28() -> Result<(), MathLibError> {
+fn matrix_det() -> Result<(), MathLibError> {
     let a = Variable::new("A", value!(1, 2, 3; 4, 5, 6; 7, 8, 9));
     let res = quick_eval("det(A)", &mut Context::from_vars(vec![a]))?.to_vec();
 
@@ -379,7 +379,7 @@ fn medium_eval28() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn medium_eval29() -> Result<(), MathLibError> {
+fn large_matrix_det() -> Result<(), MathLibError> {
     let a = Variable::new("A", value!(0, 6, -2, -1, 5; 0, 0, 0, -9, -7; 0, 15, 35, 0, 0; 0, -1, -11, -2, 1; -2, -2, 3, 0., -2));
     let res = quick_eval("det(A)", &mut Context::from_vars(vec![a]))?.to_vec();
 
@@ -389,7 +389,7 @@ fn medium_eval29() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn medium_eval30() -> Result<(), MathLibError> {
+fn matrix_inverse2() -> Result<(), MathLibError> {
     let a = Variable::new("A", value!(-1, 3./2.; 1, -1));
 
     let res = quick_eval("inv(A)", &mut Context::from_vars(vec![a]))?.round(3).to_vec();
@@ -400,7 +400,7 @@ fn medium_eval30() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn medium_eval31() -> Result<(), MathLibError> {
+fn matrix_power1() -> Result<(), MathLibError> {
     let m = Variable::new("M", value!(0.7, 0.1, 0.3; 0.1, 0.5, 0.1; 0.2, 0.4, 0.6));
 
     let res = quick_eval("M^20", &mut Context::from_vars(vec![m]))?.round(3).to_vec();
@@ -411,7 +411,7 @@ fn medium_eval31() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn medium_eval32() -> Result<(), MathLibError> {
+fn matrix_power2() -> Result<(), MathLibError> {
     let m = Variable::new("M", value!(0., 2., 0.; 0.5, 0., 0.; 0., 0.8, 0.));
 
     let res = quick_eval("M^2", &mut Context::from_vars(vec![m]))?.round(3).to_vec();
@@ -422,7 +422,7 @@ fn medium_eval32() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn medium_eval33() -> Result<(), MathLibError> {
+fn unmatched_delimiter() -> Result<(), MathLibError> {
     let res = quick_eval("eq(((25x^3-96x^2+512x+384)/(x^4+2x^3+90x^2-128x+1664)^(1.5))/(-sqrt(1-(32-x+x^2)/(((x-1)^2+25)(x^2+64)))^2))=0, x)", &mut Context::empty());
 
     assert_eq!(res, Err(QuickEvalError::ParserError(ParserError::TokenizerError(TokenizerError::UnmatchedDelimiter))));
@@ -431,7 +431,7 @@ fn medium_eval33() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn mutable_context1() -> Result<(), MathLibError> {
+fn mutable_context_variable1() -> Result<(), MathLibError> {
     let mut c = Context::default();
 
     quick_eval("x = 10", &mut c)?;
@@ -446,7 +446,7 @@ fn mutable_context1() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn mutable_context2() -> Result<(), MathLibError> {
+fn mutable_context_variable2() -> Result<(), MathLibError> {
     let mut c = Context::default();
 
     quick_eval("x = eq(x^2=9, x)", &mut c)?;
@@ -459,7 +459,7 @@ fn mutable_context2() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn mutable_context3() -> Result<(), MathLibError> {
+fn mutable_context_function() -> Result<(), MathLibError> {
     let mut c = Context::default();
 
     quick_eval("f(x) = x^2", &mut c)?;
@@ -472,7 +472,7 @@ fn mutable_context3() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn mutable_context4() -> Result<(), MathLibError> {
+fn mutable_context_multi_variable() -> Result<(), MathLibError> {
     let mut c = Context::default();
 
     quick_eval("{x, y, z} = {1, 2, 3}", &mut c)?;
@@ -490,7 +490,7 @@ fn mutable_context4() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn mutable_context5() -> Result<(), MathLibError> {
+fn mutable_context_variable_list() -> Result<(), MathLibError> {
     let mut c = Context::default();
 
     quick_eval("x = {1, 2, 3}", &mut c)?;
@@ -502,7 +502,7 @@ fn mutable_context5() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn function_side_effects1() -> Result<(), MathLibError> {
+fn function_side_effects() -> Result<(), MathLibError> {
     let mut c = Context::default();
 
     quick_eval("f(x) = y=x", &mut c)?;
@@ -515,7 +515,7 @@ fn function_side_effects1() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn function_side_effects2() -> Result<(), MathLibError> {
+fn function_side_multi_effects() -> Result<(), MathLibError> {
     let mut c = Context::default();
 
     quick_eval("f(x) = z=y=x*2", &mut c)?;
@@ -529,7 +529,7 @@ fn function_side_effects2() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn boolean1() -> Result<(), MathLibError> {
+fn boolean_equals() -> Result<(), MathLibError> {
     let res = quick_eval("6==6", &mut Context::empty())?.to_vec();
 
     assert_eq!(res[0], value!(1));
@@ -538,7 +538,7 @@ fn boolean1() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn boolean2() -> Result<(), MathLibError> {
+fn boolean_not() -> Result<(), MathLibError> {
     let res = quick_eval("!(10==6)", &mut Context::empty())?.to_vec();
 
     assert_eq!(res[0], value!(1));
@@ -547,7 +547,7 @@ fn boolean2() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn boolean3() -> Result<(), MathLibError> {
+fn boolean_or() -> Result<(), MathLibError> {
     let res = quick_eval("6==10 | 10==10", &mut Context::empty())?.to_vec();
 
     assert_eq!(res[0], value!(1));
@@ -556,7 +556,7 @@ fn boolean3() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn boolean4() -> Result<(), MathLibError> {
+fn boolean_and() -> Result<(), MathLibError> {
     let res = quick_eval("6==6 & 10", &mut Context::empty())?.to_vec();
 
     assert_eq!(res[0], value!(1));
@@ -565,7 +565,7 @@ fn boolean4() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn boolean5() -> Result<(), MathLibError> {
+fn boolean_not_eq() -> Result<(), MathLibError> {
     let res = quick_eval("6!=10 & 10==10", &mut Context::empty())?.to_vec();
 
     assert_eq!(res[0], value!(1));
@@ -574,7 +574,7 @@ fn boolean5() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn boolean6() -> Result<(), MathLibError> {
+fn boolean_general1() -> Result<(), MathLibError> {
     let res = quick_eval("6==10 | 10!=10", &mut Context::empty())?.to_vec();
 
     assert_eq!(res[0], value!(0));
@@ -583,7 +583,7 @@ fn boolean6() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn boolean7() -> Result<(), MathLibError> {
+fn boolean_general2() -> Result<(), MathLibError> {
     let res = quick_eval("6==6 & 6!=10", &mut Context::empty())?.to_vec();
 
     assert_eq!(res[0], value!(1));
@@ -592,7 +592,7 @@ fn boolean7() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn boolean8() -> Result<(), MathLibError> {
+fn boolean_general3() -> Result<(), MathLibError> {
     let mut c = Context::empty();
 
     quick_eval("a = 6", &mut c)?;
@@ -606,7 +606,7 @@ fn boolean8() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn boolean9() -> Result<(), MathLibError> {
+fn boolean_general4() -> Result<(), MathLibError> {
     let mut c = Context::empty();
 
     quick_eval("a = 6", &mut c)?;
@@ -620,7 +620,7 @@ fn boolean9() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn boolean10() -> Result<(), MathLibError> {
+fn boolean_general5() -> Result<(), MathLibError> {
     let mut c = Context::empty();
 
     quick_eval("a = 6", &mut c)?;
@@ -634,7 +634,7 @@ fn boolean10() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn boolean11() -> Result<(), MathLibError> {
+fn boolean_equation() -> Result<(), MathLibError> {
     let res = quick_eval("eq(x^2 = 9, x) == -3", &mut Context::empty())?.to_vec();
 
     assert_eq!(res, vec![value!(1), value!(0)]);
@@ -643,7 +643,7 @@ fn boolean11() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn boolean12() -> Result<(), MathLibError> {
+fn boolean_less() -> Result<(), MathLibError> {
     let res = quick_eval("2<3", &mut Context::empty())?.to_vec();
 
     assert_eq!(res[0], value!(1));
@@ -652,7 +652,7 @@ fn boolean12() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn boolean13() -> Result<(), MathLibError> {
+fn boolean_less_eq() -> Result<(), MathLibError> {
     let res = quick_eval("(2<3 & 3<2) | 3<=3", &mut Context::empty())?.to_vec();
 
     assert_eq!(res[0], value!(1));
@@ -661,7 +661,7 @@ fn boolean13() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn boolean14() -> Result<(), MathLibError> {
+fn boolean_general6() -> Result<(), MathLibError> {
     let res = quick_eval("abs(eq(x^2 = 0, x)) < 10^(-4)", &mut Context::empty())?.to_vec();
 
     assert_eq!(res[0], value!(1));
@@ -762,7 +762,7 @@ fn state_machine1() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn calculus_eval1() -> Result<(), MathLibError> {
+fn derivative() -> Result<(), MathLibError> {
     let res = quick_eval("D(x^2, x, 3)", &mut Context::empty())?.to_vec();
 
     assert_eq!(res[0].round(6), value!(6));
@@ -771,7 +771,7 @@ fn calculus_eval1() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn calculus_eval2() -> Result<(), MathLibError> {
+fn integral() -> Result<(), MathLibError> {
     let res = quick_eval("I(x^2, x, 0, 5)", &mut Context::empty())?.to_vec();
 
     assert_eq!(res[0].round(4), value!(41.6667));
@@ -780,7 +780,7 @@ fn calculus_eval2() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn calculus_eval3() -> Result<(), MathLibError> {
+fn hard_integral() -> Result<(), MathLibError> {
     let res = quick_eval("1/sqrt(2*250^2*pi)*I(e^(-(x-4000)^2/(2*250^2)), x, 3500, 4500)", &mut Context::default())?.to_vec();
 
     assert_eq!(res[0].round(4), value!(0.9545));
@@ -789,7 +789,7 @@ fn calculus_eval3() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn hard_eval1() -> Result<(), MathLibError> {
+fn positional_get() -> Result<(), MathLibError> {
     let x = Variable::new("x", value!(3));
     let a = Variable::new("A", value!(3, 2, 1));
     let b = Variable::new("B", value!(2, 3, 4; 5, 1, 7; 2, 3, 6));
@@ -801,7 +801,7 @@ fn hard_eval1() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn hard_eval2() -> Result<(), MathLibError> {
+fn matrix_inverse3() -> Result<(), MathLibError> {
     let a = Variable::new("A", value!(-3, -1, 2, -3; -3, 1, 2, -2; -2, 3, 0, 1; 1, -2, -3, 1));
     let res = quick_eval("inv(A)", &mut Context::from_vars(vec![a]))?.round(3).to_vec();
 
@@ -811,7 +811,7 @@ fn hard_eval2() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn easy_solve1() -> Result<(), MathLibError> {
+fn solve_parabolic() -> Result<(), MathLibError> {
     let res = quick_eval("eq(x^2=9, x)", &mut Context::empty())?.round(3).to_vec();
     
     assert_eq!(res, vec![value!(-3), value!(3)]);
@@ -820,7 +820,7 @@ fn easy_solve1() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn medium_solve1() -> Result<(), MathLibError> {
+fn solve_polynomial() -> Result<(), MathLibError> {
     let res = quick_eval("eq(3x^2+2x-1=0, x)", &mut Context::empty())?.round(3).to_vec();
     
     assert_eq!(res, vec![value!(-1), value!(1./3.).round(3)]);
@@ -829,7 +829,7 @@ fn medium_solve1() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn medium_solve2() -> Result<(), MathLibError> {
+fn solve_linear_system1() -> Result<(), MathLibError> {
     let equation = "eq(2x+5y+2z=-38, 3x-2y+4z=17, -6x+y-7z=-12, x, y, z)";
 
     let res = quick_eval(equation, &mut Context::empty())?.round(3).to_vec();
@@ -840,7 +840,7 @@ fn medium_solve2() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn medium_solve3() -> Result<(), MathLibError> {
+fn solve_linear_system2() -> Result<(), MathLibError> {
     let equation = "eq(3x-9z=33, 7x-4y-z=-15, 4x+6y+5z=-6, x, y, z)";
 
     let res = quick_eval(equation, &mut Context::empty())?.round(3).to_vec();
@@ -851,7 +851,7 @@ fn medium_solve3() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn medium_solve4() -> Result<(), MathLibError> {
+fn solve_custom_function() -> Result<(), MathLibError> {
     let function = parse("4x^2-9")?;
     let function_var = Function::new("f", function, vec!["x"]);
 
@@ -863,7 +863,7 @@ fn medium_solve4() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn calculus_solve1() -> Result<(), MathLibError> {
+fn solve_extremum() -> Result<(), MathLibError> {
     let res = quick_eval("eq(D(3x^2+2x-1, x, k)=0, k)", &mut Context::empty())?.round(3).to_vec();
 
     assert_eq!(res, vec![value!(-1./3.).round(3)]);
@@ -872,7 +872,7 @@ fn calculus_solve1() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn hard_solve1() -> Result<(), MathLibError> {
+fn crazy_solve() -> Result<(), MathLibError> {
     let equation = "eq(((25x^3-96x^2+512x+384)/(x^4+2x^3+90x^2-128x+1664)^(1.5))/(-sqrt(1-((32-x+x^2)/(((x-1)^2+25)(x^2+64)))^2))=0, x)";
 
     let res = quick_eval(equation, &mut Context::empty())?.round(3).to_vec();
@@ -883,7 +883,7 @@ fn hard_solve1() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn hard_solve2() -> Result<(), MathLibError> {
+fn solve_vector() -> Result<(), MathLibError> {
     let res = quick_eval("eq(x*[3, 4, 5]=[6, 8, 10], x)", &mut Context::empty());
 
     assert_eq!(res.unwrap_err(), QuickEvalError::EvalError(EvalError::VectorInEq));
@@ -892,7 +892,7 @@ fn hard_solve2() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn hard_solve3() -> Result<(), MathLibError> {
+fn solve_overdefined_system1() -> Result<(), MathLibError> {
     let equation = "eq(400-100x=600-100x, -600-100x=-400-100x, 1000-100x=0+100x, x)";
 
     let res = quick_eval(equation, &mut Context::empty())?.to_vec();
@@ -903,7 +903,7 @@ fn hard_solve3() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn hard_solve4() -> Result<(), MathLibError> {
+fn solve_overdefined_system2() -> Result<(), MathLibError> {
     let equation = "eq(400-100g=600-100k, -600-100g=-400-100k, 1000-100g=100k, g, k)";
 
     let res = quick_eval(equation, &mut Context::empty())?.round(3).to_vec();
@@ -914,7 +914,7 @@ fn hard_solve4() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn hard_solve5() -> Result<(), MathLibError> {
+fn solve_nonlinear_system1() -> Result<(), MathLibError> {
     let equation = "eq(y=x^2+6x-8, y=4x+7, x, y)";
 
     let res = quick_eval(equation, &mut Context::empty())?.round(3).to_vec();
@@ -925,12 +925,29 @@ fn hard_solve5() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn hard_solve6() -> Result<(), MathLibError> {
+fn solve_nonlinear_system2() -> Result<(), MathLibError> {
     let equation = "eq(y=1-3x, x^2/4+y^2=1, x, y)";
 
     let res = quick_eval(equation, &mut Context::empty())?.round(3).to_vec();
 
     assert_eq!(res, vec![value!(24./37., -35./37.).round(3), value!(0, 1)]);
+
+    Ok(())
+}
+
+#[test]
+fn variable_as_latex() -> Result<(), MathLibError> {
+    let res1 = quick_eval("{2, 3, 4}", &mut Context::empty())?;
+    let res2 = quick_eval("f(x) = x^2", &mut Context::empty())?;
+    let res3 = quick_eval("4", &mut Context::empty())?;
+
+    let var1 = Variable::new("x", res1);
+    let var2 = Variable::new("y", res2);
+    let var3 = Variable::new("z", res3);
+
+    assert_eq!(var1.as_latex(true), r"x&≔\left\{2, 3, 4\right\}");
+    assert_eq!(var2.as_latex(true), r"y&≔\left\{\right\}");
+    assert_eq!(var3.as_latex(true), r"z&≔4");
 
     Ok(())
 }
