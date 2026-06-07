@@ -44,7 +44,10 @@ impl Variable {
     /// converts the variable to latex. The function also provides the option to add a "&" aligner before the
     /// "=".
     pub fn as_latex(&self, add_aligner: bool) -> String {
-        self.values.as_latex_at_var(self.name.clone(), add_aligner)
+        let right = AST::from_values(self.values.clone());
+
+        let ast = AST::from_operation(Operation::SimpleOperation { op_type: SimpleOpType::Assign, left: AST::Variable(self.name.clone()), right});
+        return if add_aligner {ast.as_latex()} else {ast.as_latex_inline()};
     }
     /// converts the variable to a string using basic string formatting.
     pub fn as_string(&self) -> String {
@@ -81,7 +84,8 @@ impl Function {
     /// converts the function to latex. The function also provides the option to add a "&" aligner before
     /// the "=".
     pub fn as_latex(&self, add_aligner: bool) -> String {
-        self.ast.as_latex_at_fun(self.name.clone(), self.inputs.clone(), add_aligner)
+        let ast = AST::from_operation(Operation::SimpleOperation { op_type: SimpleOpType::Assign, left: AST::Function { name: self.name.clone(), inputs: self.inputs.iter().map(|i| AST::Variable(i.to_string())).collect() }, right: self.ast.clone() });
+        return if add_aligner {ast.as_latex()} else {ast.as_latex_inline()};
     }
     /// converts the function to a string using basic string formatting.
     pub fn as_string(&self) -> String {
@@ -503,24 +507,6 @@ impl Value {
     pub fn as_latex(&self) -> String {
         self.latex_print()
     }
-    /// converts the value to a latex expression, adding a variable name in front of it. The
-    /// function also provides the option to add a "&" aligner before the "=".
-    pub fn as_latex_at_var<S: Into<String>>(&self, var_name: S, add_aligner: bool) -> String {
-        let aligner;
-        if add_aligner {
-            aligner = "&";
-        } else {
-            aligner = "";
-        }
-
-        let mut var = var_name.into();
-
-        if var == "pi" {
-            var = "\\pi".to_string();
-        }
-
-        return format!("{} {}\u{2254} {}", var, aligner, self.as_latex());
-    }
     fn latex_print(&self) -> String {
         match self {
             Value::Scalar(s) => return round_and_format(*s, true),
@@ -621,31 +607,6 @@ impl Values {
             return format!("\\left\\{{{}\\right\\}}", self.clone().to_vec().iter().map(|v| v.as_latex()).collect::<Vec<String>>().join(", "));
         }
     }
-    /// converts the values to latex using "{}" and "," to print multiple Values. This functions
-    /// additionally adds a variable name in front of the Values. The function also provides the option to
-    /// add a "&" aligner before the "=".
-    pub fn as_latex_at_var<S: Into<String>>(&self, var_name: S, add_aligner: bool) -> String {
-        let aligner;
-        if add_aligner {
-            aligner = "&";
-        } else {
-            aligner = "";
-        }
-
-        let mut var = var_name.into();
-
-        if var == "pi" {
-            var = "\\pi".to_string();
-        }
-
-        if self.len() <= 0 {
-            return format!("{}\u{2254} {{}}", var);
-        } else if self.len() == 1 {
-            return format!("{} {}\u{2254} {}", var, aligner, self.0[0].as_latex());
-        } else {
-            return format!("{} {}\u{2254} \\left\\{{{}\\right\\}}", var, aligner, self.clone().to_vec().iter().map(|v| v.as_latex()).collect::<Vec<String>>().join(", "));
-        }
-    }
 }
 
 /// used to construct an AST which is recursively evaluated by the [eval](crate::evaluator::eval) function.
@@ -697,6 +658,20 @@ impl AST {
                 }
                 return AST::Matrix(parsed_rows);
             }
+        }
+    }
+    /// creates an AST node from [Values].
+    pub fn from_values(vals: Values) -> AST {
+        if vals.len() == 1 {
+            return AST::from_value(vals.get(0).unwrap().clone());
+        } else if vals.len() == 0 {
+            return AST::List(vec![]);
+        } else {
+            let mut ast_vals = vec![];
+            for val in vals.to_vec() {
+                ast_vals.push(AST::from_value(val));
+            }
+            return AST::List(ast_vals);
         }
     }
     /// creates an AST node from a variable name.
@@ -784,17 +759,6 @@ impl AST {
     /// converts the AST to latex but without an aligner if the AST contains an assignment.
     pub fn as_latex_inline(&self) -> String {
         self.latex_print(false)
-    }
-    /// converts the AST to latex, adding a function identifier in front of the term. The function
-    /// also provides the option to add a "&" aligner in front of the "=".
-    pub fn as_latex_at_fun<S: Into<String>>(&self, fun_name: S, fun_inputs: Vec<S>, add_aligner: bool) -> String {
-        let aligner;
-        if add_aligner {
-            aligner = "&".to_string();
-        } else {
-            aligner = String::new();
-        }
-        format!("{}({}) {}\u{2254} {}", fun_name.into(), fun_inputs.into_iter().map(|s| s.into()).collect::<Vec<String>>().join(", "), aligner, self.latex_print(add_aligner))
     }
     fn latex_print(&self, add_aligner: bool) -> String {
         match self {
