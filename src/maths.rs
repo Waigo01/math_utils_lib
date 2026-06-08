@@ -6,6 +6,7 @@ pub mod cross_pow;
 pub mod calculus;
 pub mod special;
 pub mod bool;
+pub mod num_trait;
 
 #[doc(hidden)]
 pub fn add(lv: &Value, rv: &Value) -> Result<Value, String> {

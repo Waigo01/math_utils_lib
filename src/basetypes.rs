@@ -1,4 +1,4 @@
-use crate::helpers::{center_in_string, flatten_conditional, round_and_format};
+use crate::{helpers::{center_in_string, flatten_conditional, round_and_format}, maths::num_trait::Number};
 
 #[doc(hidden)]
 const VAR_SYMBOLS: [(&str, &str); 48] = [("\\alpha", "𝛼"), ("\\Alpha", "𝛢"), ("\\beta", "𝛽"), ("\\Beta", "𝛣"), ("\\gamma", "𝛾"), ("\\Gamma", "𝚪"),
@@ -27,18 +27,18 @@ const VAR_SYMBOLS: [(&str, &str); 48] = [("\\alpha", "𝛼"), ("\\Alpha", "𝛢"
 /// ```
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Variable {
+pub struct Variable<N: Number> {
     pub name: String,
-    pub values: Values
+    pub values: Values<N>
 }
 
-impl Variable {
+impl<N: Number> Variable<N> {
     /// creates a new variable from a Vec of [Value].
-    pub fn new<S: Into<String>, V: Into<Values>>(name: S, values: V) -> Self {
+    pub fn new<S: Into<String>, V: Into<Values<N>>>(name: S, values: V) -> Self {
         Variable { name: name.into(), values: values.into()}
     }
     /// creates a new variable from [Values].
-    pub fn new_from_values<S: Into<String>>(name: S, values: Values) -> Self {
+    pub fn new_from_values<S: Into<String>>(name: S, values: Values<N>) -> Self {
         Variable { name: name.into(), values }
     }
     /// converts the variable to latex. The function also provides the option to add a "&" aligner before the
@@ -69,16 +69,16 @@ impl Variable {
 /// ```
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Function {
+pub struct Function<N: Number> {
     pub name: String,
-    pub ast: AST,
+    pub ast: AST<N>,
     pub inputs: Vec<String>
 }
 
-impl Function {
+impl<N: Number> Function<N> {
     /// creates a new function from an [AST] (a parsed expression) and a Vec of input variable
     /// names.
-    pub fn new<S: Into<String>>(name: S, ast: AST, inputs: Vec<S>) -> Function {
+    pub fn new<S: Into<String>>(name: S, ast: AST<N>, inputs: Vec<S>) -> Function<N> {
         Function { name: name.into(), ast, inputs: inputs.into_iter().map(|s| s.into()).collect() }
     }
     /// converts the function to latex. The function also provides the option to add a "&" aligner before
@@ -104,21 +104,21 @@ impl Function {
 /// ```
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Context {
-    pub vars: Vec<Variable>,
-    pub funs: Vec<Function>
+pub struct Context<N: Number> {
+    pub vars: Vec<Variable<N>>,
+    pub funs: Vec<Function<N>>
 }
 
-impl Context {
+impl<N: Number> Context<N> {
     /// creates a context with the variables pi and e and no functions.
     pub fn default() -> Self {
         Context::from_vars(vec![
-            Variable::new("pi", Value::Scalar(std::f64::consts::PI)),
-            Variable::new("e", Value::Scalar(std::f64::consts::E))
+            Variable::new("pi", Value::Scalar(N::from(std::f64::consts::PI))),
+            Variable::new("e", Value::Scalar(N::from(std::f64::consts::E)))
         ])
     }
     /// creates a context with the given variables and functions.
-    pub fn new<V: AsRef<[Variable]>, F: AsRef<[Function]>>(vars: V, funs: F) -> Context {
+    pub fn new<V: AsRef<[Variable<N>]>, F: AsRef<[Function<N>]>>(vars: V, funs: F) -> Context<N> {
         Context {vars: vars.as_ref().to_vec(), funs: funs.as_ref().to_vec()}
     }
     /// creates an empty context.
@@ -226,16 +226,16 @@ macro_rules! value {
 /// ```
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum Value {
-    Matrix(Vec<Vec<f64>>),
-    Vector(Vec<f64>),
-    Scalar(f64)
+pub enum Value<N> where N: Number {
+    Matrix(Vec<Vec<N>>),
+    Vector(Vec<N>),
+    Scalar(N)
 }
 
-impl Value {
+impl<N> Value<N> where N: Number {
     /// returns the scalar if the value is a scalar and None if it is a matrix or a
     /// vector.
-    pub fn get_scalar(&self) -> Option<f64> {
+    pub fn get_scalar(&self) -> Option<N> {
         match self {
             Value::Scalar(a) => return Some(*a),
             Value::Matrix(_) => return None,
@@ -244,7 +244,7 @@ impl Value {
     }
     /// returns the vector if the value is a vector and None if it is a matrix or a
     /// scalar.
-    pub fn get_vector(&self) -> Option<Vec<f64>> {
+    pub fn get_vector(&self) -> Option<Vec<N>> {
         match self {
             Value::Vector(a) => return Some(a.to_vec()),
             Value::Matrix(_) => return None,
@@ -253,7 +253,7 @@ impl Value {
     }
     /// returns the matrix if the value is a matrix and None if it is a scalar or a
     /// vector.
-    pub fn get_matrix(&self) -> Option<Vec<Vec<f64>>> {
+    pub fn get_matrix(&self) -> Option<Vec<Vec<N>>> {
         match self {
             Value::Matrix(a) => return Some(a.to_vec()),
             Value::Scalar(_) => return None,
@@ -282,13 +282,13 @@ impl Value {
         }
     }
     /// rounds the value.
-    pub fn round(&self, prec: usize) -> Value {
+    pub fn round(&self, prec: usize) -> Value<N> {
         match self {
-            Value::Scalar(a) => return Value::Scalar((a*10f64.powi(prec as i32)).round()/10f64.powi(prec as i32)),
+            Value::Scalar(a) => return Value::Scalar((*a*N::from(10f64).powi(prec as i32)).round()/N::from(10f64).powi(prec as i32)),
             Value::Vector(v) => {
                 let mut new_vec = vec![];
                 for i in v {
-                    new_vec.push((i*10f64.powi(prec as i32)).round()/10f64.powi(prec as i32));
+                    new_vec.push((*i*N::from(10f64).powi(prec as i32)).round()/N::from(10f64).powi(prec as i32));
                 }
                 return Value::Vector(new_vec);
             },
@@ -297,7 +297,7 @@ impl Value {
                 for i in m {
                     let mut row = vec![];
                     for j in i {
-                        row.push((j*10f64.powi(prec as i32)).round()/10f64.powi(prec as i32));
+                        row.push((*j*N::from(10f64).powi(prec as i32)).round()/N::from(10f64).powi(prec as i32));
                     }
                     new_matrix.push(row);
                 }
@@ -542,14 +542,14 @@ impl Value {
     }
 }
 
-impl Into<Values> for Value {
-    fn into(self) -> Values {
+impl<N: Number> Into<Values<N>> for Value<N> {
+    fn into(self) -> Values<N> {
         return Values::from_vec(vec![self]);
     }
 }
 
-impl Into<Values> for Vec<Value> {
-    fn into(self) -> Values {
+impl<N: Number> Into<Values<N>> for Vec<Value<N>> {
+    fn into(self) -> Values<N> {
         return Values::from_vec(self);
     }
 }
@@ -564,19 +564,19 @@ impl Into<Values> for Vec<Value> {
 /// ```
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Values(Vec<Value>);
+pub struct Values<N: Number>(Vec<Value<N>>);
 
-impl Values {
+impl<N: Number> Values<N> {
     /// creates the values from a Vec of [Value].
-    pub fn from_vec<V: AsRef<[Value]>>(values: V) -> Self {
+    pub fn from_vec<V: AsRef<[Value<N>]>>(values: V) -> Self {
         return Values(values.as_ref().to_vec());
     }
     /// converts the values back to a Vec of [Value].
-    pub fn to_vec(self) -> Vec<Value> {
+    pub fn to_vec(self) -> Vec<Value<N>> {
         return self.0;
     }
     /// gets the [Value] at the given index.
-    pub fn get(&self, i: usize) -> Option<&Value> {
+    pub fn get(&self, i: usize) -> Option<&Value<N>> {
         self.0.iter().nth(i)
     }
     /// returns the amount of values.
@@ -584,8 +584,8 @@ impl Values {
         return self.0.len()
     }
     /// rounds all values.
-    pub fn round(&self, prec: usize) -> Values {
-        let rounded_vals = self.0.iter().map(|x| x.round(prec)).collect::<Vec<Value>>();
+    pub fn round(&self, prec: usize) -> Values<N> {
+        let rounded_vals = self.0.iter().map(|x| x.round(prec)).collect::<Vec<Value<N>>>();
         Values::from_vec(rounded_vals)
     }
     /// converts the values to a string using "{}" and "," to print multiple Values. This is a crude
@@ -635,15 +635,15 @@ pub enum AST {
     Operation(Box<Operation>),
 }
 
-impl AST {
+impl<N: Number> AST {
     /// creates an AST node from a [Value].
-    pub fn from_value(val: Value) -> AST {
+    pub fn from_value(val: Value<N>) -> AST {
         match val {
-            Value::Scalar(s) => return AST::Scalar(s),
+            Value::Scalar(s) => return AST::Scalar(s.into()),
             Value::Vector(v) => {
                 let mut parsed_values = vec![];
                 for i in v {
-                    parsed_values.push(AST::Scalar(i))
+                    parsed_values.push(AST::Scalar(i.into()))
                 }
                 return AST::Vector(parsed_values)
             },
@@ -652,7 +652,7 @@ impl AST {
                 for i in m {
                     let mut row = vec![];
                     for j in i {
-                        row.push(AST::Scalar(j))
+                        row.push(AST::Scalar(j.into()))
                     }
                     parsed_rows.push(row);
                 }
@@ -661,7 +661,7 @@ impl AST {
         }
     }
     /// creates an AST node from [Values].
-    pub fn from_values(vals: Values) -> AST {
+    pub fn from_values(vals: Values<N>) -> AST {
         if vals.len() == 1 {
             return AST::from_value(vals.get(0).unwrap().clone());
         } else if vals.len() == 0 {
@@ -685,7 +685,7 @@ impl AST {
     /// converts the AST to a string using crude symbols for operations, vectors and matrices.
     pub fn as_string(&self) -> String {
         match self {
-            AST::Scalar(s) => return round_and_format(*s, false),
+            AST::Scalar(s) => return round_and_format(N::from(*s), false),
             AST::Vector(v) => return format!("[{}]", v.iter().map(|a| a.as_string()).collect::<Vec<String>>().join(", ")),
             AST::Matrix(m) => return format!("[{}]", m.iter().map(|v| "[".to_string() + &v.iter().map(|v| v.as_string()).collect::<Vec<String>>().join(", ") + "]").collect::<Vec<String>>().join(", ")),
             AST::List(l) => return format!("{{{}}}", l.iter().map(|a| a.as_string()).collect::<Vec<String>>().join(", ")),
@@ -762,7 +762,7 @@ impl AST {
     }
     fn latex_print(&self, add_aligner: bool) -> String {
         match self {
-            AST::Scalar(s) => return round_and_format(*s, true),
+            AST::Scalar(s) => return round_and_format(N::from(*s), true),
             AST::Vector(v) => {
                 let mut output_string = "\\begin{pmatrix}".to_string();
                 for i in 0..v.len() {
