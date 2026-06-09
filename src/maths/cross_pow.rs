@@ -1,9 +1,9 @@
-use crate::basetypes::Value;
+use crate::{basetypes::Value, maths::num_trait::Number};
 
 use super::mult_div::mmmult;
 
 #[doc(hidden)]
-pub fn vcross(a: &Vec<f64>, b: &Vec<f64>) -> Result<Value, String> {
+pub fn vcross<N: Number>(a: &Vec<N>, b: &Vec<N>) -> Result<Value<N>, String> {
     if a.len() != b.len() {
         return Err("Vectors have different dimensions!".to_string());
     }
@@ -19,8 +19,8 @@ pub fn vcross(a: &Vec<f64>, b: &Vec<f64>) -> Result<Value, String> {
             expand_va.push(a[i]);
             expand_vb.push(b[i]);
         } else {
-            expand_va.push(0.);
-            expand_vb.push(0.);
+            expand_va.push(N::from(0.));
+            expand_vb.push(N::from(0.));
         }
     }
 
@@ -32,12 +32,12 @@ pub fn vcross(a: &Vec<f64>, b: &Vec<f64>) -> Result<Value, String> {
 }
 
 #[doc(hidden)]
-pub fn sspow(a: &f64, b: &f64) -> Result<Value, String> {
+pub fn sspow<N: Number>(a: &N, b: &N) -> Result<Value<N>, String> {
     return Ok(Value::Scalar(a.powf(*b)));
 }
 
 #[doc(hidden)]
-pub fn mspow(a: &Vec<Vec<f64>>, b: &f64) -> Result<Value, String> {
+pub fn mspow<N: Number>(a: &Vec<Vec<N>>, b: &N) -> Result<Value<N>, String> {
     if b.round() != *b {
         return Err("Exponent must be an integer!".to_string());
     }
@@ -46,14 +46,14 @@ pub fn mspow(a: &Vec<Vec<f64>>, b: &f64) -> Result<Value, String> {
         let mut row = vec![];
         for j in 0..a[0].len() {
             if i == j {
-                row.push(1.);
+                row.push(N::from(1.));
             } else {
-                row.push(0.);
+                row.push(N::from(0.));
             }
         }
         mult.push(row);
     }
-    for _ in 0..(*b as i32) {
+    for _ in 0..(b.round().into() as i32) {
         mult = mmmult(&mult, a)?.get_matrix().unwrap();
     }
 

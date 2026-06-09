@@ -1,17 +1,17 @@
-use crate::{Context, Value, Values, Variable, basetypes::{AST, AdvancedOperation, Function, Operation, SimpleOpType}, errors::EvalError, helpers::cart_prod, maths, roots::RootFinder};
+use crate::{Context, Value, Values, Variable, basetypes::{AST, AdvancedOperation, Function, Operation, SimpleOpType}, errors::EvalError, helpers::cart_prod, maths::{self, num_trait::Number}, roots::RootFinder};
 
 /// used to evaluate an AST with the provided context.
 ///
 /// If you are searching for a quick and easy way to evaluate an expression, have a look at [quick_eval()](fn@crate::quick_eval).
-pub fn eval(b: &AST, context: &mut Context) -> Result<Values, EvalError> {
+pub fn eval<N: Number>(b: &AST, context: &mut Context<N>) -> Result<Values<N>, EvalError> {
    Ok(Values::from_vec(eval_rec(b, context, "")?))
 }
 
-fn eval_rec(b: &AST, context: &mut Context, last_fn: &str) -> Result<Vec<Value>, EvalError> {
+fn eval_rec<N: Number>(b: &AST, context: &mut Context<N>, last_fn: &str) -> Result<Vec<Value<N>>, EvalError> {
     match b {
-        AST::Scalar(s) => return Ok(vec![Value::Scalar(*s)]),
+        AST::Scalar(s) => return Ok(vec![Value::Scalar(N::from(*s))]),
         AST::Vector(v) => {
-            let mut evaled_fields: Vec<Vec<f64>> = vec![];
+            let mut evaled_fields: Vec<Vec<N>> = vec![];
             for i in &**v {
                 let values = eval_rec(i, context, last_fn)?;
                 for i in &values {
@@ -22,12 +22,12 @@ fn eval_rec(b: &AST, context: &mut Context, last_fn: &str) -> Result<Vec<Value>,
                 evaled_fields.push(values.iter().map(|v| v.get_scalar().unwrap()).collect());
             }
 
-            let permuts: Vec<Vec<f64>> = cart_prod(&evaled_fields);
+            let permuts = cart_prod(&evaled_fields);
 
             return Ok(permuts.iter().map(|p| Value::Vector(p.to_vec())).collect());
         },
         AST::Matrix(m) => {
-            let mut evaled_rows: Vec<Vec<Vec<f64>>> = vec![];
+            let mut evaled_rows: Vec<Vec<Vec<N>>> = vec![];
             for i in &**m {
                 let mut row = vec![];
                 for j in i {
@@ -41,7 +41,7 @@ fn eval_rec(b: &AST, context: &mut Context, last_fn: &str) -> Result<Vec<Value>,
                 }
                 evaled_rows.push(row);
             }
-            let mut permuts_row: Vec<Vec<Vec<f64>>> = vec![];
+            let mut permuts_row: Vec<Vec<Vec<N>>> = vec![];
             for i in evaled_rows {
                 permuts_row.push(cart_prod(&i));
             }
@@ -51,7 +51,7 @@ fn eval_rec(b: &AST, context: &mut Context, last_fn: &str) -> Result<Vec<Value>,
             Ok(permuts.iter().map(|m| Value::Matrix(m.to_vec())).collect())
         },
         AST::List(l) => {
-            return Ok(l.iter().map(|e| eval_rec(e, context, last_fn)).collect::<Result<Vec<Vec<Value>>, EvalError>>()?.into_iter().flatten().collect());
+            return Ok(l.iter().map(|e| eval_rec(e, context, last_fn)).collect::<Result<Vec<Vec<Value<N>>>, EvalError>>()?.into_iter().flatten().collect());
         }
         AST::Variable(v) => {
             for i in context.vars.iter() {
@@ -107,7 +107,7 @@ fn eval_rec(b: &AST, context: &mut Context, last_fn: &str) -> Result<Vec<Value>,
                     }
 
                     for p in permuts {
-                        let mut copied_vars: Vec<Variable> = vec![];
+                        let mut copied_vars: Vec<Variable<N>> = vec![];
                         for i in 0..inputs.len() {
                             let var_name = &function.inputs[i];
                             if let Some(var) = context.get_var(var_name) {
@@ -245,7 +245,7 @@ fn eval_rec(b: &AST, context: &mut Context, last_fn: &str) -> Result<Vec<Value>,
                             let mut res = vec![];
 
                             for con in econdition {
-                                if maths::bool::eq(&con, &Value::Scalar(0.))? == Value::Scalar(0.) {
+                                if maths::bool::eq(&con, &Value::Scalar(N::from(0.)))? == Value::Scalar(N::from(0.)) {
                                     let ethen = eval_rec(&then, context, last_fn)?;
                                     res.push(ethen);
                                 } else {

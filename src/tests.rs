@@ -164,35 +164,35 @@ fn double_paranth() -> Result<(), MathLibError> {
 
 #[test]
 fn matrix_not_rect() {
-    let res = quick_eval("[[3, 0, 5], [2, 4, 5], [1, 2]]", &mut Context::empty());
+    let res = quick_eval::<_, f64>("[[3, 0, 5], [2, 4, 5], [1, 2]]", &mut Context::empty());
 
     assert_eq!(res.unwrap_err(), QuickEvalError::ParserError(ParserError::NotRectMatrix))
 }
 
 #[test]
 fn empty_matrix_vector() {
-    let res = quick_eval("[[], [], []]", &mut Context::empty());
+    let res = quick_eval::<_, f64>("[[], [], []]", &mut Context::empty());
 
     assert_eq!(res.unwrap_err(), QuickEvalError::ParserError(ParserError::EmptyVec))
 }
 
 #[test]
 fn empty_expr() {
-    let res = quick_eval("", &mut Context::empty());
+    let res = quick_eval::<_, f64>("", &mut Context::empty());
 
     assert_eq!(res.unwrap_err(), QuickEvalError::ParserError(ParserError::EmptyExpr))
 }
 
 #[test]
 fn empty_expr_in_matrix1() {
-    let res = quick_eval("[[3, 0,], [2, 4, 5], [1, 2]]", &mut Context::empty());
+    let res = quick_eval::<_, f64>("[[3, 0,], [2, 4, 5], [1, 2]]", &mut Context::empty());
 
     assert_eq!(res.unwrap_err(), QuickEvalError::ParserError(ParserError::EmptyExpr))
 }
 
 #[test]
 fn empty_expr_in_matrix2() {
-    let res = quick_eval("[[3, 0, 5], [2, 4], [1, 2,]]", &mut Context::empty());
+    let res = quick_eval::<_, f64>("[[3, 0, 5], [2, 4], [1, 2,]]", &mut Context::empty());
 
     assert_eq!(res.unwrap_err(), QuickEvalError::ParserError(ParserError::EmptyExpr))
 }
@@ -310,7 +310,7 @@ fn custom_function_recursion() -> Result<(), MathLibError> {
     let function = parse("3*f(x)")?;
     let function_var = Function::new("f", function, vec!["x"]);
     
-    let res = quick_eval("f(5)", &mut Context::new(vec![], vec![function_var]));
+    let res = quick_eval::<_, f64>("f(5)", &mut Context::new(vec![], vec![function_var]));
 
     assert_eq!(res.err().unwrap(), QuickEvalError::EvalError(EvalError::RecursiveFunction));
 
@@ -423,7 +423,7 @@ fn matrix_power2() -> Result<(), MathLibError> {
 
 #[test]
 fn unmatched_delimiter() -> Result<(), MathLibError> {
-    let res = quick_eval("eq(((25x^3-96x^2+512x+384)/(x^4+2x^3+90x^2-128x+1664)^(1.5))/(-sqrt(1-(32-x+x^2)/(((x-1)^2+25)(x^2+64)))^2))=0, x)", &mut Context::empty());
+    let res = quick_eval::<_, f64>("eq(((25x^3-96x^2+512x+384)/(x^4+2x^3+90x^2-128x+1664)^(1.5))/(-sqrt(1-(32-x+x^2)/(((x-1)^2+25)(x^2+64)))^2))=0, x)", &mut Context::empty());
 
     assert_eq!(res, Err(QuickEvalError::ParserError(ParserError::TokenizerError(TokenizerError::UnmatchedDelimiter))));
 
@@ -884,7 +884,7 @@ fn crazy_solve() -> Result<(), MathLibError> {
 
 #[test]
 fn solve_vector() -> Result<(), MathLibError> {
-    let res = quick_eval("eq(x*[3, 4, 5]=[6, 8, 10], x)", &mut Context::empty());
+    let res = quick_eval::<_, f64>("eq(x*[3, 4, 5]=[6, 8, 10], x)", &mut Context::empty());
 
     assert_eq!(res.unwrap_err(), QuickEvalError::EvalError(EvalError::VectorInEq));
 
@@ -895,7 +895,7 @@ fn solve_vector() -> Result<(), MathLibError> {
 fn solve_overdefined_system1() -> Result<(), MathLibError> {
     let equation = "eq(400-100x=600-100x, -600-100x=-400-100x, 1000-100x=0+100x, x)";
 
-    let res = quick_eval(equation, &mut Context::empty())?.to_vec();
+    let res = quick_eval::<_, f64>(equation, &mut Context::empty())?.to_vec();
 
     assert_eq!(res, vec![]);
 
@@ -937,9 +937,9 @@ fn solve_nonlinear_system2() -> Result<(), MathLibError> {
 
 #[test]
 fn variable_as_latex() -> Result<(), MathLibError> {
-    let res1 = quick_eval("{2, 3, 4}", &mut Context::empty())?;
-    let res2 = quick_eval("f(x) = x^2", &mut Context::empty())?;
-    let res3 = quick_eval("4", &mut Context::empty())?;
+    let res1 = quick_eval::<_, f64>("{2, 3, 4}", &mut Context::empty())?;
+    let res2 = quick_eval::<_, f64>("f(x) = x^2", &mut Context::empty())?;
+    let res3 = quick_eval::<_, f64>("4", &mut Context::empty())?;
 
     let var1 = Variable::new("x", res1);
     let var2 = Variable::new("y", res2);

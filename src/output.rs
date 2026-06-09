@@ -1,7 +1,7 @@
 #[cfg(feature = "output")]
 use crate::errors::LatexError;
 
-use crate::{Values, basetypes::{AST, Operation, SimpleOpType}};
+use crate::{Values, basetypes::{AST, Operation, SimpleOpType}, maths::num_trait::Number};
 
 #[cfg(feature = "output")]
 /// converts the given latex string to a png image with the given height in pixels, returned as its raw bytes. 
@@ -50,14 +50,14 @@ pub fn svg_from_latex<S: Into<String>>(latex: String, line_color: S) -> Result<S
 /// ```
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Step {
+pub struct Step<N: Number> {
     term: AST,
-    result: Values
+    result: Values<N>
 }
 
-impl Step {
+impl<N: Number> Step<N> {
     /// creates a new step based on a term and the associated results.
-    pub fn new(term: AST, result: Values) -> Step {
+    pub fn new(term: AST, result: Values<N>) -> Step<N> {
         return Step { term, result };
     }
     fn as_latex_base(&self, mut with_align: bool, with_equation_number: Option<i32>) -> String {

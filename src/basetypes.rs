@@ -69,16 +69,16 @@ impl<N: Number> Variable<N> {
 /// ```
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Function<N: Number> {
+pub struct Function {
     pub name: String,
-    pub ast: AST<N>,
+    pub ast: AST,
     pub inputs: Vec<String>
 }
 
-impl<N: Number> Function<N> {
+impl Function {
     /// creates a new function from an [AST] (a parsed expression) and a Vec of input variable
     /// names.
-    pub fn new<S: Into<String>>(name: S, ast: AST<N>, inputs: Vec<S>) -> Function<N> {
+    pub fn new<S: Into<String>>(name: S, ast: AST, inputs: Vec<S>) -> Function {
         Function { name: name.into(), ast, inputs: inputs.into_iter().map(|s| s.into()).collect() }
     }
     /// converts the function to latex. The function also provides the option to add a "&" aligner before
@@ -106,7 +106,7 @@ impl<N: Number> Function<N> {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Context<N: Number> {
     pub vars: Vec<Variable<N>>,
-    pub funs: Vec<Function<N>>
+    pub funs: Vec<Function>
 }
 
 impl<N: Number> Context<N> {
@@ -118,23 +118,23 @@ impl<N: Number> Context<N> {
         ])
     }
     /// creates a context with the given variables and functions.
-    pub fn new<V: AsRef<[Variable<N>]>, F: AsRef<[Function<N>]>>(vars: V, funs: F) -> Context<N> {
+    pub fn new<V: AsRef<[Variable<N>]>, F: AsRef<[Function]>>(vars: V, funs: F) -> Context<N> {
         Context {vars: vars.as_ref().to_vec(), funs: funs.as_ref().to_vec()}
     }
     /// creates an empty context.
-    pub fn empty() -> Context {
+    pub fn empty() -> Context<N> {
         Context { vars: vec![], funs: vec![] }
     }
     /// creates a new context containing only the given variables.
-    pub fn from_vars<V: AsRef<[Variable]>>(vars: V) -> Context {
+    pub fn from_vars<V: AsRef<[Variable<N>]>>(vars: V) -> Context<N> {
         Context { vars: vars.as_ref().to_vec(), funs: vec![] }
     }
     /// creates a new context containing only the given functions.
-    pub fn from_funs<F: AsRef<[Function]>>(funs: F) -> Context {
+    pub fn from_funs<F: AsRef<[Function]>>(funs: F) -> Context<N> {
         Context { vars: vec![], funs: funs.as_ref().to_vec() }
     }
     /// adds a variable to the context, replacing an already existing variable with the same name.
-    pub fn add_var(&mut self, var: &Variable) {
+    pub fn add_var(&mut self, var: &Variable<N>) {
         self.vars = self.vars.iter()
             .filter(|v| v.name != var.name)
             .map(|v| v.to_owned())
@@ -166,7 +166,7 @@ impl<N: Number> Context<N> {
             .collect()
     }
     /// returns the variable with the given name or None if it does not exist in the context.
-    pub fn get_var<S: Into<String> + Clone>(&self, var_name: S) -> Option<Variable> {
+    pub fn get_var<S: Into<String> + Clone>(&self, var_name: S) -> Option<Variable<N>> {
         self.vars.iter().filter(|v| v.name == var_name.clone().into()).map(|v| v.to_owned()).nth(0)
     }
     /// returns the function with the given name or None if it does not exist in the context.
@@ -635,9 +635,9 @@ pub enum AST {
     Operation(Box<Operation>),
 }
 
-impl<N: Number> AST {
+impl AST {
     /// creates an AST node from a [Value].
-    pub fn from_value(val: Value<N>) -> AST {
+    pub fn from_value<N: Number>(val: Value<N>) -> AST {
         match val {
             Value::Scalar(s) => return AST::Scalar(s.into()),
             Value::Vector(v) => {
@@ -661,7 +661,7 @@ impl<N: Number> AST {
         }
     }
     /// creates an AST node from [Values].
-    pub fn from_values(vals: Values<N>) -> AST {
+    pub fn from_values<N: Number>(vals: Values<N>) -> AST {
         if vals.len() == 1 {
             return AST::from_value(vals.get(0).unwrap().clone());
         } else if vals.len() == 0 {
@@ -685,7 +685,7 @@ impl<N: Number> AST {
     /// converts the AST to a string using crude symbols for operations, vectors and matrices.
     pub fn as_string(&self) -> String {
         match self {
-            AST::Scalar(s) => return round_and_format(N::from(*s), false),
+            AST::Scalar(s) => return round_and_format(*s, false),
             AST::Vector(v) => return format!("[{}]", v.iter().map(|a| a.as_string()).collect::<Vec<String>>().join(", ")),
             AST::Matrix(m) => return format!("[{}]", m.iter().map(|v| "[".to_string() + &v.iter().map(|v| v.as_string()).collect::<Vec<String>>().join(", ") + "]").collect::<Vec<String>>().join(", ")),
             AST::List(l) => return format!("{{{}}}", l.iter().map(|a| a.as_string()).collect::<Vec<String>>().join(", ")),
@@ -762,7 +762,7 @@ impl<N: Number> AST {
     }
     fn latex_print(&self, add_aligner: bool) -> String {
         match self {
-            AST::Scalar(s) => return round_and_format(N::from(*s), true),
+            AST::Scalar(s) => return round_and_format(*s, true),
             AST::Vector(v) => {
                 let mut output_string = "\\begin{pmatrix}".to_string();
                 for i in 0..v.len() {

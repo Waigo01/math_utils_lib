@@ -291,6 +291,8 @@ pub use parser::parse;
 pub use evaluator::eval;
 pub use errors::MathLibError;
 
+use crate::maths::num_trait::Number;
+
 #[cfg(feature = "high-prec")]
 /// defines the precision used by the equation solver. The printing precision is PREC - 2.
 pub const PREC: usize = 13;
@@ -323,7 +325,7 @@ pub const PREC: usize = 8;
 /// assert_eq!(res[0], value!(9.));
 /// # Ok::<(), MathLibError>(())
 /// ```
-pub fn quick_eval<S: Into<String>>(expr: S, context: &mut Context) -> Result<Values, QuickEvalError> {
+pub fn quick_eval<S: Into<String>, N: Number>(expr: S, context: &mut Context<N>) -> Result<Values<N>, QuickEvalError> {
     let expr = expr.into();
     let b_tree = parse(expr)?; 
     Ok(eval(&b_tree, context)?)

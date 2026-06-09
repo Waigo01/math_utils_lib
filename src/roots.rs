@@ -1,10 +1,10 @@
-use crate::{basetypes::{Value, Variable, AST}, errors::EvalError, maths::calculus::calculate_derivative_newton, evaluator::eval, Context, PREC};
+use crate::{Context, PREC, basetypes::{AST, Value, Variable}, errors::EvalError, evaluator::eval, maths::{calculus::calculate_derivative_newton, num_trait::Number}};
 
-fn clean_results(res: &[Value]) -> Vec<Value> {
+fn clean_results<N: Number>(res: &[Value<N>]) -> Vec<Value<N>> {
     if res.len() == 0 {
         return vec![];
     }
-    let mut new_res: Vec<Value> = vec![];
+    let mut new_res: Vec<Value<N>> = vec![];
     for i in res {
         let mut found = false;
         for j in &new_res {
@@ -37,7 +37,7 @@ fn clean_results(res: &[Value]) -> Vec<Value> {
     return new_res;
 }
 
-fn gauss_algorithm(v: &mut Vec<Vec<f64>>) -> Result<Value, EvalError> {
+fn gauss_algorithm<N: Number>(v: &mut Vec<Vec<N>>) -> Result<Value<N>, EvalError> {
     if v.len()+1 != v[0].len() {
         return Err(EvalError::UnderdeterminedSystem);
     }
@@ -47,8 +47,8 @@ fn gauss_algorithm(v: &mut Vec<Vec<f64>>) -> Result<Value, EvalError> {
             let divisor = v[i][i]/v[j][i];
             let mut zero_line = true;
             for k in i..v[j].len() {
-                v[j][k] -= v[i][k]/divisor; 
-                if v[j][k] != 0. {
+                v[j][k] = v[j][k] - v[i][k]/divisor; 
+                if v[j][k] != N::from(0.) {
                     zero_line = false;
                 }
             }
@@ -62,7 +62,7 @@ fn gauss_algorithm(v: &mut Vec<Vec<f64>>) -> Result<Value, EvalError> {
 
     v.iter_mut().for_each(|x| x.reverse());
 
-    let aug_col = v.iter().map(|x| x[0]).collect::<Vec<f64>>();
+    let aug_col: Vec<N> = v.iter().map(|x| x[0]).collect();
 
     for i in 0..v.len() {
         v[i].remove(0);
@@ -74,8 +74,8 @@ fn gauss_algorithm(v: &mut Vec<Vec<f64>>) -> Result<Value, EvalError> {
             let divisor = v[i][i]/v[j][i];
             let mut zero_line = true;
             for k in i..v[j].len() {
-                v[j][k] -= v[i][k]/divisor;
-                if v[j][k] != 0. {
+                v[j][k] = v[j][k] - v[i][k]/divisor;
+                if v[j][k] != N::from(0.) {
                     zero_line = false;
                 }
             }
@@ -96,10 +96,10 @@ fn gauss_algorithm(v: &mut Vec<Vec<f64>>) -> Result<Value, EvalError> {
     return Ok(Value::Vector(result_vec));
 }
 
-fn jacobi_and_gauss(search_expres: &[AST], x: &[Variable], context: &mut Context, fx: &Vec<f64>) -> Result<Vec<Variable>, EvalError> {
-    let mut jacobi: Vec<Vec<f64>> = vec![];
+fn jacobi_and_gauss<N: Number>(search_expres: &[AST], x: &[Variable<N>], context: &mut Context<N>, fx: &Vec<N>) -> Result<Vec<Variable<N>>, EvalError> {
+    let mut jacobi: Vec<Vec<N>> = vec![];
 
-    let mut vars: Vec<&Variable> = context.vars.iter().collect();
+    let mut vars: Vec<&Variable<N>> = context.vars.iter().collect();
 
     for i in 0..search_expres.len() {
         let mut row = vec![];
@@ -111,7 +111,7 @@ fn jacobi_and_gauss(search_expres: &[AST], x: &[Variable], context: &mut Context
                     added_vars += 1;
                 }
             }
-            let derivative = calculate_derivative_newton(&search_expres[i], &x[j].name, x[j].values.get(0).unwrap(), Some(Value::Scalar(fx[i])), &mut Context::new(&vars.iter().map(|v| v.to_owned().to_owned()).collect::<Vec<Variable>>(), &context.funs))?.get_scalar().unwrap();
+            let derivative = calculate_derivative_newton(&search_expres[i], &x[j].name, x[j].values.get(0).unwrap(), Some(Value::Scalar(fx[i])), &mut Context::new(&vars.iter().map(|v| v.to_owned().to_owned()).collect::<Vec<Variable<N>>>(), &context.funs))?.get_scalar().unwrap();
             row.push(derivative);
             for _ in 0..added_vars {
                 vars.remove(vars.len()-1);
@@ -121,7 +121,7 @@ fn jacobi_and_gauss(search_expres: &[AST], x: &[Variable], context: &mut Context
     } 
 
     for i in 0..jacobi.len() {
-        jacobi[i].push(-1. * fx[i]);
+        jacobi[i].push(N::from(-1.) * fx[i]);
     }
 
     let x_new_minus_x = gauss_algorithm(&mut jacobi)?;
@@ -135,12 +135,12 @@ fn jacobi_and_gauss(search_expres: &[AST], x: &[Variable], context: &mut Context
     return Ok(x_new);
 }
 
-enum NewtonReturn {
-    NextX(Vec<Variable>),
-    FinishedX(Vec<Variable>) 
+enum NewtonReturn<N: Number> {
+    NextX(Vec<Variable<N>>),
+    FinishedX(Vec<Variable<N>>) 
 }
 
-fn newton(search_expres: &Vec<AST>, check_expres: &Vec<AST> , x: &Vec<Variable>, context: &mut Context) -> Result<NewtonReturn, EvalError> {
+fn newton<N: Number>(search_expres: &Vec<AST>, check_expres: &Vec<AST> , x: &Vec<Variable<N>>, context: &mut Context<N>) -> Result<NewtonReturn<N>, EvalError> {
     let mut fx = vec![];
     for i in x {
         context.add_var(i);
@@ -152,7 +152,7 @@ fn newton(search_expres: &Vec<AST>, check_expres: &Vec<AST> , x: &Vec<Variable>,
         context.remove_var(&i.name);
     }
 
-    if -10f64.powi(-(PREC as i32)) < fx.iter().map(|f| f.powi(2)).sum::<f64>().sqrt() && fx.iter().map(|f| f.powi(2)).sum::<f64>().sqrt() < 10f64.powi(-(PREC as i32)) {
+    if N::from(-1.)*N::from(10f64).powi(-(PREC as i32)) < fx.iter().map(|f| f.powi(2)).sum::<N>().sqrt() && fx.iter().map(|f| f.powi(2)).sum::<N>().sqrt() < N::from(10f64).powi(-(PREC as i32)) {
         let mut check_results = vec![]; 
         for i in x {
             context.add_var(i);
@@ -166,7 +166,7 @@ fn newton(search_expres: &Vec<AST>, check_expres: &Vec<AST> , x: &Vec<Variable>,
         if check_results.is_empty() {
             return Ok(NewtonReturn::FinishedX(x.to_vec()));
         }
-        if -10f64.powi(-(PREC as i32)) < check_results.iter().map(|f| f.powi(2)).sum::<f64>().sqrt() && check_results.iter().map(|f| f.powi(2)).sum::<f64>().sqrt() < 10f64.powi(-(PREC as i32)) {
+        if N::from(-1.)*N::from(10f64).powi(-(PREC as i32)) < check_results.iter().map(|f| f.powi(2)).sum::<N>().sqrt() && check_results.iter().map(|f| f.powi(2)).sum::<N>().sqrt() < N::from(10f64).powi(-(PREC as i32)) {
             return Ok(NewtonReturn::FinishedX(x.to_vec()));
         } else {
             return Err(EvalError::ExpressionCheckFailed);
@@ -199,14 +199,14 @@ fn generate_combinations(arr: Vec<usize>, len: usize, prev_arr: Vec<usize>) -> V
 
 /// defines a root finder to find the roots of an expression/multiple expressions (system of equations).
 #[derive(Debug)]
-pub struct RootFinder {
+pub struct RootFinder<N: Number> {
     expressions: Vec<AST>,
     combinations: Vec<Vec<usize>>,
-    context: Context,
+    context: Context<N>,
     search_vars_names: Vec<String>
 }
 
-impl RootFinder {
+impl<N: Number> RootFinder<N> {
     /// creates a new [RootFinder](struct@crate::roots::RootFinder) using a vec of expressions which represents
     /// the functions that you want the roots to be found of. Multiple expressions act as a system
     /// of equations. Additionally you have to pass the context and the variables in terms of which
@@ -214,7 +214,7 @@ impl RootFinder {
     ///
     /// This functionality has been implemented into the eval process using the
     /// [Equation](crate::basetypes::AdvancedOpType::Equation) operator.
-    pub fn new(expressions: Vec<AST>, mut context: Context, search_vars_names: Vec<String>) -> Result<RootFinder, EvalError> {
+    pub fn new(expressions: Vec<AST>, mut context: Context<N>, search_vars_names: Vec<String>) -> Result<RootFinder<N>, EvalError> {
         if expressions.len() == 0 {
             return Err(EvalError::NothingToDoEq);
         }
@@ -242,7 +242,7 @@ impl RootFinder {
         }
 
         for i in &search_vars_names {
-            context.add_var(&Variable::new(i, vec![Value::Scalar(8.21785)]));
+            context.add_var(&Variable::new(i, vec![Value::Scalar(N::from(8.21785))]));
         }
 
         let initial_res = eval(&expressions[0], &mut context)?;
@@ -272,7 +272,7 @@ impl RootFinder {
     /// In the case of a system of equations results will be represented as a vector with the
     /// result order being that in which the search_vars_names have been passed to the
     /// [RootFinder::new] function.
-    pub fn find_roots(&self) -> Result<Vec<Value>, EvalError> {
+    pub fn find_roots(&self) -> Result<Vec<Value<N>>, EvalError> {
         for i in &self.combinations {
             let mut search_expres = vec![];
             let mut check_expres = self.expressions.clone();
@@ -286,7 +286,7 @@ impl RootFinder {
             'solve_loop_0: for j in -1000..1000 {
                 let mut x = vec![];
                 for k in &self.search_vars_names {
-                    x.push(Variable::new(k, vec![Value::Scalar(j as f64)]));
+                    x.push(Variable::new(k, vec![Value::Scalar(N::from(j as f64))]));
                 }
 
                 'solve_loop_1: for _ in 0..1000 {
@@ -295,7 +295,7 @@ impl RootFinder {
                     match newton_result {
                         Ok(o) => {
                             match o {
-                                NewtonReturn::NextX(next_x) => x = next_x,
+                                NewtonReturn::NextX(next_x) => {x = next_x},
                                 NewtonReturn::FinishedX(fin_x) => {
                                     let mut result_vec = vec![];
                                     for i in fin_x {
