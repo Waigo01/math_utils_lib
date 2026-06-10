@@ -190,13 +190,13 @@ impl<N: Number> Context<N> {
 #[macro_export]
 macro_rules! value {
     ( $x:expr ) => {
-        Value::Scalar($x as f64)
+        Value::Scalar($x)
     };
     ( $($x:expr),+ ) => {
         {
             let mut vector = Vec::new();
             $(
-                vector.push($x as f64);
+                vector.push($x);
             )*
             Value::Vector(vector)
         }
@@ -207,7 +207,7 @@ macro_rules! value {
             $(
                 let mut row = Vec::new();
                 $(
-                    row.push($x as f64);
+                    row.push($x);
                 )*
                 vector.push(row);
             )*
