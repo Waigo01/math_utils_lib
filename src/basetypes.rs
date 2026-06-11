@@ -190,28 +190,40 @@ impl<N: Number> Context<N> {
 #[macro_export]
 macro_rules! value {
     ( $x:expr ) => {
-        Value::Scalar($x)
+        {
+            fn return_generic<N: $crate::Number>() -> $crate::Value<N>  {
+                $crate::Value::Scalar(N::from($x))
+            }
+
+            return_generic()
+        }
     };
     ( $($x:expr),+ ) => {
         {
-            let mut vector = Vec::new();
-            $(
-                vector.push($x);
-            )*
-            Value::Vector(vector)
+            fn return_generic<N: $crate::Number>() -> $crate::Value<N>  {
+                let mut vector = Vec::new();
+                $(
+                    vector.push(N::from($x));
+                )*
+                $crate::Value::Vector(vector)
+            }
+            return_generic()
         }
     };
     ( $($($x:expr),+);+ ) => {
         {
-            let mut vector = Vec::new();
-            $(
-                let mut row = Vec::new();
+            fn return_generic<N: $crate::Number>() -> $crate::Value<N>  { 
+                let mut vector = Vec::new();
                 $(
-                    row.push($x);
+                    let mut row = Vec::new();
+                    $(
+                        row.push(N::from($x));
+                    )*
+                    vector.push(row);
                 )*
-                vector.push(row);
-            )*
-            Value::Matrix(vector)
+                $crate::Value::Matrix(vector)
+            }
+            return_generic()
         }
     };
 }

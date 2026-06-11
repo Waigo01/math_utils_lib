@@ -1,4 +1,4 @@
-use std::{fmt::{Debug, LowerExp}, iter::Sum, ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Rem, RemAssign, Sub, SubAssign}};
+use std::{fmt::{Debug, Display, LowerExp}, iter::Sum, ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Rem, RemAssign, Sub, SubAssign}};
 
 /// A simple number trait to use with generics.
 pub trait Number<T: Number = Self>:
@@ -13,12 +13,13 @@ Mul<Self, Output = Self> +
 MulAssign +
 Rem<Self, Output = Self> +
 RemAssign +
-ToString +
+Display +
 Clone +
 PartialEq +
 PartialOrd +
 Copy +
 From<f64> +
+From<i32> +
 Into<f64> +
 Debug +
 LowerExp
