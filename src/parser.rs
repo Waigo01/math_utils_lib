@@ -1,4 +1,4 @@
-use crate::{basetypes::{AST, AdvancedOperation, Operation, SimpleOpType, Value}, errors::ParserError, helpers::get_args, tokenizer::{Delimiter, Token, Tokenizer}, value};
+use crate::{basetypes::{AST, AdvancedOperation, Operation, SimpleOpType}, errors::ParserError, helpers::get_args, maths::num_traits::Number, tokenizer::{Delimiter, Token, TokenStream, Tokenizer}, value};
 
 fn get_op_symbol(punct: &str) -> Option<SimpleOpType> {
     match punct {
@@ -24,21 +24,15 @@ fn get_op_symbol(punct: &str) -> Option<SimpleOpType> {
     }
 }
 
-fn parse_value(s: &Token) -> Result<AST, ParserError> {
-    if let Token::Literal(literal) = s {
-        let p = match literal.parse::<f64>() {
-            Ok(f) => f,
-            Err(_) => return Err(ParserError::ParseValue(literal.to_string()))
-        };
-        return Ok(AST::Scalar(p));
-    } else if let Token::Group(group) = s {
+fn parse_matrix_vector<N: Number>(s: &Token) -> Result<AST<N>, ParserError> {
+    if let Token::Group(group) = s {
         let args = get_args(&group.stream);
 
         if args.is_empty() || args[0].is_empty() {
             return Err(ParserError::EmptyVec);
         }
 
-        let output_v = args.iter().map(|v| parse_inner(v)).collect::<Result<Vec<AST>, ParserError>>()?;
+        let output_v = args.iter().map(|v| parse_inner(v)).collect::<Result<Vec<AST<N>>, ParserError>>()?;
         
         let mut is_vec = true;
         let mut is_mat = true;
@@ -59,7 +53,7 @@ fn parse_value(s: &Token) -> Result<AST, ParserError> {
                     AST::Vector(v) => return Ok(v.to_vec()),
                     _ => return Err(ParserError::NotRectMatrix)
                 }
-            }).collect::<Result<Vec<Vec<AST>>, ParserError>>()?;
+            }).collect::<Result<Vec<Vec<AST<N>>>, ParserError>>()?;
             let size = output_m[0].len();
             for i in &output_m {
                 if i.len() != size {
@@ -89,16 +83,24 @@ fn parse_value(s: &Token) -> Result<AST, ParserError> {
 }
 
 /// used to construct an AST from a string.
-pub fn parse<S: Into<String> + Clone>(expr: S) -> Result<AST, ParserError> {
+pub fn parse<S: Into<String> + Clone, N: Number>(expr: S) -> Result<AST<N>, ParserError> {
     let mut tokenizer = Tokenizer::new();
     let tokens = tokenizer.tokenize(expr)?;
 
     parse_inner(&tokens)
 }
 
-fn parse_inner(tokens: &[Box<Token>]) -> Result<AST, ParserError> {
+fn parse_inner<N: Number>(tokens: &[Box<Token>]) -> Result<AST<N>, ParserError> {
     if tokens.len() == 0 {
         return Err(ParserError::EmptyExpr);
+    }
+
+    //is it a valid value?
+    
+    let stream = TokenStream::from_tokens(tokens.to_vec());
+
+    if let Ok(n) = stream.to_string().parse::<N>() {
+        return Ok(AST::Scalar(n));
     }
 
     if tokens.len() == 1 && let Some(boxed) = tokens.get(0) && let Token::Group(ref group) = **boxed {
@@ -110,7 +112,7 @@ fn parse_inner(tokens: &[Box<Token>]) -> Result<AST, ParserError> {
             }))
         } else if group.delimiter == Delimiter::Brace {
             let args = get_args(&group.stream);
-            return Ok(AST::List(args.into_iter().map(|s| parse_inner(&s)).collect::<Result<Vec<AST>, ParserError>>()?));
+            return Ok(AST::List(args.into_iter().map(|s| parse_inner(&s)).collect::<Result<Vec<AST<N>>, ParserError>>()?));
         }
     }
 
@@ -149,7 +151,7 @@ fn parse_inner(tokens: &[Box<Token>]) -> Result<AST, ParserError> {
             if left_ts.is_empty() && (op.0 == SimpleOpType::AddSub || op.0 == SimpleOpType::Neg || op.0 == SimpleOpType::BoolNot) {
                 return Ok(AST::from_operation(Operation::SimpleOperation {
                     op_type: op.0.clone(), 
-                    left: AST::Scalar(0.), 
+                    left: AST::Scalar(N::ZERO), 
                     right: right_b
                 }));
             } else if left_ts.is_empty() {
@@ -203,7 +205,7 @@ fn parse_inner(tokens: &[Box<Token>]) -> Result<AST, ParserError> {
                     return Err(ParserError::WrongNumberOfArgs("derivative".to_string()));
                 }
                 let parsed_function = parse_inner(&args[0])?;
-                let Ok(AST::Variable(in_terms_of)) = parse_inner(&args[1]) else {
+                let Ok(AST::Variable(in_terms_of)) = parse_inner::<N>(&args[1]) else {
                     return Err(ParserError::DerivNotITOVar);
                 };
                 let parsed_value_at = parse_inner(&args[2])?;
@@ -220,7 +222,7 @@ fn parse_inner(tokens: &[Box<Token>]) -> Result<AST, ParserError> {
                     return Err(ParserError::WrongNumberOfArgs("integral".to_string()));
                 }
                 let parsed_function = parse_inner(&args[0])?;
-                let Ok(AST::Variable(in_terms_of)) = parse_inner(&args[1]) else {
+                let Ok(AST::Variable(in_terms_of)) = parse_inner::<N>(&args[1]) else {
                     return Err(ParserError::DerivNotITOVar);
                 };
                 let parsed_lower_b = parse_inner(&args[2])?;
@@ -282,7 +284,7 @@ fn parse_inner(tokens: &[Box<Token>]) -> Result<AST, ParserError> {
             _ => {
                 let args = get_args(&group.stream);
 
-                let parsed_args: Vec<AST> = args.iter().map(|a| parse_inner(a)).collect::<Result<Vec<AST>, ParserError>>()?;
+                let parsed_args: Vec<AST<N>> = args.iter().map(|a| parse_inner(a)).collect::<Result<Vec<AST<N>>, ParserError>>()?;
 
                 return Ok(AST::Function { name: ident.to_string(), inputs: parsed_args })
             }
@@ -298,7 +300,7 @@ fn parse_inner(tokens: &[Box<Token>]) -> Result<AST, ParserError> {
     
 
     if tokens.len() == 1 {
-        return Ok(parse_value(&tokens[0])?);
+        return Ok(parse_matrix_vector(&tokens[0])?);
     }
     
 

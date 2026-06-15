@@ -1,26 +1,26 @@
-use crate::basetypes::Value;
+use crate::{basetypes::Value, maths::num_traits::Number};
 
 #[doc(hidden)]
-pub fn ssmult(a: &f64, b: &f64) -> Result<Value, String> {
-    Ok(Value::Scalar(a*b))
+pub fn ssmult<N: Number>(a: &N, b: &N) -> Result<Value<N>, String> {
+    Ok(Value::Scalar(*a**b))
 }
 
 #[doc(hidden)]
-pub fn svmult(a: &f64, b: &Vec<f64>) -> Result<Value, String> {
+pub fn svmult<N: Number>(a: &N, b: &Vec<N>) -> Result<Value<N>, String> {
     let mut output_v = vec![];
     for i in b {
-        output_v.push(i*a);
+        output_v.push(*i**a);
     }
     Ok(Value::Vector(output_v))
 }
 
 #[doc(hidden)]
-pub fn smmult(a: &f64, b: &Vec<Vec<f64>>) -> Result<Value, String> {
+pub fn smmult<N: Number>(a: &N, b: &Vec<Vec<N>>) -> Result<Value<N>, String> {
     let mut output_m = vec![];
     for i in 0..b.len() {
         let mut row = vec![];
         for j in 0..b[0].len() {
-            row.push(b[i][j]*a);
+            row.push(b[i][j]**a);
         }
         output_m.push(row);
     }
@@ -28,27 +28,27 @@ pub fn smmult(a: &f64, b: &Vec<Vec<f64>>) -> Result<Value, String> {
 }
 
 #[doc(hidden)]
-pub fn vvmult(a: &Vec<f64>, b: &Vec<f64>) -> Result<Value, String> {
+pub fn vvmult<N: Number>(a: &Vec<N>, b: &Vec<N>) -> Result<Value<N>, String> {
     if a.len() != b.len() {
         return Err("Vectors have different dimensions!".to_string());
     }
-    let mut sum = 0f64;
+    let mut sum = N::ZERO;
     for i in 0..a.len() {
-        sum += a[i]*b[i];
+        sum = sum + a[i]*b[i];
     }
     return Ok(Value::Scalar(sum));
 }
 
 #[doc(hidden)]
-pub fn mvmult(a: &Vec<Vec<f64>>, b: &Vec<f64>) -> Result<Value, String> {
+pub fn mvmult<N: Number>(a: &Vec<Vec<N>>, b: &Vec<N>) -> Result<Value<N>, String> {
     if a[0].len() != b.len() {
         return Err("Vector and matrix have incompatible dimensions!".to_string());
     }
     let mut output_v = vec![];
     for i in 0..a.len() {
-        let mut sum = 0f64;
+        let mut sum = N::ZERO;
         for j in 0..a[i].len() {
-            sum += a[i][j]*b[j]
+            sum = sum + a[i][j]*b[j]
         }
         output_v.push(sum);
     }
@@ -56,7 +56,7 @@ pub fn mvmult(a: &Vec<Vec<f64>>, b: &Vec<f64>) -> Result<Value, String> {
 }
 
 #[doc(hidden)]
-pub fn mmmult(a: &Vec<Vec<f64>>, b: &Vec<Vec<f64>>) -> Result<Value, String> {
+pub fn mmmult<N: Number>(a: &Vec<Vec<N>>, b: &Vec<Vec<N>>) -> Result<Value<N>, String> {
     if a[0].len() != b.len() {
         return Err("Matrices have incompatible dimensions!".to_string());
     }
@@ -64,9 +64,9 @@ pub fn mmmult(a: &Vec<Vec<f64>>, b: &Vec<Vec<f64>>) -> Result<Value, String> {
     for i in 0..a.len() {
         let mut row = vec![];
         for j in 0..b[0].len() {
-            let mut sum = 0f64;
+            let mut sum = N::ZERO;
             for k in 0..a[0].len() {
-                sum += a[i][k]*b[k][j]
+                sum = sum + a[i][k]*b[k][j]
             }
             row.push(sum);
         }
@@ -76,29 +76,29 @@ pub fn mmmult(a: &Vec<Vec<f64>>, b: &Vec<Vec<f64>>) -> Result<Value, String> {
 }
 
 #[doc(hidden)]
-pub fn ssdiv(a: &f64, b: &f64) -> Result<Value, String> {
-    return Ok(Value::Scalar(a/b));
+pub fn ssdiv<N: Number>(a: &N, b: &N) -> Result<Value<N>, String> {
+    return Ok(Value::Scalar(*a/ *b));
 }
 
 #[doc(hidden)]
-pub fn vsdiv(a: &Vec<f64>, b: &f64) -> Result<Value, String> {
-    return svmult(&(1f64/b), a);
+pub fn vsdiv<N: Number>(a: &Vec<N>, b: &N) -> Result<Value<N>, String> {
+    return svmult(&b.recip(), a);
 }
 
 #[doc(hidden)]
-pub fn vvdiv(a: &Vec<f64>, b: &Vec<f64>) -> Result<Value, String> {
+pub fn vvdiv<N: Number>(a: &Vec<N>, b: &Vec<N>) -> Result<Value<N>, String> {
     if a.len() != b.len() {
         return Err("Vectors have incompatible dimensions!".to_string());
     }
-    let mut sum = 0.;
+    let mut sum = N::ZERO;
     for i in 0..a.len() {
-        sum += a[i]/b[i];
+        sum = sum + a[i]/b[i];
     }
 
     return Ok(Value::Scalar(sum));
 }
 
 #[doc(hidden)]
-pub fn msdiv(a: &Vec<Vec<f64>>, b: &f64) -> Result<Value, String> {
-    return smmult(&(1f64/b), a);
+pub fn msdiv<N: Number>(a: &Vec<Vec<N>>, b: &N) -> Result<Value<N>, String> {
+    return smmult(&b.recip(), a);
 }
