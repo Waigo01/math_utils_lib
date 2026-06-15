@@ -1,4 +1,4 @@
-use crate::{basetypes::Value, maths::num_trait::Number};
+use crate::{basetypes::Value, maths::num_traits::Number};
 
 pub mod add_sub;
 pub mod mult_div;
@@ -6,7 +6,7 @@ pub mod cross_pow;
 pub mod calculus;
 pub mod special;
 pub mod bool;
-pub mod num_trait;
+pub mod num_traits;
 
 #[doc(hidden)]
 pub fn add<N: Number>(lv: &Value<N>, rv: &Value<N>) -> Result<Value<N>, String> {
@@ -26,7 +26,7 @@ pub fn add<N: Number>(lv: &Value<N>, rv: &Value<N>) -> Result<Value<N>, String> 
 #[doc(hidden)]
 pub fn sub<N: Number>(lv: &Value<N>, rv: &Value<N>) -> Result<Value<N>, String> {
     match (lv, rv) {
-        (Value::Scalar(a), Value::Scalar(b)) => return add_sub::sadd(a, &(*b * N::from(-1.))),
+        (Value::Scalar(a), Value::Scalar(b)) => return add_sub::sadd(a, &(*b * -N::ONE)),
         (Value::Vector(a), Value::Vector(b)) => return add_sub::vsub(a, b),
         (Value::Matrix(a), Value::Matrix(b)) => return add_sub::msub(a, b),
         (Value::Vector(_), Value::Scalar(_)) => return Err("Can't subtract scalar from vector!".to_string()),
@@ -56,9 +56,9 @@ pub fn mult<N: Number>(lv: &Value<N>, rv: &Value<N>) -> Result<Value<N>, String>
 #[doc(hidden)]
 pub fn neg<N: Number>(lv: &Value<N>) -> Result<Value<N>, String> {
     match lv {
-        Value::Scalar(a) => return Ok(Value::Scalar(N::from(-1.)* *a)),
-        Value::Vector(a) => return Ok(Value::Vector(a.iter().map(|x| N::from(-1.)* *x).collect())),
-        Value::Matrix(a) => return Ok(Value::Matrix(a.iter().map(|x| x.iter().map(|y| N::from(-1.)* *y).collect()).collect()))
+        Value::Scalar(a) => return Ok(Value::Scalar(-N::ONE* *a)),
+        Value::Vector(a) => return Ok(Value::Vector(a.iter().map(|x| -N::ONE* *x).collect())),
+        Value::Matrix(a) => return Ok(Value::Matrix(a.iter().map(|x| x.iter().map(|y| -N::ONE* *y).collect()).collect()))
     }
 }
 
@@ -89,13 +89,15 @@ pub fn cross<N: Number>(lv: &Value<N>, rv: &Value<N>) -> Result<Value<N>, String
 pub fn get<N: Number>(lv: &Value<N>, rv: &Value<N>) -> Result<Value<N>, String> {
     match (lv, rv) {
         (Value::Vector(a), Value::Scalar(b)) => {
-            if *b % N::from(1.) != N::from(0.) || b.is_sign_negative() {
-                return Err("Index must be a positive Integer!".to_string());
-            }
-            if *b > N::from((a.len() - 1) as f64) {
+            let rounded_b = match b.as_rounded_int() {
+                Ok(r) if r.is_negative() => return Err("Indexd must be a positive Integer!".to_string()),
+                Ok(r) => r,
+                Err(_) => return Err("Index must be a positive Integer!".to_string())
+            };
+            if rounded_b > (a.len() - 1) as i32 {
                 return Err("Index out of bounds for vector!".to_string());
             }
-            return Ok(Value::Scalar(a[b.round().into() as usize]));
+            return Ok(Value::Scalar(a[rounded_b as usize]));
         },
         _ => return Err("Can only index vector with scalar!".to_string())
     }
@@ -168,13 +170,13 @@ pub fn arctan<N: Number>(lv: &Value<N>) -> Result<Value<N>, String> {
 pub fn abs<N: Number>(lv: &Value<N>) -> Result<Value<N>, String> {
     match lv {
         Value::Scalar(a) => {
-            if *a < N::from(0.) {return Ok(Value::Scalar(*a*N::from(-1.)));}
+            if *a < N::ZERO {return Ok(Value::Scalar(*a* -N::ONE));}
             else {return Ok(Value::Scalar(*a));}
         },
         Value::Vector(a) => {
-            let mut sum = N::from(0.);
+            let mut sum = N::ZERO;
             for i in a {
-                sum += i.powi(2);
+                sum = sum + i.powi(2);
             }
             return Ok(Value::Scalar(sum.sqrt()));
         },

@@ -1,11 +1,11 @@
-use crate::{PREC, Value, Variable, basetypes::{AST, Context, Operation, SimpleOpType}, errors::EvalError, eval, maths::num_trait::Number};
+use crate::{PREC, Value, Variable, basetypes::{AST, Context, Operation, SimpleOpType}, errors::EvalError, eval, maths::num_traits::Number};
 
 use super::{add, mult};
 
 /// calculates the integral of an expression in terms of a variable with a lower and a upper bound.
 ///
 /// Only scalars are supported as lower and upper bounds.
-pub fn calculate_integral<N: Number>(expr: &AST, in_terms_of: String, lower_bound: Value<N>, upper_bound: Value<N>, context: &Context<N>) -> Result<Vec<Value<N>>, EvalError> {
+pub fn calculate_integral<N: Number>(expr: &AST<N>, in_terms_of: String, lower_bound: Value<N>, upper_bound: Value<N>, context: &Context<N>) -> Result<Vec<Value<N>>, EvalError> {
     let mut mut_vars = context.vars.to_owned();
     for i in 0..mut_vars.len() {
         if mut_vars[i].name == in_terms_of {
@@ -16,18 +16,18 @@ pub fn calculate_integral<N: Number>(expr: &AST, in_terms_of: String, lower_boun
     match (lower_bound, upper_bound) {
         (Value::Scalar(mut lb), Value::Scalar(mut ub)) => {
             if lb == ub {
-                return Ok(vec![Value::Scalar(N::from(0.))])
+                return Ok(vec![Value::Scalar(N::ZERO)])
             }
             if ub < lb {
                 let temp = ub;
                 ub = lb;
                 lb = temp;
             }
-            let dx = (ub-lb)/N::from(10f64).powi(PREC as i32-3);
+            let dx = (ub-lb)/N::BASE.powi(PREC as i32-3);
             let mut sums = vec![];
             let mut b = lb;
             while b < ub {
-                mut_vars.push(Variable::new(&in_terms_of, vec![Value::Scalar((b+(b-dx))/N::from(2.0))]));
+                mut_vars.push(Variable::new(&in_terms_of, vec![Value::Scalar(b.mean(b-dx))]));
                 let evals = eval(expr, &mut Context::new(&mut_vars, &context.funs))?;
                 for (i, e) in evals.to_vec().iter().enumerate() {
                     if sums.len() <= i {
@@ -37,7 +37,7 @@ pub fn calculate_integral<N: Number>(expr: &AST, in_terms_of: String, lower_boun
                     }
                 }
                 mut_vars.remove(mut_vars.len()-1);
-                b += dx;
+                b = b + dx;
             }
             for i in 0..sums.len() {
                 sums[i] = mult(&sums[i], &Value::Scalar(dx))?;
@@ -55,7 +55,7 @@ pub fn calculate_integral<N: Number>(expr: &AST, in_terms_of: String, lower_boun
 /// The function also takes an optional fx value, which is the value f(x). This can be used in
 /// order to increase performance by not having to calculate f(x) twice for an application such as
 /// newtons method.
-pub fn calculate_derivative<N: Number>(expr: &AST, in_terms_of: &str, at: &Value<N>, context: &mut Context<N>) -> Result<Vec<Value<N>>, EvalError> {
+pub fn calculate_derivative<N: Number>(expr: &AST<N>, in_terms_of: &str, at: &Value<N>, context: &mut Context<N>) -> Result<Vec<Value<N>>, EvalError> {
     for i in &context.vars {
         if i.name == in_terms_of {
             context.remove_var(i.name.clone());
@@ -67,7 +67,7 @@ pub fn calculate_derivative<N: Number>(expr: &AST, in_terms_of: &str, at: &Value
             context.add_var(&Variable::new(in_terms_of, vec![at.clone()]));
             let fxs = eval(expr, context)?.to_vec();
             context.remove_var(in_terms_of);
-            context.add_var(&Variable::new(in_terms_of, vec![Value::Scalar(*s+N::from(10f64).powi(-(PREC as i32)))]));
+            context.add_var(&Variable::new(in_terms_of, vec![Value::Scalar(*s+N::BASE.powi(-(PREC as i32)))]));
             let fxhs = &eval(expr, context)?.to_vec();
             if fxs.len() != fxhs.len() {
                 return Err(EvalError::MathError("Amount of solutions for f(x) and f(x+h) are different!".to_string()));
@@ -81,7 +81,7 @@ pub fn calculate_derivative<N: Number>(expr: &AST, in_terms_of: &str, at: &Value
                         left: AST::from_value(fxhs[i].clone()),
                         right: AST::from_value(fxs[i].clone())
                     }),
-                    right: AST::from_value(Value::Scalar(10f64.powi(-(PREC as i32))))
+                    right: AST::from_value(Value::Scalar(N::BASE.powi(-(PREC as i32))))
                 });
                 res.push(eval(&h, context)?.to_vec());
             }
@@ -94,7 +94,7 @@ pub fn calculate_derivative<N: Number>(expr: &AST, in_terms_of: &str, at: &Value
     }
 }
 
-pub fn calculate_derivative_newton<N: Number>(expr: &AST, in_terms_of: &str, at: &Value<N>, mut fx: Option<Value<N>>, context: &mut Context<N>) -> Result<Value<N>, EvalError> {
+pub fn calculate_derivative_newton<N: Number>(expr: &AST<N>, in_terms_of: &str, at: &Value<N>, mut fx: Option<Value<N>>, context: &mut Context<N>) -> Result<Value<N>, EvalError> {
     for i in &context.vars {
         if i.name == in_terms_of {
             context.remove_var(in_terms_of);
@@ -108,7 +108,7 @@ pub fn calculate_derivative_newton<N: Number>(expr: &AST, in_terms_of: &str, at:
                 fx = Some(eval(expr, context)?.get(0).unwrap().clone());
                 context.remove_var(in_terms_of);
             }
-            context.add_var(&Variable::new(in_terms_of, vec![Value::Scalar(*s+N::from(10f64).powi(-(PREC as i32)))]));
+            context.add_var(&Variable::new(in_terms_of, vec![Value::Scalar(*s+N::BASE.powi(-(PREC as i32)))]));
             let fxh = &eval(expr, context)?.get(0).unwrap().clone();
             let h = AST::from_operation(Operation::SimpleOperation {
                 op_type: SimpleOpType::Div,
@@ -117,7 +117,7 @@ pub fn calculate_derivative_newton<N: Number>(expr: &AST, in_terms_of: &str, at:
                     left: AST::from_value(fxh.clone()),
                     right: AST::from_value(fx.clone().unwrap().clone())
                 }),
-                right: AST::from_value(Value::Scalar(N::from(10f64).powi(-(PREC as i32))))
+                right: AST::from_value(Value::Scalar(N::BASE.powi(-(PREC as i32))))
             });
             let res = eval(&h, context)?.get(0).unwrap().clone();
             context.remove_var(in_terms_of);

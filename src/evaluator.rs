@@ -1,13 +1,13 @@
-use crate::{Context, Value, Values, Variable, basetypes::{AST, AdvancedOperation, Function, Operation, SimpleOpType}, errors::EvalError, helpers::cart_prod, maths::{self, num_trait::Number}, roots::RootFinder};
+use crate::{Context, Value, Values, Variable, basetypes::{AST, AdvancedOperation, Function, Operation, SimpleOpType}, errors::EvalError, helpers::cart_prod, maths::{self, num_traits::Number}, roots::RootFinder};
 
 /// used to evaluate an AST with the provided context.
 ///
-/// If you are searching for a quick and easy way to evaluate an expression, have a look at [quick_eval()](fn@crate::quick_eval).
-pub fn eval<N: Number>(b: &AST, context: &mut Context<N>) -> Result<Values<N>, EvalError> {
+/// If you are searching for a quick and easy way to evaluate an expression, have a look at [quick_eval()](crate::quick_eval!).
+pub fn eval<N: Number>(b: &AST<N>, context: &mut Context<N>) -> Result<Values<N>, EvalError> {
    Ok(Values::from_vec(eval_rec(b, context, "")?))
 }
 
-fn eval_rec<N: Number>(b: &AST, context: &mut Context<N>, last_fn: &str) -> Result<Vec<Value<N>>, EvalError> {
+fn eval_rec<N: Number>(b: &AST<N>, context: &mut Context<N>, last_fn: &str) -> Result<Vec<Value<N>>, EvalError> {
     match b {
         AST::Scalar(s) => return Ok(vec![Value::Scalar(N::from(*s))]),
         AST::Vector(v) => {
@@ -245,7 +245,7 @@ fn eval_rec<N: Number>(b: &AST, context: &mut Context<N>, last_fn: &str) -> Resu
                             let mut res = vec![];
 
                             for con in econdition {
-                                if maths::bool::eq(&con, &Value::Scalar(N::from(0.)))? == Value::Scalar(N::from(0.)) {
+                                if maths::bool::eq(&con, &Value::Scalar(N::ZERO))? == Value::Scalar(N::ZERO) {
                                     let ethen = eval_rec(&then, context, last_fn)?;
                                     res.push(ethen);
                                 } else {

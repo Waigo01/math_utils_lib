@@ -1,4 +1,4 @@
-use crate::{helpers::{center_in_string, flatten_conditional, round_and_format}, maths::num_trait::Number};
+use crate::{helpers::{center_in_string, flatten_conditional, round_and_format}, maths::num_traits::Number};
 
 #[doc(hidden)]
 const VAR_SYMBOLS: [(&str, &str); 48] = [("\\alpha", "𝛼"), ("\\Alpha", "𝛢"), ("\\beta", "𝛽"), ("\\Beta", "𝛣"), ("\\gamma", "𝛾"), ("\\Gamma", "𝚪"),
@@ -23,7 +23,7 @@ const VAR_SYMBOLS: [(&str, &str); 48] = [("\\alpha", "𝛼"), ("\\Alpha", "𝛢"
 /// 
 /// ```
 /// # use math_utils_lib::{Variable, value, Value};
-/// let variable = Variable::new("x", vec![value!(3.)]);
+/// let variable: Variable<f64> = Variable::new("x", vec![value!(3.)]);
 /// ```
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -63,22 +63,22 @@ impl<N: Number> Variable<N> {
 ///
 /// ```
 /// # use math_utils_lib::{parse, Function, MathLibError};
-/// let parsed_expr = parse("x^2")?;
+/// let parsed_expr = parse::<_, f64>("x^2")?;
 /// let function = Function::new("f", parsed_expr, vec!["x"]);
 /// # Ok::<(), MathLibError>(())
 /// ```
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Function {
+pub struct Function<N: Number> {
     pub name: String,
-    pub ast: AST,
+    pub ast: AST<N>,
     pub inputs: Vec<String>
 }
 
-impl Function {
+impl<N: Number> Function<N> {
     /// creates a new function from an [AST] (a parsed expression) and a Vec of input variable
     /// names.
-    pub fn new<S: Into<String>>(name: S, ast: AST, inputs: Vec<S>) -> Function {
+    pub fn new<S: Into<String>>(name: S, ast: AST<N>, inputs: Vec<S>) -> Function<N> {
         Function { name: name.into(), ast, inputs: inputs.into_iter().map(|s| s.into()).collect() }
     }
     /// converts the function to latex. The function also provides the option to add a "&" aligner before
@@ -100,25 +100,22 @@ impl Function {
 ///
 /// ```
 /// # use math_utils_lib::Context;
-/// let context = Context::default();
+/// let context: Context<f64> = Context::default();
 /// ```
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Context<N: Number> {
     pub vars: Vec<Variable<N>>,
-    pub funs: Vec<Function>
+    pub funs: Vec<Function<N>>
 }
 
 impl<N: Number> Context<N> {
     /// creates a context with the variables pi and e and no functions.
     pub fn default() -> Self {
-        Context::from_vars(vec![
-            Variable::new("pi", Value::Scalar(N::from(std::f64::consts::PI))),
-            Variable::new("e", Value::Scalar(N::from(std::f64::consts::E)))
-        ])
+        return Context::from_vars(N::default_consts().into_iter().map(|c| Variable::new(c.0, Value::Scalar(c.1))).collect::<Vec<Variable<N>>>());
     }
     /// creates a context with the given variables and functions.
-    pub fn new<V: AsRef<[Variable<N>]>, F: AsRef<[Function]>>(vars: V, funs: F) -> Context<N> {
+    pub fn new<V: AsRef<[Variable<N>]>, F: AsRef<[Function<N>]>>(vars: V, funs: F) -> Context<N> {
         Context {vars: vars.as_ref().to_vec(), funs: funs.as_ref().to_vec()}
     }
     /// creates an empty context.
@@ -130,7 +127,7 @@ impl<N: Number> Context<N> {
         Context { vars: vars.as_ref().to_vec(), funs: vec![] }
     }
     /// creates a new context containing only the given functions.
-    pub fn from_funs<F: AsRef<[Function]>>(funs: F) -> Context<N> {
+    pub fn from_funs<F: AsRef<[Function<N>]>>(funs: F) -> Context<N> {
         Context { vars: vec![], funs: funs.as_ref().to_vec() }
     }
     /// adds a variable to the context, replacing an already existing variable with the same name.
@@ -143,7 +140,7 @@ impl<N: Number> Context<N> {
         self.vars.push(var.to_owned());
     }
     /// adds a function to the context, replacing an already existing function with the same name.
-    pub fn add_fun(&mut self, fun: &Function) {
+    pub fn add_fun(&mut self, fun: &Function<N>) {
         self.funs = self.funs.iter()
             .filter(|f| f.name != fun.name)
             .map(|f| f.to_owned())
@@ -170,7 +167,7 @@ impl<N: Number> Context<N> {
         self.vars.iter().filter(|v| v.name == var_name.clone().into()).map(|v| v.to_owned()).nth(0)
     }
     /// returns the function with the given name or None if it does not exist in the context.
-    pub fn get_fun<S: Into<String> + Clone>(&self, fun_name: S) -> Option<Function> {
+    pub fn get_fun<S: Into<String> + Clone>(&self, fun_name: S) -> Option<Function<N>> {
         self.funs.iter().filter(|f| f.name == fun_name.clone().into()).map(|f| f.to_owned()).nth(0)
     }
 }
@@ -183,9 +180,9 @@ impl<N: Number> Context<N> {
 ///
 /// ```
 /// # use math_utils_lib::{Value, value};
-/// let x: Value = value!(3.5);
-/// let y: Value = value!(3, 2, 1);
-/// let z: Value = value!(1, 0, 0; 0, 1, 0; 0, 0, 1);
+/// let x: Value<f64> = value!(3.5);
+/// let y: Value<f64> = value!(3, 2, 1);
+/// let z: Value<f64> = value!(1, 0, 0; 0, 1, 0; 0, 0, 1);
 /// ```
 #[macro_export]
 macro_rules! value {
@@ -234,7 +231,7 @@ macro_rules! value {
 /// 
 /// ```
 /// # use math_utils_lib::Value;
-/// let x: Value = Value::Scalar(3.5);
+/// let x: Value<f64> = Value::Scalar(3.5);
 /// ```
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -296,11 +293,11 @@ impl<N> Value<N> where N: Number {
     /// rounds the value.
     pub fn round(&self, prec: usize) -> Value<N> {
         match self {
-            Value::Scalar(a) => return Value::Scalar((*a*N::from(10f64).powi(prec as i32)).round()/N::from(10f64).powi(prec as i32)),
+            Value::Scalar(a) => return Value::Scalar((*a*N::BASE.powi(prec as i32)).round()/N::BASE.powi(prec as i32)),
             Value::Vector(v) => {
                 let mut new_vec = vec![];
                 for i in v {
-                    new_vec.push((*i*N::from(10f64).powi(prec as i32)).round()/N::from(10f64).powi(prec as i32));
+                    new_vec.push((*i*N::BASE.powi(prec as i32)).round()/N::BASE.powi(prec as i32));
                 }
                 return Value::Vector(new_vec);
             },
@@ -309,7 +306,7 @@ impl<N> Value<N> where N: Number {
                 for i in m {
                     let mut row = vec![];
                     for j in i {
-                        row.push((*j*N::from(10f64).powi(prec as i32)).round()/N::from(10f64).powi(prec as i32));
+                        row.push((*j*N::BASE.powi(prec as i32)).round()/N::BASE.powi(prec as i32));
                     }
                     new_matrix.push(row);
                 }
@@ -634,28 +631,28 @@ impl<N: Number> Values<N> {
 /// - Operation
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum AST {
-    Scalar(f64),
-    Vector(Vec<AST>),
-    Matrix(Vec<Vec<AST>>),
-    List(Vec<AST>),
+pub enum AST<N: Number> {
+    Scalar(N),
+    Vector(Vec<AST<N>>),
+    Matrix(Vec<Vec<AST<N>>>),
+    List(Vec<AST<N>>),
     Variable(String),
     Function {
         name: String,
-        inputs: Vec<AST>
+        inputs: Vec<AST<N>>
     },
-    Operation(Box<Operation>),
+    Operation(Box<Operation<N>>),
 }
 
-impl AST {
+impl<N: Number> AST<N> {
     /// creates an AST node from a [Value].
-    pub fn from_value<N: Number>(val: Value<N>) -> AST {
+    pub fn from_value(val: Value<N>) -> AST<N> {
         match val {
-            Value::Scalar(s) => return AST::Scalar(s.into()),
+            Value::Scalar(s) => return AST::Scalar(s),
             Value::Vector(v) => {
                 let mut parsed_values = vec![];
                 for i in v {
-                    parsed_values.push(AST::Scalar(i.into()))
+                    parsed_values.push(AST::Scalar(i))
                 }
                 return AST::Vector(parsed_values)
             },
@@ -664,7 +661,7 @@ impl AST {
                 for i in m {
                     let mut row = vec![];
                     for j in i {
-                        row.push(AST::Scalar(j.into()))
+                        row.push(AST::Scalar(j))
                     }
                     parsed_rows.push(row);
                 }
@@ -673,7 +670,7 @@ impl AST {
         }
     }
     /// creates an AST node from [Values].
-    pub fn from_values<N: Number>(vals: Values<N>) -> AST {
+    pub fn from_values(vals: Values<N>) -> AST<N> {
         if vals.len() == 1 {
             return AST::from_value(vals.get(0).unwrap().clone());
         } else if vals.len() == 0 {
@@ -687,11 +684,11 @@ impl AST {
         }
     }
     /// creates an AST node from a variable name.
-    pub fn from_variable_name<S: Into<String>>(val: S) -> AST {
+    pub fn from_variable_name<S: Into<String>>(val: S) -> AST<N> {
         return AST::Variable(val.into());
     }
     /// creates an AST node from an operation.
-    pub fn from_operation(val: Operation) -> AST {
+    pub fn from_operation(val: Operation<N>) -> AST<N> {
         return AST::Operation(Box::new(val));
     }
     /// converts the AST to a string using crude symbols for operations, vectors and matrices.
@@ -978,38 +975,38 @@ pub enum AdvancedOpType {
 /// construct an AST from a mathematical expression.
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum Operation {
+pub enum Operation<N: Number> {
     SimpleOperation {
         op_type: SimpleOpType,
-        left: AST,
-        right: AST,
+        left: AST<N>,
+        right: AST<N>,
     },
-    AdvancedOperation(AdvancedOperation)
+    AdvancedOperation(AdvancedOperation<N>)
 }
 
 /// used to specify an advanced operation for more complex mathematical operations, such as
 /// functions with more than two inputs and the equation solver.
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum AdvancedOperation{
+pub enum AdvancedOperation<N: Number>{
     Integral {
-        expr: AST,
+        expr: AST<N>,
         in_terms_of: String,
-        lower_bound: AST,
-        upper_bound: AST
+        lower_bound: AST<N>,
+        upper_bound: AST<N>
     },
     Derivative {
-        expr: AST,
+        expr: AST<N>,
         in_terms_of: String,
-        at: AST
+        at: AST<N>
     },
     Equation {
-        equations: Vec<(AST, AST)>,
+        equations: Vec<(AST<N>, AST<N>)>,
         search_vars: Vec<String>
     },
     Conditional {
-        condition: AST,
-        then: AST,
-        r#else: Option<AST>
+        condition: AST<N>,
+        then: AST<N>,
+        r#else: Option<AST<N>>
     }
 }

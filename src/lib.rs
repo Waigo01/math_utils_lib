@@ -17,6 +17,8 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //! ## Major features
 //!
 //! - Parsing and evaluating calculations with matrices, vectors and scalars.
+//! - Generic number implementation for scalars. Allowing for different number types with custom
+//! parsers and calculation rules.
 //! - A recursive parsing implementation allowing for calculations withing matrices and vectors.
 //! - An inbuilt equation solver for solving linear and non-linear systems of equations, accessible through a custom "function".
 //! - An evaluator based on combinatorics for combining multiple results from equations or sqrts with other operations.
@@ -45,7 +47,7 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //! ```rust
 //! # use math_utils_lib::{MathLibError, quick_eval, value, Context, Value};
 //! // The library can do the most basic calculations.
-//! let res = quick_eval("3*3", &mut Context::empty())?.to_vec();
+//! let res = quick_eval!("3*3")?.to_vec();
 //! 
 //! // The return of the quick eval method will have multiple values to support things like sqrt(9) = {-3, 3}.
 //! // In this case however this vector of values will only have one value (9).
@@ -57,7 +59,7 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //! # use math_utils_lib::{MathLibError, quick_eval, value, Context, Variable, Value};
 //! // Using the Context we can add variables with their respective values.
 //! let x = Variable::new("x", vec![value!(3)]);
-//! let res = quick_eval("3x", &mut Context::from_vars(vec![x]))?.to_vec();
+//! let res = quick_eval!("3x", &mut Context::from_vars(vec![x]))?.to_vec();
 //!
 //! assert_eq!(res[0], value!(9));
 //! # Ok::<(), MathLibError>(())
@@ -69,9 +71,9 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //! let mut context = Context::empty();
 //!
 //! // We can now assign 3 to the variable x in the expression itself.
-//! quick_eval("x=3", &mut context)?;
+//! quick_eval!("x=3", &mut context)?;
 //! // And use the variable later on.
-//! let res = quick_eval("3x", &mut context)?.to_vec();
+//! let res = quick_eval!("3x", &mut context)?.to_vec();
 //!
 //! assert_eq!(res[0], value!(9));
 //! # Ok::<(), MathLibError>(())
@@ -80,7 +82,7 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //! ```rust
 //! # use math_utils_lib::{MathLibError, quick_eval, value, Context, Value};
 //! // The library also has full matrix and vector support.
-//! let res = quick_eval("[[3, 4, 5], [1, 2, 3], [5, 6, 7]]", &mut Context::empty())?.to_vec();
+//! let res = quick_eval!("[[3, 4, 5], [1, 2, 3], [5, 6, 7]]")?.to_vec();
 //!
 //! // Notice that the matrix is by default parsed in a column major format,
 //! // whereas internally the library uses a row-major format.
@@ -96,7 +98,7 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //! let function_var = Function::new("f", function, vec!["x"]);
 //!
 //! // Then we can use that function later on.
-//! let res = quick_eval("f(5)", &mut Context::from_funs(vec![function_var]))?.to_vec();
+//! let res = quick_eval!("f(5)", &mut Context::from_funs(vec![function_var]))?.to_vec();
 //!
 //! assert_eq!(res[0], value!(140));
 //! # Ok::<(), MathLibError>(())
@@ -107,8 +109,8 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //! // Like before this assignment can also be done in an expression.
 //! let mut context = Context::empty();
 //!
-//! quick_eval("f(x)=5x^2+2x+x", &mut context)?;
-//! let res = quick_eval("f(5)", &mut context)?.to_vec();
+//! quick_eval!("f(x)=5x^2+2x+x", &mut context)?;
+//! let res = quick_eval!("f(5)", &mut context)?.to_vec();
 //!
 //! assert_eq!(res[0], value!(140));
 //! # Ok::<(), MathLibError>(())
@@ -120,9 +122,9 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //! 
 //! // Defined functions can even have side effects,
 //! // like setting a variable in the context, when called.
-//! quick_eval("f(x) = y=x", &mut c)?;
+//! quick_eval!("f(x) = y=x", &mut c)?;
 //!
-//! quick_eval("f(5)", &mut c)?;
+//! quick_eval!("f(5)", &mut c)?;
 //!
 //! assert_eq!(c.get_var("y".to_string()).unwrap().values.to_vec()[0], value!(5));
 //!
@@ -134,7 +136,7 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //! # use math_utils_lib::{MathLibError, quick_eval, value, Context, Value};
 //! // The library also has an inbuilt equation solver, based on newtons method. It can be accessed
 //! // using the eq "function"
-//! let res = quick_eval("eq(x^2=9, x)", &mut Context::empty())?.round(3).to_vec();
+//! let res = quick_eval!("eq(x^2=9, x)")?.round(3).to_vec();
 //!     
 //! assert_eq!(res, vec![value!(-3), value!(3)]);
 //! # Ok::<(), MathLibError>(())
@@ -145,7 +147,7 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //! // The same solver can also solve both linear and non-linear systems of equations.
 //! let equation = "eq(2x+5y+2z=-38, 3x-2y+4z=17, -6x+y-7z=-12, x, y, z)";
 //!
-//! let res = quick_eval(equation, &mut Context::empty())?.round(3).to_vec();
+//! let res = quick_eval!(equation)?.round(3).to_vec();
 //!
 //! assert_eq!(res, vec![value!(3, -8, -2)]);
 //! # Ok::<(), MathLibError>(())
@@ -155,12 +157,12 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //! # use math_utils_lib::{MathLibError, quick_eval, value, Context, Value};
 //! let mut c = Context::empty();
 //!
-//! quick_eval("a = 6", &mut c)?;
-//! quick_eval("b = 10", &mut c)?;
+//! quick_eval!("a = 6", &mut c)?;
+//! quick_eval!("b = 10", &mut c)?;
 //! 
 //! // The evaluator also supports boolean expressions where 0 = false and !0 = true.
 //! // The and (&) and or (|) operation will always return 1 for true and 0 for false.
-//! let res = quick_eval("!(a != 10 | b != 10) | b != 5", &mut c)?.to_vec();
+//! let res = quick_eval!("!(a != 10 | b != 10) | b != 5", &mut c)?.to_vec();
 //!
 //! assert_eq!(res[0], value!(1));
 //!
@@ -170,7 +172,7 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //! ```rust
 //! # use math_utils_lib::{MathLibError, quick_eval, value, Context, Value};
 //! // The evaluator can also make case destinctions using an if statement and a boolean expression.
-//! let res = quick_eval("if(eq(x^2 = 9, x) == -3, 5, 2)", &mut Context::empty())?.to_vec();
+//! let res = quick_eval!("if(eq(x^2 = 9, x) == -3, 5, 2)")?.to_vec();
 //!
 //! // Since there are two solutions to x^2 = 9
 //! // and the first one is indeed -3 but the second one is not, the resulting Values are 5, 2.
@@ -183,14 +185,14 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //! # use math_utils_lib::{MathLibError, quick_eval, value, Context, Value};
 //!
 //! let mut c = Context::empty();
-//! quick_eval("state = 0", &mut c)?;
+//! quick_eval!("state = 0", &mut c)?;
 //!
 //! // Using the power of lists, side effects in functions and if statements,
 //! // we can even build simple state machines.
 //!
 //! // This one recognizes the word 'math' with m = 0, a = 1, t = 2 and h = 3.
 //!
-//! quick_eval("f(x) =
+//! quick_eval!("f(x) =
 //! if(x == 0 & state == 0,
 //!    state = 1,
 //! if(x == 1 & state == 1,
@@ -203,19 +205,19 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //!
 //! // This is the word 'math'.
 //!
-//! quick_eval("f({0, 1, 2, 3})", &mut c)?;
+//! quick_eval!("f({0, 1, 2, 3})", &mut c)?;
 //!
-//! let res = quick_eval("state", &mut c)?.to_vec();
+//! let res = quick_eval!("state", &mut c)?.to_vec();
 //!
 //! assert_eq!(res[0], value!(4));
 //! 
-//! quick_eval("state = 0", &mut c)?;
+//! quick_eval!("state = 0", &mut c)?;
 //!
 //! // This is NOT the word 'math'.
 //!
-//! quick_eval("f({0, 1, 4, 2})", &mut c)?.to_vec();
+//! quick_eval!("f({0, 1, 4, 2})", &mut c)?.to_vec();
 //! 
-//! let res = quick_eval("state", &mut c)?.to_vec();
+//! let res = quick_eval!("state", &mut c)?.to_vec();
 //!
 //! assert_ne!(res[0], value!(4));
 //!
@@ -223,8 +225,8 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //! ```
 //!
 //! ```ignore
-//! # use math_utils_lib::{parse, eval, Step, png_from_latex, export_history, Context, MathLibError, Value, ExportType};
-//! let parsed_expr = parse("x = 3*3+6^5")?;
+//! # use math_utils_lib::{parse, eval, Step, png_from_latex, export_history, Context, MathLibError, Value, ExportType, AST};
+//! let parsed_expr: AST<f64> = parse("x = 3*3+6^5")?;
 //! let res = eval(&parsed_expr, &mut Context::empty())?;
 //!
 //! // We can also create a "Step" based on a parsed expression and a corresponding result.
@@ -251,6 +253,7 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //! - [x] Function side effects
 //! - [x] Boolean operations
 //! - [x] Conditional evaluation
+//! - [x] Generic numbers
 //! - [ ] Complex numbers
 //! - [ ] Possible tensor support
 //! - [ ] Stable API that makes everyone happy (very hard)
@@ -264,8 +267,6 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //! - The expected behavior
 //!
 //! When it comes to contributions, feel free to fork the github repo and open pull requests.
-
-use errors::QuickEvalError;
 
 #[doc(hidden)]
 pub mod maths;
@@ -283,15 +284,14 @@ pub mod tokenizer;
 #[cfg(test)]
 mod tests;
 
-pub use basetypes::{Value, Values, Variable, Context, Function};
+pub use basetypes::{Value, Values, Variable, Context, Function, AST};
 pub use output::Step;
 #[cfg(feature = "output")]
 pub use output::{export_history, ExportType, png_from_latex, svg_from_latex};
 pub use parser::parse;
 pub use evaluator::eval;
 pub use errors::MathLibError;
-
-use crate::maths::num_trait::Number;
+pub use maths::num_traits::Number;
 
 #[cfg(feature = "high-prec")]
 /// defines the precision used by the equation solver. The printing precision is PREC - 2.
@@ -311,7 +311,7 @@ pub const PREC: usize = 8;
 ///
 /// ```
 /// # use math_utils_lib::{basetypes::Function, errors::{EvalError, MathLibError, ParserError, QuickEvalError}, parse, quick_eval, value, Context, Value, Variable};
-/// let res = quick_eval("3*3", &mut Context::default())?.to_vec();
+/// let res = quick_eval!("3*3")?.to_vec();
 ///
 /// assert_eq!(res[0], value!(9.));
 /// # Ok::<(), MathLibError>(())
@@ -320,13 +320,45 @@ pub const PREC: usize = 8;
 /// ```
 /// # use math_utils_lib::{basetypes::Function, errors::{EvalError, MathLibError, ParserError, QuickEvalError}, parse, quick_eval, value, Context, Value, Variable};
 /// let x = Variable::new("x".to_string(), vec![value!(3.)]);
-/// let res = quick_eval("3x".to_string(), &mut Context::from_vars(vec![x]))?.to_vec();
+/// let res = quick_eval!("3x".to_string(), &mut Context::from_vars(vec![x]))?.to_vec();
 ///
 /// assert_eq!(res[0], value!(9.));
 /// # Ok::<(), MathLibError>(())
 /// ```
-pub fn quick_eval<S: Into<String>, N: Number>(expr: S, context: &mut Context<N>) -> Result<Values<N>, QuickEvalError> {
-    let expr = expr.into();
-    let b_tree = parse(expr)?; 
-    Ok(eval(&b_tree, context)?)
+
+#[macro_export]
+macro_rules! quick_eval {
+    ( $e:expr ) => {
+        {
+            pub fn quick_eval<S: Into<String>, N: $crate::Number>(expr: S, context: &mut $crate::Context<N>) -> Result<$crate::Values<N>, $crate::errors::QuickEvalError> {
+                let expr = expr.into();
+                let b_tree = $crate::parse(expr)?; 
+                Ok($crate::eval(&b_tree, context)?)
+            }
+
+            quick_eval::<_, f64>($e, &mut $crate::Context::default())
+        }
+    };
+    ( $e:expr, $c:expr ) => {
+        {
+            pub fn quick_eval<S: Into<String>, N: $crate::Number>(expr: S, context: &mut $crate::Context<N>) -> Result<$crate::Values<N>, $crate::errors::QuickEvalError> {
+                let expr = expr.into();
+                let b_tree = $crate::parse(expr)?; 
+                Ok($crate::eval(&b_tree, context)?)
+            }
+
+            quick_eval::<_, f64>($e, $c)
+        }
+    };
+    ( $e:expr, $c:expr, $t:ty ) => {
+        { 
+            pub fn quick_eval<S: Into<String>, N: $crate::Number>(expr: S, context: &mut $crate::Context<N>) -> Result<$crate::Values<N>, $crate::errors::QuickEvalError> {
+                let expr = expr.into();
+                let b_tree = $crate::parse(expr)?; 
+                Ok($crate::eval(&b_tree, context)?)
+            }
+
+            quick_eval::<_, $t>($e, $c)
+        }
+    }
 }

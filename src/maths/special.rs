@@ -1,4 +1,4 @@
-use crate::{Value, maths::num_trait::Number};
+use crate::{Value, maths::num_traits::Number};
 
 #[doc(hidden)]
 pub fn det_m<N: Number>(a: &Vec<Vec<N>>) -> Result<Value<N>, String> {
@@ -9,10 +9,10 @@ pub fn det_m<N: Number>(a: &Vec<Vec<N>>) -> Result<Value<N>, String> {
     } else if a.len() == 2 {
         return Ok(Value::Scalar(a[0][0]*a[1][1]-a[0][1]*a[1][0]));
     } else {
-        let mut sum = N::from(0.);
+        let mut sum = N::ZERO;
         for i in 0..a[0].len() {
             let new_matrix = a[1..].iter().map(|r| r[0..i].iter().cloned().chain(r[i+1..].iter().cloned()).collect()).collect::<Vec<Vec<N>>>();
-            sum += N::from(-1f64).powi(i as i32)*a[0][i]*det_m(&new_matrix)?.get_scalar().unwrap();
+            sum = sum + (-N::ONE).powi(i as i32)*a[0][i]*det_m(&new_matrix)?.get_scalar().unwrap();
         }
         return Ok(Value::Scalar(sum));
     }
@@ -22,7 +22,7 @@ pub fn det_m<N: Number>(a: &Vec<Vec<N>>) -> Result<Value<N>, String> {
 pub fn inv_m<N: Number>(a: &Vec<Vec<N>>) -> Result<Value<N>, String> {
     match det_m(a) {
         Err(_) => return Err("Can't calculate inverse of a non-square matrix!".to_string()),
-        Ok(Value::Scalar(s)) if s == N::from(0.) => return Err("Can't calculate inverse of a matrix with determinant 0!".to_string()),
+        Ok(Value::Scalar(s)) if s == N::ZERO => return Err("Can't calculate inverse of a matrix with determinant 0!".to_string()),
         _ => {}
     };
 
@@ -33,9 +33,9 @@ pub fn inv_m<N: Number>(a: &Vec<Vec<N>>) -> Result<Value<N>, String> {
     for i in 0..n {
         for j in 0..n {
             if j == i {
-                v[i].push(N::from(1.));
+                v[i].push(N::ONE);
             } else {
-                v[i].push(N::from(0.));
+                v[i].push(N::ZERO);
             }
         }
     }
@@ -46,7 +46,7 @@ pub fn inv_m<N: Number>(a: &Vec<Vec<N>>) -> Result<Value<N>, String> {
             let mut zero_line = true;
             for k in i..v[j].len() {
                 v[j][k] = v[j][k] - v[i][k]/divisor; 
-                if v[j][k] != N::from(0.) {
+                if v[j][k] != N::ZERO {
                     zero_line = false;
                 }
             }
@@ -73,7 +73,7 @@ pub fn inv_m<N: Number>(a: &Vec<Vec<N>>) -> Result<Value<N>, String> {
             let mut zero_line = true;
             for k in i..v[j].len() {
                 v[j][k] = v[j][k] - v[i][k]/divisor;
-                if v[j][k] != N::from(0.) {
+                if v[j][k] != N::ZERO {
                     zero_line = false;
                 }
             }

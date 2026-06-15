@@ -1,4 +1,4 @@
-use crate::{basetypes::Value, maths::num_trait::Number};
+use crate::{basetypes::Value, maths::num_traits::Number};
 
 #[doc(hidden)]
 pub fn ssmult<N: Number>(a: &N, b: &N) -> Result<Value<N>, String> {
@@ -32,9 +32,9 @@ pub fn vvmult<N: Number>(a: &Vec<N>, b: &Vec<N>) -> Result<Value<N>, String> {
     if a.len() != b.len() {
         return Err("Vectors have different dimensions!".to_string());
     }
-    let mut sum = N::from(0.);
+    let mut sum = N::ZERO;
     for i in 0..a.len() {
-        sum += a[i]*b[i];
+        sum = sum + a[i]*b[i];
     }
     return Ok(Value::Scalar(sum));
 }
@@ -46,9 +46,9 @@ pub fn mvmult<N: Number>(a: &Vec<Vec<N>>, b: &Vec<N>) -> Result<Value<N>, String
     }
     let mut output_v = vec![];
     for i in 0..a.len() {
-        let mut sum = N::from(0.);
+        let mut sum = N::ZERO;
         for j in 0..a[i].len() {
-            sum += a[i][j]*b[j]
+            sum = sum + a[i][j]*b[j]
         }
         output_v.push(sum);
     }
@@ -64,9 +64,9 @@ pub fn mmmult<N: Number>(a: &Vec<Vec<N>>, b: &Vec<Vec<N>>) -> Result<Value<N>, S
     for i in 0..a.len() {
         let mut row = vec![];
         for j in 0..b[0].len() {
-            let mut sum = N::from(0.);
+            let mut sum = N::ZERO;
             for k in 0..a[0].len() {
-                sum += a[i][k]*b[k][j]
+                sum = sum + a[i][k]*b[k][j]
             }
             row.push(sum);
         }
@@ -90,9 +90,9 @@ pub fn vvdiv<N: Number>(a: &Vec<N>, b: &Vec<N>) -> Result<Value<N>, String> {
     if a.len() != b.len() {
         return Err("Vectors have incompatible dimensions!".to_string());
     }
-    let mut sum = N::from(0.);
+    let mut sum = N::ZERO;
     for i in 0..a.len() {
-        sum += a[i]/b[i];
+        sum = sum + a[i]/b[i];
     }
 
     return Ok(Value::Scalar(sum));

@@ -1,4 +1,4 @@
-use crate::{basetypes::Value, maths::num_trait::Number};
+use crate::{basetypes::Value, maths::num_traits::Number};
 
 use super::mult_div::mmmult;
 
@@ -19,8 +19,8 @@ pub fn vcross<N: Number>(a: &Vec<N>, b: &Vec<N>) -> Result<Value<N>, String> {
             expand_va.push(a[i]);
             expand_vb.push(b[i]);
         } else {
-            expand_va.push(N::from(0.));
-            expand_vb.push(N::from(0.));
+            expand_va.push(N::ZERO);
+            expand_vb.push(N::ZERO);
         }
     }
 
@@ -38,7 +38,7 @@ pub fn sspow<N: Number>(a: &N, b: &N) -> Result<Value<N>, String> {
 
 #[doc(hidden)]
 pub fn mspow<N: Number>(a: &Vec<Vec<N>>, b: &N) -> Result<Value<N>, String> {
-    if b.round() != *b {
+    if *b % N::ONE != N::ZERO {
         return Err("Exponent must be an integer!".to_string());
     }
     let mut mult = vec![];
@@ -46,14 +46,18 @@ pub fn mspow<N: Number>(a: &Vec<Vec<N>>, b: &N) -> Result<Value<N>, String> {
         let mut row = vec![];
         for j in 0..a[0].len() {
             if i == j {
-                row.push(N::from(1.));
+                row.push(N::ONE);
             } else {
-                row.push(N::from(0.));
+                row.push(N::ZERO);
             }
         }
         mult.push(row);
     }
-    for _ in 0..(b.round().into() as i32) {
+    let rounded_b = match b.as_rounded_int() {
+        Ok(r) => r,
+        Err(_) => return Err("Exponent must be an integer!".to_string())
+    };
+    for _ in 0..rounded_b {
         mult = mmmult(&mult, a)?.get_matrix().unwrap();
     }
 

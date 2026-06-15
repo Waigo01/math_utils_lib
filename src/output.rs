@@ -1,7 +1,7 @@
 #[cfg(feature = "output")]
 use crate::errors::LatexError;
 
-use crate::{Values, basetypes::{AST, Operation, SimpleOpType}, maths::num_trait::Number};
+use crate::{Values, basetypes::{AST, Operation, SimpleOpType}, maths::num_traits::Number};
 
 #[cfg(feature = "output")]
 /// converts the given latex string to a png image with the given height in pixels, returned as its raw bytes. 
@@ -45,19 +45,19 @@ pub fn svg_from_latex<S: Into<String>>(latex: String, line_color: S) -> Result<S
 /// # use math_utils_lib::{parse, eval, Step, Context, MathLibError, Value};
 /// let parsed_expr = parse("3*3+6^5")?;
 /// let res = eval(&parsed_expr, &mut Context::empty())?;
-/// let step = Step::new(parsed_expr, res);
+/// let step: Step<f64> = Step::new(parsed_expr, res);
 /// # Ok::<(), MathLibError>(())
 /// ```
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Step<N: Number> {
-    term: AST,
+    term: AST<N>,
     result: Values<N>
 }
 
 impl<N: Number> Step<N> {
     /// creates a new step based on a term and the associated results.
-    pub fn new(term: AST, result: Values<N>) -> Step<N> {
+    pub fn new(term: AST<N>, result: Values<N>) -> Step<N> {
         return Step { term, result };
     }
     fn as_latex_base(&self, mut with_align: bool, with_equation_number: Option<i32>) -> String {
@@ -136,7 +136,7 @@ pub enum ExportType {
 /// exports a history of [Step] to a file named <file_name> with the file type defined
 /// by export_type (see [ExportType] for further details).
 #[cfg(feature = "output")]
-pub fn export_history(history: Vec<Step>, export_type: ExportType) -> Result<Vec<u8>, LatexError> {
+pub fn export_history<N: Number>(history: Vec<Step<N>>, export_type: ExportType) -> Result<Vec<u8>, LatexError> {
     let mut output_string = "\\documentclass[12pt, letterpaper]{article}\n\\usepackage{amsmath}\n\\usepackage[margin=1in]{geometry}\n\\allowdisplaybreaks\n\\begin{document}\n\\begin{align*}\n".to_string();
     for (i, s) in history.iter().enumerate() {
         output_string += &s.as_latex_with_tag(i as i32+1);
