@@ -1,4 +1,6 @@
-use std::{fmt::{Debug, Display, LowerExp}, iter::Sum, ops::{Add, Div, Mul, Neg, Rem, Sub}, str::FromStr};
+use std::{fmt::{Debug, Display, LowerExp}, iter::Sum, ops::{Add, Div, Mul, Neg, Sub}, str::FromStr};
+
+use crate::{Function, Variable, maths};
 
 /// This trait the number as it is required by the parser and evaluator. 
 ///
@@ -15,7 +17,6 @@ Sum +
 Sub<Self, Output = Self> +
 Div<Self, Output = Self> +
 Mul<Self, Output = Self> +
-Rem<Self, Output = Self> +
 Neg<Output = Self> +
 Clone +
 Copy +
@@ -34,156 +35,99 @@ LowerExp
     const ONE: Self;
     /// The Base/radix of this number type.
     const BASE: Self;
-    /// The default constants that should be added to [Context::default()](crate::Context::default()) returned as their name and value.
-    fn default_consts() -> Vec<(String, Self)>;
-    /// Provides the newton's method with starting guesses. Should return an iterator with the size
+    /// The nan value of this number type.
+    const NAN: Self;
+    /// The inf value of this number type.
+    const INFINITY: Self;
+    /// The -inf value of this number type.
+    const NEG_INFINITY: Self;
+    /// returns the default constants that should be added to [Context::default()](crate::Context::default()).
+    fn default_vars() -> Vec<Variable<Self>>;
+    /// returns the default functions that should be added to
+    /// [Context::default()](crate::Context::default()).
+    fn default_functions() -> Vec<Function<Self>>;
+    /// provides the newton's method with starting guesses. Should return an iterator with the size
     /// of n_values, which corresponds to the number of initial guesses.
     fn newton_search_pattern(n_values: usize) -> impl Iterator<Item = Self>;
-    /// Returns the nan value of this number type.
-    fn nan() -> Self;
-    /// Returns the inf value of this number type.
-    fn infinity() -> Self;
-    /// Returns the -inf value of this number type.
-    fn neg_infinity() -> Self;
-    /// Returns the arithmatic mean between two numbers of this type.
+    /// returns the arithmatic mean between two numbers of this type.
     fn mean(self, other: Self) -> Self;
-    /// Checks if the value is nan.
+    /// checks if the value is nan.
     fn is_nan(self) -> bool;
-    /// Checks if the value is infinite.
+    /// checks if the value is infinite.
     fn is_infinite(self) -> bool;
-    /// Checks if the value is finitie.
+    /// checks if the value is finitie.
     fn is_finite(self) -> bool;
-    /// Returns 1/value.
+    /// returns 1/value.
     fn recip(self) -> Self;
-    /// Returns the floor of the value.
+    /// returns the floor of the value.
     fn floor(self) -> Self;
-    /// Returns the ceil of the value.
+    /// returns the ceil of the value.
     fn ceil(self) -> Self;
-    /// Rounds the value.
+    /// rounds the value.
     fn round(self) -> Self;
-    /// Rounds the value and returns it as an integer. This method may return an Error if the value
+    /// rounds the value and returns it as an integer. This method may return an Error if the value
     /// cannot be returned as an integer. This method is only used to index into a vector and
     /// raise a matrix to an integer power.
     fn as_rounded_int(self) -> Result<i32, ()>;
-    /// Returns the abs of the value.
+    /// returns the abs of the value.
     fn abs(self) -> Self;
-    /// Returns the value raised to an integer power.
+    /// returns the value raised to an integer power.
     fn powi(self, n: i32) -> Self;
-    /// Returns the value raised to an arbitrary power.
+    /// returns the value raised to an arbitrary power.
     fn powf(self, n: Self) -> Self;
-    /// Returns the square root of the value.
+    /// returns the square root of the value.
     fn sqrt(self) -> Self;
-    /// Returns the natural log of the value.
-    fn ln(self) -> Self;
-    /// Returns the log of the value with an aribtrary base.
-    fn log(self, base: Self) -> Self;
-    /// Returns the max out of two values.
-    fn max(self, other: Self) -> Self;
-    /// Returns the min out of two values.
-    fn min(self, other: Self) -> Self;
-    /// Returns the sin of the value.
-    fn sin(self) -> Self;
-    /// Returns the cos of the value.
-    fn cos(self) -> Self;
-    /// Returns the tan of the value.
-    fn tan(self) -> Self;
-    /// Returns the arcsin of the value.
-    fn asin(self) -> Self;
-    /// Returns the arccos of the value.
-    fn acos(self) -> Self;
-    /// Returns the arctan of the value.
-    fn atan(self) -> Self;
 }
 
-impl Number for f64 {
-    const ONE: Self = 1.;
-    const ZERO: Self = 0.;
-    const BASE: Self = 10.;
-    fn default_consts() -> Vec<(String, Self)> {
+/// Implements functions that are only useful or only defined for real numbers.
+///
+/// This Trait implementation is also used to avoid having nested complex numbers. Please do not
+/// implement this trait if your number type is a complex number.
+pub trait RealNumber {
+    /// returns the 2-argument arctangent.
+    fn atan2(self, other: Self) -> Self;
+}
+
+/// Implements some basic functions. It also provides a method that returns the appropriate default
+/// functions for context creation.
+pub trait StandardFunctions {
+    /// returns the sin of the number.
+    fn sin(self) -> Self;
+    /// returns the cos of the number.
+    fn cos(self) -> Self;
+    /// returns the tan of the number.
+    fn tan(self) -> Self;
+    /// Returns the asin of the number.
+    fn asin(self) -> Self;
+    /// returns the acos of the number.
+    fn acos(self) -> Self;
+    /// returns the atan of the number.
+    fn atan(self) -> Self;
+    /// returns the sinh of the number.
+    fn sinh(self) -> Self;
+    /// returns the cosh of the number.
+    fn cosh(self) -> Self;
+    /// returns the tanh of the number.
+    fn tanh(self) -> Self;
+    /// returns the natural log of the number.
+    fn ln(self) -> Self;
+    /// returns exp(x).
+    fn exp(self) -> Self;
+
+    fn default_functions() -> Vec<Function<Self>> where Self: Number {
         vec![
-            ("pi".to_string(), std::f64::consts::PI),
-            ("e".to_string(), std::f64::consts::E),
+            Function::new_internal("sin".to_string(), 1, maths::sin),
+            Function::new_internal("cos".to_string(), 1, maths::cos),
+            Function::new_internal("tan".to_string(), 1, maths::tan),
+            Function::new_internal("abs".to_string(), 1, maths::abs),
+            Function::new_internal("sqrt".to_string(), 1, maths::sqrt),
+            Function::new_internal("root".to_string(), 2, maths::root),
+            Function::new_internal("ln".to_string(), 1, maths::ln),
+            Function::new_internal("arcsin".to_string(), 1, maths::arcsin),
+            Function::new_internal("arccos".to_string(), 1, maths::arccos),
+            Function::new_internal("arctan".to_string(), 1, maths::arctan),
+            Function::new_internal("det".to_string(), 1, maths::det),
+            Function::new_internal("inv".to_string(), 1, maths::inv)
         ]
-    }
-    fn newton_search_pattern(n_values: usize) -> impl Iterator<Item = Self> {
-        ((-(n_values as i32)/2)..(n_values as i32/2)).map(|v| v as f64)
-    }
-    fn nan() -> Self {
-        Self::NAN
-    }
-    fn infinity() -> Self {
-        Self::INFINITY
-    }
-    fn neg_infinity() -> Self {
-        Self::NEG_INFINITY
-    }
-    fn mean(self, other: Self) -> Self {
-        (self + other)/2.
-    }
-    fn is_nan(self) -> bool {
-        self.is_nan()
-    }
-    fn is_infinite(self) -> bool {
-        self.is_infinite()
-    }
-    fn is_finite(self) -> bool {
-        self.is_finite()
-    }
-    fn recip(self) -> Self {
-        self.recip()
-    }
-    fn floor(self) -> Self {
-        self.floor()
-    }
-    fn ceil(self) -> Self {
-        self.ceil()
-    }
-    fn round(self) -> Self {
-        self.round()
-    }
-    fn as_rounded_int(self) -> Result<i32, ()> {
-        Ok(self.round() as i32)
-    }
-    fn abs(self) -> Self {
-        self.abs()
-    }
-    fn powi(self, n: i32) -> Self {
-        self.powi(n)
-    }
-    fn powf(self, n: Self) -> Self {
-        self.powf(n)
-    }
-    fn sqrt(self) -> Self {
-        self.sqrt()
-    }
-    fn ln(self) -> Self {
-        self.ln()
-    }
-    fn log(self, base: Self) -> Self {
-        self.log(base)
-    }
-    fn max(self, other: Self) -> Self {
-        self.max(other)
-    }
-    fn min(self, other: Self) -> Self {
-        self.min(other)
-    }
-    fn sin(self) -> Self {
-        self.sin()
-    }
-    fn cos(self) -> Self {
-        self.cos()
-    }
-    fn tan(self) -> Self {
-        self.tan()
-    }
-    fn asin(self) -> Self {
-        self.asin()
-    }
-    fn acos(self) -> Self {
-        self.acos()
-    }
-    fn atan(self) -> Self {
-        self.atan()
     }
 }

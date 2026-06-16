@@ -1,4 +1,4 @@
-use crate::{basetypes::Value, maths::num_traits::Number};
+use crate::{basetypes::Value, maths::num_traits::{Number, StandardFunctions}};
 
 pub mod add_sub;
 pub mod mult_div;
@@ -7,6 +7,7 @@ pub mod calculus;
 pub mod special;
 pub mod bool;
 pub mod num_traits;
+pub mod num_impls;
 
 #[doc(hidden)]
 pub fn add<N: Number>(lv: &Value<N>, rv: &Value<N>) -> Result<Value<N>, String> {
@@ -113,7 +114,10 @@ pub fn pow<N: Number>(lv: &Value<N>, rv: &Value<N>) -> Result<Value<N>, String> 
 }
 
 #[doc(hidden)]
-pub fn sin<N: Number>(lv: &Value<N>) -> Result<Value<N>, String> {
+pub fn sin<N: Number + StandardFunctions>(args: Vec<Value<N>>) -> Result<Value<N>, String> {
+    let Some(lv) = args.get(0) else {
+        return Err("Sin requires exactly one argument!".to_string());
+    };
     match lv {
         Value::Scalar(a) => return Ok(Value::Scalar(a.sin())),
         Value::Vector(_) => return Err("Can't take sin of vector!".to_string()),
@@ -122,7 +126,10 @@ pub fn sin<N: Number>(lv: &Value<N>) -> Result<Value<N>, String> {
 }
 
 #[doc(hidden)]
-pub fn cos<N: Number>(lv: &Value<N>) -> Result<Value<N>, String> {
+pub fn cos<N: Number + StandardFunctions>(args: Vec<Value<N>>) -> Result<Value<N>, String> {
+    let Some(lv) = args.get(0) else {
+        return Err("Cos requires exactly one argument!".to_string());
+    };
     match lv {
         Value::Scalar(a) => return Ok(Value::Scalar(a.cos())),
         Value::Vector(_) => return Err("Can't take cos of vector!".to_string()),
@@ -131,7 +138,10 @@ pub fn cos<N: Number>(lv: &Value<N>) -> Result<Value<N>, String> {
 }
 
 #[doc(hidden)]
-pub fn tan<N: Number>(lv: &Value<N>) -> Result<Value<N>, String> {
+pub fn tan<N: Number + StandardFunctions>(args: Vec<Value<N>>) -> Result<Value<N>, String> {
+    let Some(lv) = args.get(0) else {
+        return Err("Tan requires exactly one argument!".to_string());
+    };
     match lv {
         Value::Scalar(a) => return Ok(Value::Scalar(a.tan())),
         Value::Vector(_) => return Err("Can't take tan of vector!".to_string()),
@@ -140,7 +150,10 @@ pub fn tan<N: Number>(lv: &Value<N>) -> Result<Value<N>, String> {
 }
 
 #[doc(hidden)]
-pub fn arcsin<N: Number>(lv: &Value<N>) -> Result<Value<N>, String> {
+pub fn arcsin<N: Number + StandardFunctions>(args: Vec<Value<N>>) -> Result<Value<N>, String> {
+    let Some(lv) = args.get(0) else {
+        return Err("Arcsin requires exactly one argument!".to_string());
+    };
     match lv {
         Value::Scalar(a) => return Ok(Value::Scalar(a.asin())),
         Value::Vector(_) => return Err("Can't take arcsin of vector!".to_string()),
@@ -149,7 +162,10 @@ pub fn arcsin<N: Number>(lv: &Value<N>) -> Result<Value<N>, String> {
 }
 
 #[doc(hidden)]
-pub fn arccos<N: Number>(lv: &Value<N>) -> Result<Value<N>, String> {
+pub fn arccos<N: Number + StandardFunctions>(args: Vec<Value<N>>) -> Result<Value<N>, String> {
+    let Some(lv) = args.get(0) else {
+        return Err("Arccos requires exactly one argument!".to_string());
+    };
     match lv {
         Value::Scalar(a) => return Ok(Value::Scalar(a.acos())),
         Value::Vector(_) => return Err("Can't take arccos of vector!".to_string()),
@@ -158,7 +174,10 @@ pub fn arccos<N: Number>(lv: &Value<N>) -> Result<Value<N>, String> {
 }
 
 #[doc(hidden)]
-pub fn arctan<N: Number>(lv: &Value<N>) -> Result<Value<N>, String> {
+pub fn arctan<N: Number + StandardFunctions>(args: Vec<Value<N>>) -> Result<Value<N>, String> {
+    let Some(lv) = args.get(0) else {
+        return Err("Arctan requires exactly one argument!".to_string());
+    };
     match lv {
         Value::Scalar(a) => return Ok(Value::Scalar(a.atan())),
         Value::Vector(_) => return Err("Can't take arctan of vector!".to_string()),
@@ -167,7 +186,10 @@ pub fn arctan<N: Number>(lv: &Value<N>) -> Result<Value<N>, String> {
 }
 
 #[doc(hidden)]
-pub fn abs<N: Number>(lv: &Value<N>) -> Result<Value<N>, String> {
+pub fn abs<N: Number>(args: Vec<Value<N>>) -> Result<Value<N>, String> {
+    let Some(lv) = args.get(0) else {
+        return Err("Abs requires exactly one argument!".to_string());
+    };
     match lv {
         Value::Scalar(a) => {
             if *a < N::ZERO {return Ok(Value::Scalar(*a* -N::ONE));}
@@ -185,7 +207,10 @@ pub fn abs<N: Number>(lv: &Value<N>) -> Result<Value<N>, String> {
 }
 
 #[doc(hidden)]
-pub fn sqrt<N: Number>(lv: &Value<N>) -> Result<Value<N>, String> {
+pub fn sqrt<N: Number>(args: Vec<Value<N>>) -> Result<Value<N>, String> {
+    let Some(lv) = args.get(0) else {
+        return Err("Sqrt requires exactly one argument!".to_string());
+    };
     match lv {
         Value::Scalar(a) => return Ok(Value::Scalar(a.sqrt())),
         Value::Vector(_) => return Err("Can't take sqrt of vector!".to_string()),
@@ -194,7 +219,13 @@ pub fn sqrt<N: Number>(lv: &Value<N>) -> Result<Value<N>, String> {
 }
 
 #[doc(hidden)]
-pub fn root<N: Number>(lv: &Value<N>, rv: &Value<N>) -> Result<Value<N>, String> {
+pub fn root<N: Number>(args: Vec<Value<N>>) -> Result<Value<N>, String> {
+    let Some(lv) = args.get(0) else {
+        return Err("Root requires exactly two arguments!".to_string());
+    };
+    let Some(rv) = args.get(1) else {
+        return Err("Root requires exactly two arguments!".to_string());
+    };
     match (lv, rv) {
         (Value::Scalar(a), Value::Scalar(b)) => {
             return Ok(Value::Scalar(a.powf(b.recip())));
@@ -204,7 +235,10 @@ pub fn root<N: Number>(lv: &Value<N>, rv: &Value<N>) -> Result<Value<N>, String>
 }
 
 #[doc(hidden)]
-pub fn ln<N: Number>(lv: &Value<N>) -> Result<Value<N>, String> {
+pub fn ln<N: Number + StandardFunctions>(args: Vec<Value<N>>) -> Result<Value<N>, String> {
+    let Some(lv) = args.get(0) else {
+        return Err("Sin requires exactly one argument!".to_string());
+    };
     match lv {
         Value::Scalar(a) => return Ok(Value::Scalar(a.ln())),
         Value::Vector(_) => return Err("Can't take ln of vector!".to_string()),
@@ -213,7 +247,10 @@ pub fn ln<N: Number>(lv: &Value<N>) -> Result<Value<N>, String> {
 }
 
 #[doc(hidden)]
-pub fn det<N: Number>(lv: &Value<N>) -> Result<Value<N>, String> {
+pub fn det<N: Number + StandardFunctions>(args: Vec<Value<N>>) -> Result<Value<N>, String> {
+    let Some(lv) = args.get(0) else {
+        return Err("Sin requires exactly one argument!".to_string());
+    };
     match lv {
         Value::Scalar(_) => return Err("Can't calculate determinant of a scalar!".to_string()),
         Value::Vector(_) => return Err("Can't calculate determinant of a vector!".to_string()),
@@ -222,7 +259,10 @@ pub fn det<N: Number>(lv: &Value<N>) -> Result<Value<N>, String> {
 }
 
 #[doc(hidden)]
-pub fn inv<N: Number>(lv: &Value<N>) -> Result<Value<N>, String> {
+pub fn inv<N: Number>(args: Vec<Value<N>>) -> Result<Value<N>, String> {
+    let Some(lv) = args.get(0) else {
+        return Err("Sin requires exactly one argument!".to_string());
+    };
     match lv {
         Value::Scalar(_) => return Err("Can't calculate inverse of a scalar!".to_string()),
         Value::Vector(_) => return Err("Can't calculate inverse of a vector!".to_string()),

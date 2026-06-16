@@ -76,59 +76,48 @@ fn eval_rec<N: Number>(b: &AST<N>, context: &mut Context<N>, last_fn: &str) -> R
 
             let mut res = vec![];
 
-            match name.as_str() {
-                "sin" if eval_inputs.len() == 1 => for p in permuts {res.push(maths::sin(&p[0])?)},
-                "sin" => return Err(EvalError::WrongNumberOfArgs((1, eval_inputs.len()))),
-                "cos" if eval_inputs.len() == 1 => for p in permuts {res.push(maths::cos(&p[0])?)},
-                "cos" => return Err(EvalError::WrongNumberOfArgs((1, eval_inputs.len()))),
-                "tan" if eval_inputs.len() == 1 => for p in permuts {res.push(maths::tan(&p[0])?)},
-                "tan" => return Err(EvalError::WrongNumberOfArgs((1, eval_inputs.len()))),
-                "abs" if eval_inputs.len() == 1 => for p in permuts {res.push(maths::abs(&p[0])?)},
-                "abs" => return Err(EvalError::WrongNumberOfArgs((1, eval_inputs.len()))),
-                "sqrt" if eval_inputs.len() == 1 => for p in permuts {res.push(maths::sqrt(&p[0])?)},
-                "sqrt" => return Err(EvalError::WrongNumberOfArgs((1, eval_inputs.len()))),
-                "root" if eval_inputs.len() == 2 => for p in permuts {res.push(maths::root(&p[0], &p[1])?)},
-                "root" => return Err(EvalError::WrongNumberOfArgs((2, eval_inputs.len()))),
-                "ln" if eval_inputs.len() == 1 => for p in permuts {res.push(maths::ln(&p[0])?)},
-                "ln" => return Err(EvalError::WrongNumberOfArgs((1, eval_inputs.len()))),
-                "arcsin" if eval_inputs.len() == 1 => for p in permuts {res.push(maths::arcsin(&p[0])?)},
-                "arcsin" => return Err(EvalError::WrongNumberOfArgs((1, eval_inputs.len()))),
-                "arccos" if eval_inputs.len() == 1 => for p in permuts {res.push(maths::arccos(&p[0])?)},
-                "arccos" => return Err(EvalError::WrongNumberOfArgs((1, eval_inputs.len()))),
-                "arctan" if eval_inputs.len() == 1 => for p in permuts {res.push(maths::arctan(&p[0])?)},
-                "arctan" => return Err(EvalError::WrongNumberOfArgs((1, eval_inputs.len()))),
-                "det" if eval_inputs.len() == 1 => for p in permuts {res.push(maths::det(&p[0])?)},
-                "det" => return Err(EvalError::WrongNumberOfArgs((1, eval_inputs.len()))),
-                "inv" if eval_inputs.len() == 1 => for p in permuts {res.push(maths::inv(&p[0])?)},
-                "inv" => return Err(EvalError::WrongNumberOfArgs((1, eval_inputs.len()))),
-                _ if let Some(function) = context.get_fun(name) => {
-                    if inputs.len() != function.inputs.len() {
-                        return Err(EvalError::WrongNumberOfArgs((function.inputs.len(), inputs.len())));
-                    }
+            if let Some(function) = context.get_fun(name) {
+                match function {
+                    Function::CustomFunction { ast, inputs: fn_inputs, .. } => {
+                        if inputs.len() != fn_inputs.len() {
+                            return Err(EvalError::WrongNumberOfArgs((fn_inputs.len(), inputs.len())));
+                        }
 
-                    for p in permuts {
-                        let mut copied_vars: Vec<Variable<N>> = vec![];
-                        for i in 0..inputs.len() {
-                            let var_name = &function.inputs[i];
-                            if let Some(var) = context.get_var(var_name) {
-                                copied_vars.push(var);
+                        for p in permuts {
+                            let mut copied_vars: Vec<Variable<N>> = vec![];
+                            for i in 0..inputs.len() {
+                                let var_name = &fn_inputs[i];
+                                if let Some(var) = context.get_var(var_name) {
+                                    copied_vars.push(var);
+                                }
+
+                                context.add_var(&Variable::new(var_name, vec![p[i].clone()]));
                             }
 
-                            context.add_var(&Variable::new(var_name, vec![p[i].clone()]));
+                            res.append(&mut eval_rec(&ast, context, name)?);
+
+                            for var_name in &fn_inputs {
+                                context.remove_var(var_name);
+                            }
+
+                            for var in copied_vars {
+                                context.add_var(&var);
+                            }
+                        }
+                    },
+                    Function::InternalFunction { n_arguments, function, .. } => {
+                        if inputs.len() != n_arguments {
+                            return Err(EvalError::WrongNumberOfArgs((n_arguments, inputs.len())));
                         }
 
-                        res.append(&mut eval_rec(&function.ast, context, name)?);
-
-                        for var_name in &function.inputs {
-                            context.remove_var(var_name);
-                        }
-
-                        for var in copied_vars {
-                            context.add_var(&var);
+                        for p in permuts {
+                            res.push(function(p)?);
                         }
                     }
-                },
-                _ => {return Err(EvalError::NoFunction(name.to_string()))}
+                }
+                
+            } else {
+                return Err(EvalError::NoFunction(name.to_string()))
             }
 
             return Ok(res);

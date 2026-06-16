@@ -254,7 +254,7 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //! - [x] Boolean operations
 //! - [x] Conditional evaluation
 //! - [x] Generic numbers
-//! - [ ] Complex numbers
+//! - [x] Complex numbers
 //! - [ ] Possible tensor support
 //! - [ ] Stable API that makes everyone happy (very hard)
 //!
@@ -291,7 +291,8 @@ pub use output::{export_history, ExportType, png_from_latex, svg_from_latex};
 pub use parser::parse;
 pub use evaluator::eval;
 pub use errors::MathLibError;
-pub use maths::num_traits::Number;
+pub use maths::num_traits::{Number, StandardFunctions, RealNumber};
+pub use maths::num_impls::Complex;
 
 #[cfg(feature = "high-prec")]
 /// defines the precision used by the equation solver. The printing precision is PREC - 2.
@@ -306,6 +307,10 @@ pub const PREC: usize = 8;
 /// For more information about the context, take a look at [Context] and for more information about
 /// the possible operations, take a look at [SimpleOpType](basetypes::SimpleOpType) and
 /// [AdvancedOpType](basetypes::AdvancedOpType).
+///
+/// When calling this macro with just a string argument, it will internally crate a new Context
+/// using [Context::default()]. You can also specify your own context, as the second argument. With the argument following the semicolon you can specify the number 
+/// type that should be used. By default [f64] is used, other number types must implement [Number].
 ///
 /// # Examples
 ///
@@ -350,7 +355,18 @@ macro_rules! quick_eval {
             quick_eval::<_, f64>($e, $c)
         }
     };
-    ( $e:expr, $c:expr, $t:ty ) => {
+    ( $e:expr; $t:ty ) => {
+        { 
+            pub fn quick_eval<S: Into<String>, N: $crate::Number>(expr: S, context: &mut $crate::Context<N>) -> Result<$crate::Values<N>, $crate::errors::QuickEvalError> {
+                let expr = expr.into();
+                let b_tree = $crate::parse(expr)?; 
+                Ok($crate::eval(&b_tree, context)?)
+            }
+
+            quick_eval::<_, $t>($e, &mut $crate::Context::default())
+        }
+    };
+    ( $e:expr, $c:expr; $t:ty ) => {
         { 
             pub fn quick_eval<S: Into<String>, N: $crate::Number>(expr: S, context: &mut $crate::Context<N>) -> Result<$crate::Values<N>, $crate::errors::QuickEvalError> {
                 let expr = expr.into();

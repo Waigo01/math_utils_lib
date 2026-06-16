@@ -218,7 +218,7 @@ Output:
 - [x] Equations as operators -> eval can handle multiple values
 - [x] Variable/Function assignment as operator -> mutable context for evaluator
 - [x] Generic numbers
-- [ ] Complex numbers
+- [x] Complex numbers
 - [ ] Possible tensor support
 - [ ] Stable API that makes everyone happy (very hard)
 

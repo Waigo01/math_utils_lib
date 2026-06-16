@@ -38,9 +38,10 @@ pub fn sspow<N: Number>(a: &N, b: &N) -> Result<Value<N>, String> {
 
 #[doc(hidden)]
 pub fn mspow<N: Number>(a: &Vec<Vec<N>>, b: &N) -> Result<Value<N>, String> {
-    if *b % N::ONE != N::ZERO {
-        return Err("Exponent must be an integer!".to_string());
-    }
+    let rounded_b = match b.as_rounded_int() {
+        Ok(r) => r,
+        Err(_) => return Err("Exponent must be an integer!".to_string())
+    };
     let mut mult = vec![];
     for i in 0..a.len() {
         let mut row = vec![];
@@ -53,10 +54,6 @@ pub fn mspow<N: Number>(a: &Vec<Vec<N>>, b: &N) -> Result<Value<N>, String> {
         }
         mult.push(row);
     }
-    let rounded_b = match b.as_rounded_int() {
-        Ok(r) => r,
-        Err(_) => return Err("Exponent must be an integer!".to_string())
-    };
     for _ in 0..rounded_b {
         mult = mmmult(&mult, a)?.get_matrix().unwrap();
     }

@@ -67,29 +67,78 @@ impl<N: Number> Variable<N> {
 /// let function = Function::new("f", parsed_expr, vec!["x"]);
 /// # Ok::<(), MathLibError>(())
 /// ```
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Function<N: Number> {
-    pub name: String,
-    pub ast: AST<N>,
-    pub inputs: Vec<String>
+pub enum Function<N: Number> {
+    CustomFunction {
+        name: String,
+        ast: AST<N>,
+        inputs: Vec<String>
+    },
+    InternalFunction {
+        name: String,
+        n_arguments: usize,
+        function: fn(Vec<Value<N>>) -> Result<Value<N>, String>
+    }
 }
 
 impl<N: Number> Function<N> {
     /// creates a new function from an [AST] (a parsed expression) and a Vec of input variable
     /// names.
-    pub fn new<S: Into<String>>(name: S, ast: AST<N>, inputs: Vec<S>) -> Function<N> {
-        Function { name: name.into(), ast, inputs: inputs.into_iter().map(|s| s.into()).collect() }
+    pub fn new<S: Into<String>>(name: S, ast: AST<N>, inputs: Vec<S>) -> Self {
+        Function::CustomFunction { name: name.into(), ast, inputs: inputs.into_iter().map(|s| s.into()).collect() }
+    }
+    /// creates a new function based on an internal rust function, that takes n_arguments and
+    /// returns a single value or an error message.
+    pub fn new_internal<S: Into<String>>(name: S, n_arguments: usize, function: fn(Vec<Value<N>>) -> Result<Value<N>, String>) -> Self {
+        Function::InternalFunction { name: name.into(), n_arguments, function }
     }
     /// converts the function to latex. The function also provides the option to add a "&" aligner before
     /// the "=".
     pub fn as_latex(&self, add_aligner: bool) -> String {
-        let ast = AST::from_operation(Operation::SimpleOperation { op_type: SimpleOpType::Assign, left: AST::Function { name: self.name.clone(), inputs: self.inputs.iter().map(|i| AST::Variable(i.to_string())).collect() }, right: self.ast.clone() });
-        return if add_aligner {ast.as_latex()} else {ast.as_latex_inline()};
+        match self {
+            Function::CustomFunction { name, ast, inputs } => {
+                let ast = AST::from_operation(Operation::SimpleOperation { op_type: SimpleOpType::Assign, left: AST::Function { name: name.clone(), inputs: inputs.iter().map(|i| AST::Variable(i.to_string())).collect() }, right: ast.clone() });
+                return if add_aligner {ast.as_latex()} else {ast.as_latex_inline()};
+            },
+            Function::InternalFunction { name, n_arguments, .. } => {
+                let mut latex = format!("{name}(");
+                if *n_arguments == 1 {
+                    latex += "x";
+                } else {
+                    let arguments = &(0..*n_arguments as i32).map(|i| format!("x_{i}")).collect::<Vec<String>>().join(",");
+                    latex += arguments;
+                }
+                latex += ")";
+                latex
+            }
+        }
     }
     /// converts the function to a string using basic string formatting.
     pub fn as_string(&self) -> String {
-        format!("{}({}) = {}", self.name, self.inputs.join(", "), self.ast.as_string())
+        match self {
+            Function::CustomFunction { name, ast, inputs } => {
+                format!("{}({}) = {}", name, inputs.join(", "), ast.as_string())
+            },
+            Function::InternalFunction { name, n_arguments, .. } => {
+                let mut string = format!("{name}(");
+                if *n_arguments == 1 {
+                    string += "x";
+                } else {
+                    let arguments = &(0..*n_arguments as i32).map(|i| format!("x_{i}")).collect::<Vec<String>>().join(",");
+                    string += arguments;
+                }
+                string += ")";
+                string
+            }
+        }
+    }
+    /// get the name of the function
+    pub fn name(&self) -> String {
+        match self {
+            Function::CustomFunction { name, .. } => name.to_string(),
+            Function::InternalFunction { name, .. } => name.to_string()
+        }
     }
 }
 
@@ -102,7 +151,7 @@ impl<N: Number> Function<N> {
 /// # use math_utils_lib::Context;
 /// let context: Context<f64> = Context::default();
 /// ```
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Context<N: Number> {
     pub vars: Vec<Variable<N>>,
@@ -110,13 +159,29 @@ pub struct Context<N: Number> {
 }
 
 impl<N: Number> Context<N> {
-    /// creates a context with the variables pi and e and no functions.
+    /// creates a new context with variables specified by
+    /// [Number::default_vars()](crate::Number::default_vars()). And functions specified by
+    /// [Number::default_functions()](crate::Number::default_functions()).
+    ///
+    /// When using [f64] default consts are pi and e.
     pub fn default() -> Self {
-        return Context::from_vars(N::default_consts().into_iter().map(|c| Variable::new(c.0, Value::Scalar(c.1))).collect::<Vec<Variable<N>>>());
+        return Context::new(N::default_vars(), N::default_functions());
     }
-    /// creates a context with the given variables and functions.
+    /// creates a context containing only the given variables and functions.
     pub fn new<V: AsRef<[Variable<N>]>, F: AsRef<[Function<N>]>>(vars: V, funs: F) -> Context<N> {
         Context {vars: vars.as_ref().to_vec(), funs: funs.as_ref().to_vec()}
+    }
+    /// creates a context containing the given variables and functions in addition to the default
+    /// variables and functions.
+    pub fn with<V: AsRef<[Variable<N>]>, F: AsRef<[Function<N>]>>(vars: V, funs: F) -> Context<N> {
+        let mut c = Context::default();
+        for var in vars.as_ref() {
+            c.add_var(var);
+        }
+        for fun in funs.as_ref() {
+            c.add_fun(fun);
+        }
+        c
     }
     /// creates an empty context.
     pub fn empty() -> Context<N> {
@@ -130,6 +195,24 @@ impl<N: Number> Context<N> {
     pub fn from_funs<F: AsRef<[Function<N>]>>(funs: F) -> Context<N> {
         Context { vars: vec![], funs: funs.as_ref().to_vec() }
     }
+    /// creates a new context containing the given variables in addition to the default variables
+    /// and functions.
+    pub fn with_vars<V: AsRef<[Variable<N>]>>(vars: V) -> Context<N> {
+        let mut c = Context::default();
+        for var in vars.as_ref() {
+            c.add_var(var);
+        }
+        c
+    }
+    /// creates a new context containing the given functions in addition to the default variables
+    /// and functions.
+    pub fn with_funs<F: AsRef<[Function<N>]>>(funs: F) -> Context<N> {
+        let mut c = Context::default();
+        for fun in funs.as_ref() {
+            c.add_fun(fun);
+        }
+        c
+    }
     /// adds a variable to the context, replacing an already existing variable with the same name.
     pub fn add_var(&mut self, var: &Variable<N>) {
         self.vars = self.vars.iter()
@@ -142,7 +225,7 @@ impl<N: Number> Context<N> {
     /// adds a function to the context, replacing an already existing function with the same name.
     pub fn add_fun(&mut self, fun: &Function<N>) {
         self.funs = self.funs.iter()
-            .filter(|f| f.name != fun.name)
+            .filter(|f| f.name() != fun.name())
             .map(|f| f.to_owned())
             .collect();
 
@@ -158,7 +241,7 @@ impl<N: Number> Context<N> {
     /// removes all functions with the given variable name.
     pub fn remove_fun<S: Into<String> + Clone>(&mut self, fun_name: S) {
         self.funs = self.funs.iter()
-            .filter(|f| f.name != fun_name.clone().into())
+            .filter(|f| f.name() != fun_name.clone().into())
             .map(|f| f.to_owned())
             .collect()
     }
@@ -168,7 +251,7 @@ impl<N: Number> Context<N> {
     }
     /// returns the function with the given name or None if it does not exist in the context.
     pub fn get_fun<S: Into<String> + Clone>(&self, fun_name: S) -> Option<Function<N>> {
-        self.funs.iter().filter(|f| f.name == fun_name.clone().into()).map(|f| f.to_owned()).nth(0)
+        self.funs.iter().filter(|f| f.name() == fun_name.clone().into()).map(|f| f.to_owned()).nth(0)
     }
 }
 
@@ -188,39 +271,29 @@ impl<N: Number> Context<N> {
 macro_rules! value {
     ( $x:expr ) => {
         {
-            fn return_generic<N: $crate::Number>() -> $crate::Value<N>  {
-                $crate::Value::Scalar(N::from($x))
-            }
-
-            return_generic()
+            $crate::Value::Scalar($x.into())
         }
     };
     ( $($x:expr),+ ) => {
         {
-            fn return_generic<N: $crate::Number>() -> $crate::Value<N>  {
-                let mut vector = Vec::new();
-                $(
-                    vector.push(N::from($x));
-                )*
-                $crate::Value::Vector(vector)
-            }
-            return_generic()
+            let mut vector = Vec::new();
+            $(
+                vector.push($x.into());
+            )*
+            $crate::Value::Vector(vector)
         }
     };
     ( $($($x:expr),+);+ ) => {
         {
-            fn return_generic<N: $crate::Number>() -> $crate::Value<N>  { 
-                let mut vector = Vec::new();
+            let mut vector = Vec::new();
+            $(
+                let mut row = Vec::new();
                 $(
-                    let mut row = Vec::new();
-                    $(
-                        row.push(N::from($x));
-                    )*
-                    vector.push(row);
+                    row.push($x.into());
                 )*
-                $crate::Value::Matrix(vector)
-            }
-            return_generic()
+                vector.push(row);
+            )*
+            $crate::Value::Matrix(vector)
         }
     };
 }
