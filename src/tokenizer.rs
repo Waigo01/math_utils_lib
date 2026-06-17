@@ -112,8 +112,8 @@ pub struct Tokenizer {
     current_double_punct: Option<(char, char)>
 }
 
-const STANDARD_OPERATION_PUNCTS: [char; 9] = ['@','-','*','/','^','#', ',', '&', '|'];
-const DOUBLE_PUNCTS: [(char, char); 5] =[('+', '-'), ('=', '='), ('!', '='), ('<', '='), ('>', '=')];
+const STANDARD_OPERATION_PUNCTS: [char; 8] = ['@','-','*','/', '#', ',', '&', '|'];
+const DOUBLE_PUNCTS: [(char, char); 6] =[('+', '-'), ('=', '='), ('!', '='), ('<', '='), ('>', '='), ('^', '^')];
 
 impl Tokenizer {
     pub fn new() -> Self {

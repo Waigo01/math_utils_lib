@@ -224,6 +224,17 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //! # Ok::<(), MathLibError>(())
 //! ```
 //!
+//! ```rust
+//! # use math_utils_lib::{MathLibError, quick_eval, value, Complex};
+//!
+//! // You can also use other types that implement the Number trait, such as complex numbers.
+//! let res = quick_eval!("e^(i*pi)"; Complex<f64>)?.to_vec();
+//!
+//! assert_eq!(res[0], value!(-1));
+//!
+//! # Ok::<(), MathLibError>(())
+//! ```
+//!
 //! ```ignore
 //! # use math_utils_lib::{parse, eval, Step, png_from_latex, export_history, Context, MathLibError, Value, ExportType, AST};
 //! let parsed_expr: AST<f64> = parse("x = 3*3+6^5")?;
@@ -284,7 +295,7 @@ pub mod tokenizer;
 #[cfg(test)]
 mod tests;
 
-pub use basetypes::{Value, Values, Variable, Context, Function, AST};
+pub use basetypes::{Value, Values, Variable, Context, Function, AST, InternalFunction};
 pub use output::Step;
 #[cfg(feature = "output")]
 pub use output::{export_history, ExportType, png_from_latex, svg_from_latex};

@@ -1,16 +1,24 @@
 use std::{fmt::{Display, LowerExp}, iter::Sum, ops::{Add, Div, Mul, Neg, Sub}, str::FromStr};
 
-use crate::{Function, Number, Value, Variable, maths::num_traits::{RealNumber, StandardFunctions}};
+use crate::{Number, PREC, Value, Variable, basetypes::InternalFunction, maths::num_traits::{RealNumber, StandardFunctions}};
 
 impl StandardFunctions for f64 {
     fn ln(self) -> Self {
         self.ln()
     }
     fn sin(self) -> Self {
-        self.sin()
+        if self == std::f64::consts::PI {
+            return 0.
+        } else {
+            self.sin()
+        }
     }
     fn cos(self) -> Self {
-        self.cos()
+        if self == std::f64::consts::PI/2. {
+            return 0.
+        } else {
+            self.cos()
+        }
     }
     fn tan(self) -> Self {
         self.tan()
@@ -36,6 +44,15 @@ impl StandardFunctions for f64 {
     fn exp(self) -> Self {
         self.exp()
     }
+    fn fact(self) -> Self {
+        let res = crate::helpers::lanczos_approx(Complex { re: self + Self::ONE, im: Self::ZERO });
+        let epsilon = Self::BASE.powi(-(PREC as i32));
+        if res.im < epsilon {
+            return res.re;
+        } else {
+            return Self::NAN;
+        }
+    }
 }
 
 impl RealNumber for f64 {
@@ -57,11 +74,11 @@ impl Number for f64 {
             Variable::new("e".to_string(), Value::Scalar(std::f64::consts::E)),
         ]
     }
-    fn default_functions() -> Vec<Function<Self>> {
+    fn default_functions() -> Vec<InternalFunction<Self>> {
        <Self as StandardFunctions>::default_functions() 
     }
-    fn newton_search_pattern(n_values: usize) -> impl Iterator<Item = Self> {
-        ((-(n_values as i32)/2)..(n_values as i32/2)).map(|v| v as f64)
+    fn newton_search_pattern(n_values: usize) -> Vec<Self> {
+        ((-(n_values as i32)/2)..(n_values as i32/2)).map(|v| v as f64/4.).collect()
     }
     fn mean(self, other: Self) -> Self {
         (self + other)/2.
@@ -104,9 +121,10 @@ impl Number for f64 {
     }
 }
 
-/// A simple complex number type that can be used to build a complex number from two types that
-/// implement [Number](crate::Number), [StandardFunctions](crate::StandardFunctions) and [RealNumber](crate::RealNumber).
+/// A simple complex number type that can be used to build a complex number from a type that
+/// implements [Number](crate::Number), [StandardFunctions](crate::StandardFunctions) and [RealNumber](crate::RealNumber).
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Complex<N: Number + StandardFunctions + RealNumber> {
     re: N,
     im: N
@@ -147,6 +165,14 @@ impl<N: Number + StandardFunctions + RealNumber> Complex<N> {
     /// creates a new complex number from a real and imaginiary part.
     pub fn new(re: N, im: N) -> Self {
         Complex { re, im }
+    }
+    /// returns the real part of the number.
+    pub fn re(self) -> N {
+        self.re
+    }
+    /// returns the imaginary part of the number.
+    pub fn im(self) -> N {
+        self.im
     }
 }
 
@@ -231,11 +257,11 @@ impl<N: Number + StandardFunctions + RealNumber> Number for Complex<N> {
 
         default_vars
     }
-    fn default_functions() -> Vec<Function<Self>> {
+    fn default_functions() -> Vec<InternalFunction<Self>> {
         <Self as StandardFunctions>::default_functions()
     }
-    fn newton_search_pattern(n_values: usize) -> impl Iterator<Item = Self> {
-        ((-(n_values as i32)/2)..(n_values as i32/2)).map(|v| Complex { re: N::from(v), im: N::ZERO })
+    fn newton_search_pattern(n_values: usize) -> Vec<Self> {
+        ((-(n_values as i32)/2)..(n_values as i32/2)).map(|v| Self::from(v/4)*(Self::I*Self::from(v/4)).exp()).collect()
     }
     fn abs(self) -> Self {
         Complex{re: (self.re.powi(2) + self.im.powi(2)).sqrt(), im: N::ZERO}
@@ -322,5 +348,8 @@ impl<N: Number + StandardFunctions + RealNumber> StandardFunctions for Complex<N
     }
     fn exp(self) -> Self {
         Complex { re: self.re.exp(), im: N::ZERO }*Complex{re: self.im.cos(), im: self.im.sin()}
+    }
+    fn fact(self) -> Self {
+        crate::helpers::lanczos_approx(self + Self::ONE)
     }
 }

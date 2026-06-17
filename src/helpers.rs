@@ -1,4 +1,4 @@
-use crate::{PREC, basetypes::{AST, AdvancedOperation, Operation}, maths::num_traits::Number, tokenizer::{Token, TokenStream}};
+use crate::{Complex, PREC, RealNumber, StandardFunctions, basetypes::{AST, AdvancedOperation, Operation}, maths::num_traits::Number, tokenizer::{Token, TokenStream}};
 
 #[doc(hidden)]
 pub fn center_in_string(f: String, n: i32) -> String {
@@ -105,4 +105,37 @@ pub fn flatten_conditional<N: Number>(condition: &AST<N>, then: &AST<N>, mut els
     }
 
     return (conditionals, else_outer.clone())
+}
+
+const G: i32 = 7;
+const P: [f64; 9] = [
+    0.99999999999980993,
+    676.5203681218851,
+    -1259.1392167224028,
+    771.32342877765313,
+    -176.61502916214059,
+    12.507343278686905,
+    -0.13857109526572012,
+    9.9843695780195716e-6,
+    1.5056327351493116e-7
+];
+
+
+#[doc(hidden)]
+pub fn lanczos_approx<N: Number + RealNumber + StandardFunctions>(mut z: Complex<N>) -> Complex<N> {
+    let y;
+    let pi = Complex::from(std::f64::consts::PI);
+    if z.re() < N::from(0.5) {
+        y = pi / ((pi * z).sin() * lanczos_approx(Complex::ONE-z));
+    } else {
+        z = z - Complex::ONE;
+        let mut x = Complex::from(P[0]);
+        for i in 1..P.len() {
+            x = x + Complex::from(P[i]) / (z + Complex::from(i as i32));
+        }
+        let t = z + Complex::from(G) + Complex::from(0.5);
+        y = (Complex::from(2)*pi).sqrt() * t.powf(z+Complex::from(0.5)) * (-t).exp() * x;
+    }
+
+    return y;
 }

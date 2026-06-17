@@ -195,6 +195,13 @@ assert_ne!(res[0], value!(4));
 ```
 
 ```rust
+// You can also use other types that implement the Number trait, such as complex numbers.
+let res = quick_eval!("e^(i*pi)"; Complex<f64>)?.to_vec();
+
+assert_eq!(res[0], value!(-1));
+```
+
+```rust
 let parsed_expr: AST<f64> = parse("x = 3*3+6^5")?;
 let res = eval(&parsed_expr, &mut Context::empty())?;
 

@@ -1,4 +1,4 @@
-use crate::{basetypes::Value, maths::num_traits::{Number, StandardFunctions}};
+use crate::{AST, Context, PREC, Variable, basetypes::Value, errors::EvalError, eval, maths::num_traits::{Number, StandardFunctions}};
 
 pub mod add_sub;
 pub mod mult_div;
@@ -105,11 +105,75 @@ pub fn get<N: Number>(lv: &Value<N>, rv: &Value<N>) -> Result<Value<N>, String> 
 }
 
 #[doc(hidden)]
+pub fn calculate_sum<N: Number>(expr: &AST<N>, in_terms_of: String, lower_bound: Value<N>, upper_bound: Value<N>, context: &Context<N>, to_inf: bool) -> Result<Vec<Value<N>>, EvalError> {
+    let mut mut_vars = context.vars.to_owned();
+    for i in 0..mut_vars.len() {
+        if mut_vars[i].name == in_terms_of {
+            mut_vars.remove(i);
+            break;
+        }
+    }
+    match (lower_bound, upper_bound) {
+        (Value::Scalar(lb), Value::Scalar(ub)) if let Ok(mut lb) = lb.as_rounded_int() && let Ok(mut ub) = ub.as_rounded_int() => {
+            if lb == ub {
+                return Ok(vec![Value::Scalar(N::ZERO)])
+            }
+            if ub < lb {
+                let temp = ub;
+                ub = lb;
+                lb = temp;
+            }
+            if to_inf {
+                ub = i32::MAX;
+            }
+            let mut sums = vec![];
+            'outer: for b in lb..=ub {
+                mut_vars.push(Variable::new(&in_terms_of, vec![Value::Scalar(b.into())]));
+                let evals = eval(expr, &mut Context::new(&mut_vars, &context.funs))?;
+                for (i, e) in evals.to_vec().iter().enumerate() {
+                    if sums.len() <= i {
+                        sums.push(e.clone());
+                    } else {
+                        sums[i] = add(&sums[i], &e)?;
+                    }
+                    if to_inf && abs(vec![e.clone()])?.get_scalar().unwrap() < N::BASE.powi(-(PREC as i32-2)) {
+                        break 'outer;
+                    }
+                }
+                mut_vars.remove(mut_vars.len()-1);
+            }
+
+            return Ok(sums)
+        }
+        _ => {return Err(EvalError::MathError("Only scalar bounds are allowed!".to_string()))}
+    }
+}
+
+#[doc(hidden)]
 pub fn pow<N: Number>(lv: &Value<N>, rv: &Value<N>) -> Result<Value<N>, String> {
     match (lv, rv) {
         (Value::Scalar(a), Value::Scalar(b)) => return cross_pow::sspow(a, b),
         (Value::Matrix(m), Value::Scalar(b)) => return cross_pow::mspow(m, b),
         _ => return Err("Can only raise scalar or matrix to the power of scalar!".to_string())
+    }
+}
+
+#[doc(hidden)]
+pub fn tetration<N: Number>(lv: &Value<N>, rv: &Value<N>) -> Result<Value<N>, String> {
+    match (lv, rv) {
+        (Value::Scalar(a), Value::Scalar(b)) => {
+            if let Ok(lexp) = b.as_rounded_int() {
+                let base = a.clone();
+                let mut a = a.clone();
+                for _ in 0..lexp {
+                    a = a.powf(base);
+                }
+                return Ok(Value::Scalar(a));
+            } else {
+                return Err("Can only tetrate using an integer left exponential!".to_string());
+            }
+        },
+        _ => return Err("Can only tetrate using a scalar left exponential!".to_string())
     }
 }
 
@@ -146,6 +210,66 @@ pub fn tan<N: Number + StandardFunctions>(args: Vec<Value<N>>) -> Result<Value<N
         Value::Scalar(a) => return Ok(Value::Scalar(a.tan())),
         Value::Vector(_) => return Err("Can't take tan of vector!".to_string()),
         Value::Matrix(_) => return Err("Can't take tan of matrix!".to_string())
+    }
+}
+
+#[doc(hidden)]
+pub fn sinh<N: Number + StandardFunctions>(args: Vec<Value<N>>) -> Result<Value<N>, String> {
+    let Some(lv) = args.get(0) else {
+        return Err("Sinh requires exactly one argument!".to_string());
+    };
+    match lv {
+        Value::Scalar(a) => return Ok(Value::Scalar(a.sinh())),
+        Value::Vector(_) => return Err("Can't take sinh of vector!".to_string()),
+        Value::Matrix(_) => return Err("Can't take sinh of matrix!".to_string())
+    }
+}
+
+#[doc(hidden)]
+pub fn cosh<N: Number + StandardFunctions>(args: Vec<Value<N>>) -> Result<Value<N>, String> {
+    let Some(lv) = args.get(0) else {
+        return Err("Cosh requires exactly one argument!".to_string());
+    };
+    match lv {
+        Value::Scalar(a) => return Ok(Value::Scalar(a.cosh())),
+        Value::Vector(_) => return Err("Can't take cosh of vector!".to_string()),
+        Value::Matrix(_) => return Err("Can't take cosh of matrix!".to_string())
+    }
+}
+
+#[doc(hidden)]
+pub fn tanh<N: Number + StandardFunctions>(args: Vec<Value<N>>) -> Result<Value<N>, String> {
+    let Some(lv) = args.get(0) else {
+        return Err("Tanh requires exactly one argument!".to_string());
+    };
+    match lv {
+        Value::Scalar(a) => return Ok(Value::Scalar(a.tanh())),
+        Value::Vector(_) => return Err("Can't take tanh of vector!".to_string()),
+        Value::Matrix(_) => return Err("Can't take tanh of matrix!".to_string())
+    }
+}
+
+#[doc(hidden)]
+pub fn exp<N: Number + StandardFunctions>(args: Vec<Value<N>>) -> Result<Value<N>, String> {
+    let Some(lv) = args.get(0) else {
+        return Err("Exp requires exactly one argument!".to_string());
+    };
+    match lv {
+        Value::Scalar(a) => return Ok(Value::Scalar(a.exp())),
+        Value::Vector(_) => return Err("Can't take exp of vector!".to_string()),
+        Value::Matrix(_) => return Err("Can't take exp of matrix!".to_string())
+    }
+}
+
+#[doc(hidden)]
+pub fn fact<N: Number + StandardFunctions>(args: Vec<Value<N>>) -> Result<Value<N>, String> {
+    let Some(lv) = args.get(0) else {
+        return Err("Fact requires exactly one argument!".to_string());
+    };
+    match lv {
+        Value::Scalar(a) => return Ok(Value::Scalar(a.fact())),
+        Value::Vector(_) => return Err("Can't take fact of vector!".to_string()),
+        Value::Matrix(_) => return Err("Can't take fact of matrix!".to_string())
     }
 }
 

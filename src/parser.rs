@@ -19,6 +19,7 @@ fn get_op_symbol(punct: &str) -> Option<SimpleOpType> {
         "/" => Some(SimpleOpType::Div),
         "#" => Some(SimpleOpType::Cross),
         "^" => Some(SimpleOpType::Pow),
+        "^^" => Some(SimpleOpType::Tetration),
         "@" => Some(SimpleOpType::Get),
         _ => None
     }
@@ -228,6 +229,25 @@ fn parse_inner<N: Number>(tokens: &[Box<Token>]) -> Result<AST<N>, ParserError> 
                 let parsed_lower_b = parse_inner(&args[2])?;
                 let parsed_upper_b = parse_inner(&args[3])?;
                 return Ok(AST::from_operation(Operation::AdvancedOperation(AdvancedOperation::Integral {
+                    expr: parsed_function,
+                    in_terms_of,
+                    lower_bound: parsed_lower_b,
+                    upper_bound: parsed_upper_b
+                })));
+            },
+            "S" => {
+                let args = get_args(&group.stream);
+                
+                if args.len() != 4 {
+                    return Err(ParserError::WrongNumberOfArgs("sum".to_string()));
+                }
+                let parsed_function = parse_inner(&args[0])?;
+                let Ok(AST::Variable(in_terms_of)) = parse_inner::<N>(&args[1]) else {
+                    return Err(ParserError::DerivNotITOVar);
+                };
+                let parsed_lower_b = parse_inner(&args[2])?;
+                let parsed_upper_b = parse_inner(&args[3])?;
+                return Ok(AST::from_operation(Operation::AdvancedOperation(AdvancedOperation::Sum {
                     expr: parsed_function,
                     in_terms_of,
                     lower_bound: parsed_lower_b,

@@ -69,76 +69,40 @@ impl<N: Number> Variable<N> {
 /// ```
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum Function<N: Number> {
-    CustomFunction {
-        name: String,
-        ast: AST<N>,
-        inputs: Vec<String>
-    },
-    InternalFunction {
-        name: String,
-        n_arguments: usize,
-        function: fn(Vec<Value<N>>) -> Result<Value<N>, String>
-    }
+pub struct Function<N: Number> {
+    pub name: String,
+    pub ast: AST<N>,
+    pub inputs: Vec<String>
 }
 
 impl<N: Number> Function<N> {
     /// creates a new function from an [AST] (a parsed expression) and a Vec of input variable
     /// names.
     pub fn new<S: Into<String>>(name: S, ast: AST<N>, inputs: Vec<S>) -> Self {
-        Function::CustomFunction { name: name.into(), ast, inputs: inputs.into_iter().map(|s| s.into()).collect() }
-    }
-    /// creates a new function based on an internal rust function, that takes n_arguments and
-    /// returns a single value or an error message.
-    pub fn new_internal<S: Into<String>>(name: S, n_arguments: usize, function: fn(Vec<Value<N>>) -> Result<Value<N>, String>) -> Self {
-        Function::InternalFunction { name: name.into(), n_arguments, function }
+        Function { name: name.into(), ast, inputs: inputs.into_iter().map(|s| s.into()).collect() }
     }
     /// converts the function to latex. The function also provides the option to add a "&" aligner before
     /// the "=".
     pub fn as_latex(&self, add_aligner: bool) -> String {
-        match self {
-            Function::CustomFunction { name, ast, inputs } => {
-                let ast = AST::from_operation(Operation::SimpleOperation { op_type: SimpleOpType::Assign, left: AST::Function { name: name.clone(), inputs: inputs.iter().map(|i| AST::Variable(i.to_string())).collect() }, right: ast.clone() });
-                return if add_aligner {ast.as_latex()} else {ast.as_latex_inline()};
-            },
-            Function::InternalFunction { name, n_arguments, .. } => {
-                let mut latex = format!("{name}(");
-                if *n_arguments == 1 {
-                    latex += "x";
-                } else {
-                    let arguments = &(0..*n_arguments as i32).map(|i| format!("x_{i}")).collect::<Vec<String>>().join(",");
-                    latex += arguments;
-                }
-                latex += ")";
-                latex
-            }
-        }
+        let ast = AST::from_operation(Operation::SimpleOperation { op_type: SimpleOpType::Assign, left: AST::Function { name: self.name.clone(), inputs: self.inputs.iter().map(|i| AST::Variable(i.to_string())).collect() }, right: self.ast.clone() });
+        return if add_aligner {ast.as_latex()} else {ast.as_latex_inline()};
     }
     /// converts the function to a string using basic string formatting.
     pub fn as_string(&self) -> String {
-        match self {
-            Function::CustomFunction { name, ast, inputs } => {
-                format!("{}({}) = {}", name, inputs.join(", "), ast.as_string())
-            },
-            Function::InternalFunction { name, n_arguments, .. } => {
-                let mut string = format!("{name}(");
-                if *n_arguments == 1 {
-                    string += "x";
-                } else {
-                    let arguments = &(0..*n_arguments as i32).map(|i| format!("x_{i}")).collect::<Vec<String>>().join(",");
-                    string += arguments;
-                }
-                string += ")";
-                string
-            }
-        }
+        format!("{}({}) = {}", self.name, self.inputs.join(", "), self.ast.as_string())
     }
-    /// get the name of the function
-    pub fn name(&self) -> String {
-        match self {
-            Function::CustomFunction { name, .. } => name.to_string(),
-            Function::InternalFunction { name, .. } => name.to_string()
-        }
+}
+
+#[derive(Debug, Clone)]
+pub struct InternalFunction<N: Number> {
+    pub name: String,
+    pub n_arguments: usize,
+    pub function: fn(Vec<Value<N>>) -> Result<Value<N>, String>
+}
+
+impl<N: Number> InternalFunction<N> {
+    pub fn new<S: Into<String>>(name: S, n_args: usize, function: fn(Vec<Value<N>>) -> Result<Value<N>, String>) -> Self {
+        InternalFunction { name: name.into(), n_arguments: n_args, function }
     }
 }
 
@@ -155,7 +119,9 @@ impl<N: Number> Function<N> {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Context<N: Number> {
     pub vars: Vec<Variable<N>>,
-    pub funs: Vec<Function<N>>
+    pub funs: Vec<Function<N>>,
+    #[cfg_attr(feature = "serde", serde(skip, default = "N::default_functions"))]
+    pub internal_funs: Vec<InternalFunction<N>>
 }
 
 impl<N: Number> Context<N> {
@@ -163,13 +129,17 @@ impl<N: Number> Context<N> {
     /// [Number::default_vars()](crate::Number::default_vars()). And functions specified by
     /// [Number::default_functions()](crate::Number::default_functions()).
     ///
-    /// When using [f64] default consts are pi and e.
+    /// When using [f64] default vars are pi and e. When using [Complex](crate::Complex) default
+    /// vars are pi, e and i.
+    ///
+    /// The both [f64] and [Complex](crate::Complex) provide the same default functions. Take a look
+    /// at [StandardFunctions::default_functions()](crate::StandardFunctions::default_functions()).
     pub fn default() -> Self {
-        return Context::new(N::default_vars(), N::default_functions());
+        return Context::new(N::default_vars(), vec![]);
     }
     /// creates a context containing only the given variables and functions.
     pub fn new<V: AsRef<[Variable<N>]>, F: AsRef<[Function<N>]>>(vars: V, funs: F) -> Context<N> {
-        Context {vars: vars.as_ref().to_vec(), funs: funs.as_ref().to_vec()}
+        Context {vars: vars.as_ref().to_vec(), funs: funs.as_ref().to_vec(), internal_funs: N::default_functions()}
     }
     /// creates a context containing the given variables and functions in addition to the default
     /// variables and functions.
@@ -185,15 +155,15 @@ impl<N: Number> Context<N> {
     }
     /// creates an empty context.
     pub fn empty() -> Context<N> {
-        Context { vars: vec![], funs: vec![] }
+        Context { vars: vec![], funs: vec![], internal_funs: vec![] }
     }
     /// creates a new context containing only the given variables.
     pub fn from_vars<V: AsRef<[Variable<N>]>>(vars: V) -> Context<N> {
-        Context { vars: vars.as_ref().to_vec(), funs: vec![] }
+        Context { vars: vars.as_ref().to_vec(), funs: vec![], internal_funs: vec![] }
     }
     /// creates a new context containing only the given functions.
     pub fn from_funs<F: AsRef<[Function<N>]>>(funs: F) -> Context<N> {
-        Context { vars: vec![], funs: funs.as_ref().to_vec() }
+        Context { vars: vec![], funs: funs.as_ref().to_vec(), internal_funs: vec![] }
     }
     /// creates a new context containing the given variables in addition to the default variables
     /// and functions.
@@ -225,7 +195,7 @@ impl<N: Number> Context<N> {
     /// adds a function to the context, replacing an already existing function with the same name.
     pub fn add_fun(&mut self, fun: &Function<N>) {
         self.funs = self.funs.iter()
-            .filter(|f| f.name() != fun.name())
+            .filter(|f| f.name != fun.name)
             .map(|f| f.to_owned())
             .collect();
 
@@ -241,7 +211,7 @@ impl<N: Number> Context<N> {
     /// removes all functions with the given variable name.
     pub fn remove_fun<S: Into<String> + Clone>(&mut self, fun_name: S) {
         self.funs = self.funs.iter()
-            .filter(|f| f.name() != fun_name.clone().into())
+            .filter(|f| f.name != fun_name.clone().into())
             .map(|f| f.to_owned())
             .collect()
     }
@@ -251,7 +221,11 @@ impl<N: Number> Context<N> {
     }
     /// returns the function with the given name or None if it does not exist in the context.
     pub fn get_fun<S: Into<String> + Clone>(&self, fun_name: S) -> Option<Function<N>> {
-        self.funs.iter().filter(|f| f.name() == fun_name.clone().into()).map(|f| f.to_owned()).nth(0)
+        self.funs.iter().filter(|f| f.name == fun_name.clone().into()).map(|f| f.to_owned()).nth(0)
+    }
+    /// returns the function with the given name or None if it does not exist in the context.
+    pub fn get_internal_fun<S: Into<String> + Clone>(&self, fun_name: S) -> Option<InternalFunction<N>> {
+        self.internal_funs.iter().filter(|f| f.name == fun_name.clone().into()).map(|f| f.to_owned()).nth(0)
     }
 }
 
@@ -799,6 +773,7 @@ impl<N: Number> AST<N> {
                             SimpleOpType::HiddenMult => return format!("{}{}", lv, rv),
                             SimpleOpType::Pow => return format!("{}^({})", lv, rv),
                             SimpleOpType::Cross => return format!("{}x{}", lv, rv),
+                            SimpleOpType::Tetration => return format!("{}^^{}", lv, rv),
                             SimpleOpType::Parenths => return format!("({})", lv),
                         }
                     },
@@ -827,6 +802,12 @@ impl<N: Number> AST<N> {
                                 } else {
                                     return format!("if({}, {})", condition, then);
                                 }
+                            },
+                            AdvancedOperation::Sum { expr, in_terms_of, lower_bound, upper_bound } => {
+                                let eexpr = &expr.as_string();
+                                let elower_b = &lower_bound.as_string();
+                                let eupper_b = &upper_bound.as_string();
+                                return format!("Sum({}, {}, {}, {})", eexpr, in_terms_of, elower_b, eupper_b);
                             }
                         }
                     }
@@ -920,6 +901,7 @@ impl<N: Number> AST<N> {
                             SimpleOpType::HiddenMult => return format!("{}{}", lv, rv),
                             SimpleOpType::Pow => return format!("{}^{{{}}}", lv, rv),
                             SimpleOpType::Cross => return format!("{}\\times {}", lv, rv),
+                            SimpleOpType::Tetration => return format!("{{^{{{}}}{}}}", rv, rv),
                             SimpleOpType::Parenths => return format!("\\left({}\\right)", lv),
                         }
                     },
@@ -962,6 +944,12 @@ impl<N: Number> AST<N> {
                                 return_string += r"\end{array}\right.";
 
                                 return return_string;
+                            },
+                            AdvancedOperation::Sum { expr, in_terms_of, lower_bound, upper_bound } => {
+                                let eexpr = &expr.latex_print(false);
+                                let elower_b = &lower_bound.latex_print(false);
+                                let eupper_b = &upper_bound.latex_print(false);
+                                return format!("\\sum_{{{} = {}}}^{{{}}}\\left({}\\right)", in_terms_of, elower_b, eupper_b, eexpr);
                             }
                         }
                     }
@@ -1021,11 +1009,13 @@ pub enum SimpleOpType {
     /// Hidden multiplication between scalar and variable or parentheses (3a, 5(3+3), (3+5)(2+6))
     HiddenMult = 17,
     /// Take a scalar or a matrix to the power of a scalar using "^" (a^b)
-    Pow = 18,
+    Pow = 19,
+    /// Calculate the repeated exponensial (a^^n), i.e. a^a^a^a.. n times.
+    Tetration = 20,
     /// Index into vector using "@" ([3, 4, 5]@1 = 4)
-    Get = 19,
+    Get = 21,
     /// Prioritise expressions in parentheses (3*(5+5))
-    Parenths = 20
+    Parenths = 22
 }
 
 /// specifies the type of operation for the [AdvancedOperation] struct.
@@ -1081,5 +1071,11 @@ pub enum AdvancedOperation<N: Number>{
         condition: AST<N>,
         then: AST<N>,
         r#else: Option<AST<N>>
+    },
+    Sum {
+        expr: AST<N>,
+        in_terms_of: String,
+        lower_bound: AST<N>,
+        upper_bound: AST<N>
     }
 }

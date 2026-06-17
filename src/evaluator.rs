@@ -1,4 +1,4 @@
-use crate::{Context, Value, Values, Variable, basetypes::{AST, AdvancedOperation, Function, Operation, SimpleOpType}, errors::EvalError, helpers::cart_prod, maths::{self, num_traits::Number}, roots::RootFinder};
+use crate::{Context, Value, Values, Variable, basetypes::{AST, AdvancedOperation, Function, InternalFunction, Operation, SimpleOpType}, errors::EvalError, helpers::cart_prod, maths::{self, num_traits::Number}, roots::RootFinder};
 
 /// used to evaluate an AST with the provided context.
 ///
@@ -76,46 +76,40 @@ fn eval_rec<N: Number>(b: &AST<N>, context: &mut Context<N>, last_fn: &str) -> R
 
             let mut res = vec![];
 
-            if let Some(function) = context.get_fun(name) {
-                match function {
-                    Function::CustomFunction { ast, inputs: fn_inputs, .. } => {
-                        if inputs.len() != fn_inputs.len() {
-                            return Err(EvalError::WrongNumberOfArgs((fn_inputs.len(), inputs.len())));
+            if let Some(InternalFunction{n_arguments, function, ..}) = context.get_internal_fun(name) {
+                if inputs.len() != n_arguments {
+                    return Err(EvalError::WrongNumberOfArgs((n_arguments, inputs.len())));
+                }
+
+                for p in permuts {
+                    res.push(function(p)?);
+                }
+            } else if let Some(Function{ast, inputs: fn_inputs, ..}) = context.get_fun(name) {
+                if inputs.len() != fn_inputs.len() {
+                    return Err(EvalError::WrongNumberOfArgs((fn_inputs.len(), inputs.len())));
+                }
+
+                for p in permuts {
+                    let mut copied_vars: Vec<Variable<N>> = vec![];
+                    for i in 0..inputs.len() {
+                        let var_name = &fn_inputs[i];
+                        if let Some(var) = context.get_var(var_name) {
+                            copied_vars.push(var);
                         }
 
-                        for p in permuts {
-                            let mut copied_vars: Vec<Variable<N>> = vec![];
-                            for i in 0..inputs.len() {
-                                let var_name = &fn_inputs[i];
-                                if let Some(var) = context.get_var(var_name) {
-                                    copied_vars.push(var);
-                                }
+                        context.add_var(&Variable::new(var_name, vec![p[i].clone()]));
+                    }
 
-                                context.add_var(&Variable::new(var_name, vec![p[i].clone()]));
-                            }
+                    res.append(&mut eval_rec(&ast, context, name)?);
 
-                            res.append(&mut eval_rec(&ast, context, name)?);
+                    for var_name in &fn_inputs {
+                        context.remove_var(var_name);
+                    }
 
-                            for var_name in &fn_inputs {
-                                context.remove_var(var_name);
-                            }
-
-                            for var in copied_vars {
-                                context.add_var(&var);
-                            }
-                        }
-                    },
-                    Function::InternalFunction { n_arguments, function, .. } => {
-                        if inputs.len() != n_arguments {
-                            return Err(EvalError::WrongNumberOfArgs((n_arguments, inputs.len())));
-                        }
-
-                        for p in permuts {
-                            res.push(function(p)?);
-                        }
+                    for var in copied_vars {
+                        context.add_var(&var);
                     }
                 }
-                
             } else {
                 return Err(EvalError::NoFunction(name.to_string()))
             }
@@ -178,6 +172,7 @@ fn eval_rec<N: Number>(b: &AST<N>, context: &mut Context<N>, last_fn: &str) -> R
                                 SimpleOpType::BoolNot => res.push(maths::bool::not(j)?),
                                 SimpleOpType::BoolAnd => res.push(maths::bool::and(i, j)?),
                                 SimpleOpType::BoolOr => res.push(maths::bool::or(i, j)?),
+                                SimpleOpType::Tetration => res.push(maths::tetration(i, j)?),
                                 SimpleOpType::Assign => {},
                             }
                         }
@@ -196,6 +191,27 @@ fn eval_rec<N: Number>(b: &AST<N>, context: &mut Context<N>, last_fn: &str) -> R
                             for i in lb {
                                 for j in &ub {
                                     res.push(maths::calculus::calculate_integral(&expr, in_terms_of.clone(), i.clone(), j.clone(), context)?);
+                                }
+                            }
+
+                            return Ok(res.into_iter().flatten().collect());
+                        },
+                        AdvancedOperation::Sum {expr, in_terms_of, lower_bound, upper_bound} => {
+                            let lb = eval_rec(&lower_bound, context, last_fn)?;
+                            let infinite_sum = if let AST::Variable(name) = upper_bound && name == "inf" {
+                                true
+                            } else if AST::Scalar(N::INFINITY) == *upper_bound {
+                                true
+                            } else {
+                                false
+                            };
+                            let ub = eval_rec(&upper_bound, context, last_fn)?;
+
+                            let mut res = vec![];
+
+                            for i in lb {
+                                for j in &ub {
+                                    res.push(maths::calculate_sum(&expr, in_terms_of.clone(), i.clone(), j.clone(), context, infinite_sum)?);
                                 }
                             }
 
