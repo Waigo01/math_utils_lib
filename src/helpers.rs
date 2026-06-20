@@ -1,4 +1,4 @@
-use crate::{Complex, PREC, RealNumber, StandardFunctions, basetypes::{AST, AdvancedOperation, Operation}, maths::num_traits::Number, tokenizer::{Token, TokenStream}};
+use crate::{Complex, RealNumber, StandardFunctions, basetypes::{AST, AdvancedOperation, Operation}, maths::num_traits::Number, tokenizer::{Token, TokenStream}};
 
 #[doc(hidden)]
 pub fn center_in_string(f: String, n: i32) -> String {
@@ -33,13 +33,13 @@ pub fn center_in_string(f: String, n: i32) -> String {
 
 #[doc(hidden)]
 pub fn round_and_format<N>(x: N, latex: bool) -> String where N: Number {
-    if (x*N::BASE.powi(PREC as i32-2)).round()/N::BASE.powi(PREC as i32-2) == N::ZERO && !latex && x != N::ZERO {
+    if (x/N::DISPLAY_EPSILON).round()*N::DISPLAY_EPSILON == N::ZERO && !latex && x != N::ZERO {
         let mut scientific = format!("{:+e}", x);
         if scientific.chars().nth(0).unwrap() == '+' {
             scientific = scientific[1..].to_string();
         }
         return scientific;
-    } else if (x*N::BASE.powi(PREC as i32-2)).round()/N::BASE.powi(PREC as i32-2) == N::ZERO && x != N::ZERO {
+    } else if (x/N::DISPLAY_EPSILON).round()*N::DISPLAY_EPSILON == N::ZERO && x != N::ZERO {
         let mut scientific = format!("{:+e}", x);
         if scientific.chars().nth(0).unwrap() == '+' {
             scientific = scientific[1..].to_string();
@@ -48,7 +48,7 @@ pub fn round_and_format<N>(x: N, latex: bool) -> String where N: Number {
         let right = scientific.split("e").nth(1).unwrap();
         return format!("{}\\cdot 10^{{{}}}", left, right);
     } else {
-        let rounded = (x*N::BASE.powi(PREC as i32-2)).round()/N::BASE.powi(PREC as i32-2);
+        let rounded = (x/N::DISPLAY_EPSILON).round()*N::DISPLAY_EPSILON;
         let rounded_string;
         if rounded == N::ZERO && rounded.to_string().len() > 1 {
             rounded_string = rounded.to_string()[1..].to_string();

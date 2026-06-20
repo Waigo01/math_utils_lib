@@ -1,6 +1,6 @@
 use std::{fmt::{Display, LowerExp}, iter::Sum, ops::{Add, Div, Mul, Neg, Sub}, str::FromStr};
 
-use crate::{Number, PREC, Value, Variable, basetypes::InternalFunction, maths::num_traits::{RealNumber, StandardFunctions}};
+use crate::{Number, Value, Variable, basetypes::InternalFunction, maths::num_traits::{RealNumber, StandardFunctions}};
 
 impl StandardFunctions for f64 {
     fn ln(self) -> Self {
@@ -46,8 +46,7 @@ impl StandardFunctions for f64 {
     }
     fn fact(self) -> Self {
         let res = crate::helpers::lanczos_approx(Complex { re: self + Self::ONE, im: Self::ZERO });
-        let epsilon = Self::BASE.powi(-(PREC as i32));
-        if res.im < epsilon {
+        if res.im < Self::EPSILON {
             return res.re;
         } else {
             return Self::NAN;
@@ -64,10 +63,12 @@ impl RealNumber for f64 {
 impl Number for f64 {
     const ONE: Self = 1.;
     const ZERO: Self = 0.;
-    const BASE: Self = 10.;
     const NAN: Self = f64::NAN*2.;
     const INFINITY: Self = f64::INFINITY;
     const NEG_INFINITY: Self = f64::NEG_INFINITY;
+    const EPSILON: Self = 0.00000001;
+    const DISPLAY_EPSILON: Self = 0.000001;
+    const BASE: Self = 10.;
     fn default_vars() -> Vec<Variable<Self>> {
         vec![
             Variable::new("pi".to_string(), Value::Scalar(std::f64::consts::PI)),
@@ -237,6 +238,8 @@ impl<N: Number + StandardFunctions + RealNumber> Number for Complex<N> {
     const NAN: Self = Complex{re: N::NAN, im: N::NAN};
     const INFINITY: Self = Complex{re: N::INFINITY, im: N::INFINITY};
     const NEG_INFINITY: Self = Complex{re: N::NEG_INFINITY, im: N::NEG_INFINITY};
+    const EPSILON: Self = Complex{re: N::EPSILON, im: N::ZERO};
+    const DISPLAY_EPSILON: Self = Complex{re: N::DISPLAY_EPSILON, im: N::ZERO};
     const BASE: Self = Complex{re: N::BASE, im: N::ZERO};
     fn default_vars() -> Vec<Variable<Self>> {
         let mut default_vars = vec![];

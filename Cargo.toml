@@ -26,7 +26,6 @@ serde = { version = "1.0.217", features = ["derive"], optional = true }
 [features]
 default = []
 doc-images = ["dep:embed-doc-image"]
-high-prec = []
 row-major = []
 output = ["dep:mathjax_svg", "dep:tectonic", "dep:resvg"]
 serde = ["dep:serde"]

@@ -37,7 +37,9 @@ Sync +
     const ZERO: Self;
     /// The neutral element of multiplication of this number type.
     const ONE: Self;
-    /// The Base/radix of this number type.
+    /// A small number indicating the precision of this number type.
+    const EPSILON: Self;
+    /// The base/radix of this number type.
     const BASE: Self;
     /// The nan value of this number type.
     const NAN: Self;
@@ -115,7 +117,12 @@ LowerExp +
     const ZERO: Self;
     /// The neutral element of multiplication of this number type.
     const ONE: Self;
-    /// The Base/radix of this number type.
+    /// A small number indicating the precision of this number type.
+    const EPSILON: Self;
+    /// A small number indicating the display precision of this number type. This number MUST be
+    /// larger than EPSILON.
+    const DISPLAY_EPSILON: Self;
+    /// The base/radix of this number type.
     const BASE: Self;
     /// The nan value of this number type.
     const NAN: Self;

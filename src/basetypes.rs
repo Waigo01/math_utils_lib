@@ -361,6 +361,54 @@ impl<N> Value<N> where N: Number {
             }
         }
     }
+    /// rounds the value to the precision of the number type.
+    pub fn round_to_precision(&self) -> Value<N> {
+        match self {
+            Value::Scalar(a) => return Value::Scalar((*a/N::EPSILON).round()*N::EPSILON),
+            Value::Vector(v) => {
+                let mut new_vec = vec![];
+                for i in v {
+                    new_vec.push((*i/N::EPSILON).round()*N::EPSILON);
+                }
+                return Value::Vector(new_vec);
+            },
+            Value::Matrix(m) => {
+                let mut new_matrix = vec![];
+                for i in m {
+                    let mut row = vec![];
+                    for j in i {
+                        row.push((*j/N::EPSILON).round()*N::EPSILON);
+                    }
+                    new_matrix.push(row);
+                }
+                return Value::Matrix(new_matrix);
+            }
+        }
+    }
+    /// rounds the value to the display precision of the number type.
+    pub fn round_to_display_precision(&self) -> Value<N> {
+        match self {
+            Value::Scalar(a) => return Value::Scalar((*a/N::DISPLAY_EPSILON).round()*N::DISPLAY_EPSILON),
+            Value::Vector(v) => {
+                let mut new_vec = vec![];
+                for i in v {
+                    new_vec.push((*i/N::DISPLAY_EPSILON).round()*N::DISPLAY_EPSILON);
+                }
+                return Value::Vector(new_vec);
+            },
+            Value::Matrix(m) => {
+                let mut new_matrix = vec![];
+                for i in m {
+                    let mut row = vec![];
+                    for j in i {
+                        row.push((*j/N::DISPLAY_EPSILON).round()*N::DISPLAY_EPSILON);
+                    }
+                    new_matrix.push(row);
+                }
+                return Value::Matrix(new_matrix);
+            }
+        }
+    }
     /// checks if any part of the value is infinite or NaN.
     pub fn is_inf_or_nan(&self) -> bool {
         match self {

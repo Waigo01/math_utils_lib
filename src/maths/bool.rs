@@ -1,8 +1,8 @@
-use crate::{PREC, Value, maths::num_traits::Number};
+use crate::{Value, maths::num_traits::Number};
 
 #[doc(hidden)]
 pub fn and<N: Number>(lv: &Value<N>, rv: &Value<N>) -> Result<Value<N>, String> {
-    match (lv.round(PREC - 2), rv.round(PREC - 2)) {
+    match (lv.round_to_precision(), rv.round_to_precision()) {
         (Value::Scalar(a), Value::Scalar(b)) => if a != N::ZERO && b != N::ZERO  {Ok(Value::Scalar(N::ONE))} else {Ok(Value::Scalar(N::ZERO))},
         _ => Err("And can only be computed with two scalars!".to_string()),
     }
@@ -10,7 +10,7 @@ pub fn and<N: Number>(lv: &Value<N>, rv: &Value<N>) -> Result<Value<N>, String> 
 
 #[doc(hidden)]
 pub fn or<N: Number>(lv: &Value<N>, rv: &Value<N>) -> Result<Value<N>, String> {
-    match (lv.round(PREC - 2), rv.round(PREC - 2)) {
+    match (lv.round_to_precision(), rv.round_to_precision()) {
         (Value::Scalar(a), Value::Scalar(b)) => if a != N::ZERO || b != N::ZERO  {Ok(Value::Scalar(N::ONE))} else {Ok(Value::Scalar(N::ZERO))},
         _ => Err("Or can only be computed with two scalars!".to_string()),
     }
@@ -18,7 +18,7 @@ pub fn or<N: Number>(lv: &Value<N>, rv: &Value<N>) -> Result<Value<N>, String> {
 
 #[doc(hidden)]
 pub fn eq<N: Number>(lv: &Value<N>, rv: &Value<N>) -> Result<Value<N>, String> {
-    if lv.round(PREC-2) == rv.round(PREC-2) {
+    if lv.round_to_precision() == rv.round_to_precision() {
         Ok(Value::Scalar(N::ONE))
     } else {
         Ok(Value::Scalar(N::ZERO))
@@ -27,7 +27,7 @@ pub fn eq<N: Number>(lv: &Value<N>, rv: &Value<N>) -> Result<Value<N>, String> {
 
 #[doc(hidden)]
 pub fn not_eq<N: Number>(lv: &Value<N>, rv: &Value<N>) -> Result<Value<N>, String> {
-    if lv.round(PREC-2) != rv.round(PREC-2) {
+    if lv.round_to_precision() != rv.round_to_precision() {
         Ok(Value::Scalar(N::ONE))
     } else {
         Ok(Value::Scalar(N::ZERO))
@@ -36,7 +36,7 @@ pub fn not_eq<N: Number>(lv: &Value<N>, rv: &Value<N>) -> Result<Value<N>, Strin
 
 #[doc(hidden)]
 pub fn lt<N: Number>(lv: &Value<N>, rv: &Value<N>) -> Result<Value<N>, String> {
-    match (lv.round(PREC - 2), rv.round(PREC - 2)) {
+    match (lv.round_to_precision(), rv.round_to_precision()) {
         (Value::Scalar(a), Value::Scalar(b)) => if a < b {Ok(Value::Scalar(N::ONE))} else {Ok(Value::Scalar(N::ZERO))},
         _ => Err("Only two scalars can be ordered!".to_string()),
     }
@@ -44,7 +44,7 @@ pub fn lt<N: Number>(lv: &Value<N>, rv: &Value<N>) -> Result<Value<N>, String> {
 
 #[doc(hidden)]
 pub fn gt<N: Number>(lv: &Value<N>, rv: &Value<N>) -> Result<Value<N>, String> {
-    match (lv.round(PREC - 2), rv.round(PREC - 2)) {
+    match (lv.round_to_precision(), rv.round_to_precision()) {
         (Value::Scalar(a), Value::Scalar(b)) => if a > b {Ok(Value::Scalar(N::ONE))} else {Ok(Value::Scalar(N::ZERO))},
         _ => Err("Only two scalars can be ordered!".to_string()),
     }
@@ -52,7 +52,7 @@ pub fn gt<N: Number>(lv: &Value<N>, rv: &Value<N>) -> Result<Value<N>, String> {
 
 #[doc(hidden)]
 pub fn lteq<N: Number>(lv: &Value<N>, rv: &Value<N>) -> Result<Value<N>, String> {
-    match (lv.round(PREC - 2), rv.round(PREC - 2)) {
+    match (lv.round_to_precision(), rv.round_to_precision()) {
         (Value::Scalar(a), Value::Scalar(b)) => if a <= b  {Ok(Value::Scalar(N::ONE))} else {Ok(Value::Scalar(N::ZERO))},
         _ => Err("Only two scalars can be ordered!".to_string()),
     }
@@ -60,7 +60,7 @@ pub fn lteq<N: Number>(lv: &Value<N>, rv: &Value<N>) -> Result<Value<N>, String>
 
 #[doc(hidden)]
 pub fn gteq<N: Number>(lv: &Value<N>, rv: &Value<N>) -> Result<Value<N>, String> {
-    match (lv.round(PREC - 2), rv.round(PREC - 2)) {
+    match (lv.round_to_precision(), rv.round_to_precision()) {
         (Value::Scalar(a), Value::Scalar(b)) => if a >= b  {Ok(Value::Scalar(N::ONE))} else {Ok(Value::Scalar(N::ZERO))},
         _ => Err("Only two scalars can be ordered!".to_string()),
     }
@@ -68,7 +68,7 @@ pub fn gteq<N: Number>(lv: &Value<N>, rv: &Value<N>) -> Result<Value<N>, String>
 
 #[doc(hidden)]
 pub fn not<N: Number>(rv: &Value<N>) -> Result<Value<N>, String> {
-    match rv.round(PREC - 2) {
+    match rv.round_to_precision() {
         Value::Scalar(a) => if a == N::ZERO {Ok(Value::Scalar(N::ONE))} else {Ok(Value::Scalar(N::ZERO))},
         _ => Err("Only two scalars can be ordered!".to_string()),
     }

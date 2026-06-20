@@ -29,7 +29,6 @@ This repo/crate provides a number of math utilities:
 
 ## Crate features
 
-- high-prec: uses a precision of 13 instead of 8 (will slow down execution).
 - row-major: parses matrices in a row major format.
 - output: enables dependencies in order to provide rendered PDFs, PNGs and SVGs. (currently broken)
 - serde: enables serde::Serialize and serde::Deserialize on most structs and enums.

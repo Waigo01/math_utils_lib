@@ -1,4 +1,4 @@
-use crate::{Context, PREC, basetypes::{AST, Value, Variable}, errors::EvalError, evaluator::eval, maths::{calculus::calculate_derivative_newton, num_traits::Number}};
+use crate::{Context, basetypes::{AST, Value, Variable}, errors::EvalError, evaluator::eval, maths::{calculus::calculate_derivative_newton, num_traits::Number}};
 
 fn clean_results<N: Number>(res: &[Value<N>]) -> Vec<Value<N>> {
     if res.len() == 0 {
@@ -8,7 +8,7 @@ fn clean_results<N: Number>(res: &[Value<N>]) -> Vec<Value<N>> {
     for i in res {
         let mut found = false;
         for j in &new_res {
-            if i.round(PREC-2) == j.round(PREC-2) {
+            if i.round_to_display_precision() == j.round_to_display_precision() {
                 found = true;
                 break;
             }
@@ -152,7 +152,7 @@ fn newton<N: Number>(search_expres: &Vec<AST<N>>, check_expres: &Vec<AST<N>> , x
         context.remove_var(&i.name);
     }
 
-    if -N::ONE*N::BASE.powi(-(PREC as i32)) < fx.iter().map(|f| f.powi(2)).sum::<N>().sqrt() && fx.iter().map(|f| f.powi(2)).sum::<N>().sqrt() < N::BASE.powi(-(PREC as i32)) {
+    if -N::EPSILON < fx.iter().map(|f| f.powi(2)).sum::<N>().sqrt() && fx.iter().map(|f| f.powi(2)).sum::<N>().sqrt() < N::EPSILON {
         let mut check_results = vec![]; 
         for i in x {
             context.add_var(i);
@@ -166,7 +166,7 @@ fn newton<N: Number>(search_expres: &Vec<AST<N>>, check_expres: &Vec<AST<N>> , x
         if check_results.is_empty() {
             return Ok(NewtonReturn::FinishedX(x.to_vec()));
         }
-        if -N::ONE*N::BASE.powi(-(PREC as i32)) < check_results.iter().map(|f| f.powi(2)).sum::<N>().sqrt() && check_results.iter().map(|f| f.powi(2)).sum::<N>().sqrt() < N::BASE.powi(-(PREC as i32)) {
+        if -N::EPSILON < check_results.iter().map(|f| f.powi(2)).sum::<N>().sqrt() && check_results.iter().map(|f| f.powi(2)).sum::<N>().sqrt() < N::EPSILON {
             return Ok(NewtonReturn::FinishedX(x.to_vec()));
         } else {
             return Err(EvalError::ExpressionCheckFailed);
@@ -174,8 +174,6 @@ fn newton<N: Number>(search_expres: &Vec<AST<N>>, check_expres: &Vec<AST<N>> , x
     }
 
     let new_x = jacobi_and_gauss(search_expres, x, context, &fx)?;
-
-    println!("{:.?}", new_x);
 
     for i in &new_x {
         if i.values.get(0).unwrap().is_inf_or_nan() {

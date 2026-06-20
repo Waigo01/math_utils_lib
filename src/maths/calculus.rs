@@ -1,4 +1,4 @@
-use crate::{PREC, Value, Variable, basetypes::{AST, Context, Operation, SimpleOpType}, errors::EvalError, eval, maths::num_traits::Number};
+use crate::{Value, Variable, basetypes::{AST, Context, Operation, SimpleOpType}, errors::EvalError, eval, maths::num_traits::Number};
 
 use super::{add, mult};
 
@@ -23,7 +23,7 @@ pub fn calculate_integral<N: Number>(expr: &AST<N>, in_terms_of: String, lower_b
                 ub = lb;
                 lb = temp;
             }
-            let dx = (ub-lb)/N::BASE.powi(PREC as i32-3);
+            let dx = (ub-lb)*N::DISPLAY_EPSILON;
             let mut sums = vec![];
             let mut b = lb;
             while b < ub {
@@ -67,7 +67,7 @@ pub fn calculate_derivative<N: Number>(expr: &AST<N>, in_terms_of: &str, at: &Va
             context.add_var(&Variable::new(in_terms_of, vec![at.clone()]));
             let fxs = eval(expr, context)?.to_vec();
             context.remove_var(in_terms_of);
-            context.add_var(&Variable::new(in_terms_of, vec![Value::Scalar(*s+N::BASE.powi(-(PREC as i32)))]));
+            context.add_var(&Variable::new(in_terms_of, vec![Value::Scalar(*s+N::EPSILON)]));
             let fxhs = &eval(expr, context)?.to_vec();
             if fxs.len() != fxhs.len() {
                 return Err(EvalError::MathError("Amount of solutions for f(x) and f(x+h) are different!".to_string()));
@@ -81,7 +81,7 @@ pub fn calculate_derivative<N: Number>(expr: &AST<N>, in_terms_of: &str, at: &Va
                         left: AST::from_value(fxhs[i].clone()),
                         right: AST::from_value(fxs[i].clone())
                     }),
-                    right: AST::from_value(Value::Scalar(N::BASE.powi(-(PREC as i32))))
+                    right: AST::from_value(Value::Scalar(N::EPSILON))
                 });
                 res.push(eval(&h, context)?.to_vec());
             }
@@ -108,7 +108,7 @@ pub fn calculate_derivative_newton<N: Number>(expr: &AST<N>, in_terms_of: &str, 
                 fx = Some(eval(expr, context)?.get(0).unwrap().clone());
                 context.remove_var(in_terms_of);
             }
-            context.add_var(&Variable::new(in_terms_of, vec![Value::Scalar(*s+N::BASE.powi(-(PREC as i32)))]));
+            context.add_var(&Variable::new(in_terms_of, vec![Value::Scalar(*s+N::EPSILON)]));
             let fxh = &eval(expr, context)?.get(0).unwrap().clone();
             let h = AST::from_operation(Operation::SimpleOperation {
                 op_type: SimpleOpType::Div,
@@ -117,7 +117,7 @@ pub fn calculate_derivative_newton<N: Number>(expr: &AST<N>, in_terms_of: &str, 
                     left: AST::from_value(fxh.clone()),
                     right: AST::from_value(fx.clone().unwrap().clone())
                 }),
-                right: AST::from_value(Value::Scalar(N::BASE.powi(-(PREC as i32))))
+                right: AST::from_value(Value::Scalar(N::EPSILON))
             });
             let res = eval(&h, context)?.get(0).unwrap().clone();
             context.remove_var(in_terms_of);

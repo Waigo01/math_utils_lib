@@ -30,7 +30,6 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //!
 //! ## Crate features
 //!
-//! - high-prec: uses a precision of 13 instead of 8 (will slow down execution).
 //! - row-major: parses matrices in a row major format.
 //! - output: enables dependencies in order to provide rendered PDFs, PNGs and SVGs.
 //! - serde: enables serde::Serialize and serde::Deserialize on most structs and enums.
@@ -304,14 +303,6 @@ pub use evaluator::eval;
 pub use errors::MathLibError;
 pub use maths::num_traits::{Number, StandardFunctions, RealNumber};
 pub use maths::num_impls::Complex;
-
-#[cfg(feature = "high-prec")]
-/// defines the precision used by the equation solver. The printing precision is PREC - 2.
-pub const PREC: usize = 13;
-
-#[cfg(not(feature = "high-prec"))]
-/// defines the precision used by the equation solver. The printing precision is PREC - 2.
-pub const PREC: usize = 8;
 
 /// evaluates a given expression in the given context. If you just want the AST, have a look at [parse()].
 ///

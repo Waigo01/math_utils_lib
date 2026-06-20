@@ -1,4 +1,4 @@
-use crate::{AST, Context, PREC, Variable, basetypes::Value, errors::EvalError, eval, maths::num_traits::{Number, StandardFunctions}};
+use crate::{AST, Context, Variable, basetypes::Value, errors::EvalError, eval, maths::num_traits::{Number, StandardFunctions}};
 
 pub mod add_sub;
 pub mod mult_div;
@@ -136,7 +136,7 @@ pub fn calculate_sum<N: Number>(expr: &AST<N>, in_terms_of: String, lower_bound:
                     } else {
                         sums[i] = add(&sums[i], &e)?;
                     }
-                    if to_inf && abs(vec![e.clone()])?.get_scalar().unwrap() < N::BASE.powi(-(PREC as i32-2)) {
+                    if to_inf && abs(vec![e.clone()])?.get_scalar().unwrap() < N::EPSILON {
                         break 'outer;
                     }
                 }
