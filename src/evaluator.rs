@@ -1,4 +1,4 @@
-use crate::{Context, Value, Values, Variable, basetypes::{AST, AdvancedOperation, Function, InternalFunction, Operation, SimpleOpType}, errors::EvalError, helpers::cart_prod, maths::{self, num_traits::Number}, roots::RootFinder};
+use crate::{Context, Value, Values, Variable, basetypes::{AST, AdvancedOperation, Function, InternalFunction, Operation, SimpleOpType}, errors::EvalError, helpers::cart_prod, maths::{self, calculus::calculate_sum, num_traits::Number}, roots::RootFinder};
 
 /// used to evaluate an AST with the provided context.
 ///
@@ -190,7 +190,7 @@ fn eval_rec<N: Number>(b: &AST<N>, context: &mut Context<N>, last_fn: &str) -> R
 
                             for i in lb {
                                 for j in &ub {
-                                    res.push(maths::calculus::calculate_integral(&expr, in_terms_of.clone(), i.clone(), j.clone(), context)?);
+                                    res.push(maths::calculus::calculate_integral(&expr, in_terms_of.clone(), i.clone(), j.clone(), context, N::epsilon(), 15)?);
                                 }
                             }
 
@@ -198,20 +198,13 @@ fn eval_rec<N: Number>(b: &AST<N>, context: &mut Context<N>, last_fn: &str) -> R
                         },
                         AdvancedOperation::Sum {expr, in_terms_of, lower_bound, upper_bound} => {
                             let lb = eval_rec(&lower_bound, context, last_fn)?;
-                            let infinite_sum = if let AST::Variable(name) = upper_bound && name == "inf" {
-                                true
-                            } else if AST::Scalar(N::INFINITY) == *upper_bound {
-                                true
-                            } else {
-                                false
-                            };
                             let ub = eval_rec(&upper_bound, context, last_fn)?;
 
                             let mut res = vec![];
 
                             for i in lb {
                                 for j in &ub {
-                                    res.push(maths::calculate_sum(&expr, in_terms_of.clone(), i.clone(), j.clone(), context, infinite_sum)?);
+                                    res.push(calculate_sum(&expr, in_terms_of.clone(), i.clone(), j.clone(), context)?);
                                 }
                             }
 
@@ -250,7 +243,7 @@ fn eval_rec<N: Number>(b: &AST<N>, context: &mut Context<N>, last_fn: &str) -> R
                             let mut res = vec![];
 
                             for con in econdition {
-                                if maths::bool::eq(&con, &Value::Scalar(N::ZERO))? == Value::Scalar(N::ZERO) {
+                                if maths::bool::eq(&con, &Value::Scalar(N::zero()))? == Value::Scalar(N::zero()) {
                                     let ethen = eval_rec(&then, context, last_fn)?;
                                     res.push(ethen);
                                 } else {

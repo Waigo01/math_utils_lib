@@ -1,4 +1,4 @@
-use crate::{AST, Context, Variable, basetypes::Value, errors::EvalError, eval, maths::num_traits::{Number, StandardFunctions}};
+use crate::{basetypes::Value, maths::num_traits::{Number, StandardFunctions}};
 
 pub mod add_sub;
 pub mod mult_div;
@@ -27,7 +27,7 @@ pub fn add<N: Number>(lv: &Value<N>, rv: &Value<N>) -> Result<Value<N>, String> 
 #[doc(hidden)]
 pub fn sub<N: Number>(lv: &Value<N>, rv: &Value<N>) -> Result<Value<N>, String> {
     match (lv, rv) {
-        (Value::Scalar(a), Value::Scalar(b)) => return add_sub::sadd(a, &(*b * -N::ONE)),
+        (Value::Scalar(a), Value::Scalar(b)) => return add_sub::sadd(a, &(*b * -N::one())),
         (Value::Vector(a), Value::Vector(b)) => return add_sub::vsub(a, b),
         (Value::Matrix(a), Value::Matrix(b)) => return add_sub::msub(a, b),
         (Value::Vector(_), Value::Scalar(_)) => return Err("Can't subtract scalar from vector!".to_string()),
@@ -57,9 +57,9 @@ pub fn mult<N: Number>(lv: &Value<N>, rv: &Value<N>) -> Result<Value<N>, String>
 #[doc(hidden)]
 pub fn neg<N: Number>(lv: &Value<N>) -> Result<Value<N>, String> {
     match lv {
-        Value::Scalar(a) => return Ok(Value::Scalar(-N::ONE* *a)),
-        Value::Vector(a) => return Ok(Value::Vector(a.iter().map(|x| -N::ONE* *x).collect())),
-        Value::Matrix(a) => return Ok(Value::Matrix(a.iter().map(|x| x.iter().map(|y| -N::ONE* *y).collect()).collect()))
+        Value::Scalar(a) => return Ok(Value::Scalar(-N::one()* *a)),
+        Value::Vector(a) => return Ok(Value::Vector(a.iter().map(|x| -N::one()* *x).collect())),
+        Value::Matrix(a) => return Ok(Value::Matrix(a.iter().map(|x| x.iter().map(|y| -N::one()* *y).collect()).collect()))
     }
 }
 
@@ -101,51 +101,6 @@ pub fn get<N: Number>(lv: &Value<N>, rv: &Value<N>) -> Result<Value<N>, String> 
             return Ok(Value::Scalar(a[rounded_b as usize]));
         },
         _ => return Err("Can only index vector with scalar!".to_string())
-    }
-}
-
-#[doc(hidden)]
-pub fn calculate_sum<N: Number>(expr: &AST<N>, in_terms_of: String, lower_bound: Value<N>, upper_bound: Value<N>, context: &Context<N>, to_inf: bool) -> Result<Vec<Value<N>>, EvalError> {
-    let mut mut_vars = context.vars.to_owned();
-    for i in 0..mut_vars.len() {
-        if mut_vars[i].name == in_terms_of {
-            mut_vars.remove(i);
-            break;
-        }
-    }
-    match (lower_bound, upper_bound) {
-        (Value::Scalar(lb), Value::Scalar(ub)) if let Ok(mut lb) = lb.as_rounded_int() && let Ok(mut ub) = ub.as_rounded_int() => {
-            if lb == ub {
-                return Ok(vec![Value::Scalar(N::ZERO)])
-            }
-            if ub < lb {
-                let temp = ub;
-                ub = lb;
-                lb = temp;
-            }
-            if to_inf {
-                ub = i32::MAX;
-            }
-            let mut sums = vec![];
-            'outer: for b in lb..=ub {
-                mut_vars.push(Variable::new(&in_terms_of, vec![Value::Scalar(b.into())]));
-                let evals = eval(expr, &mut Context::new(&mut_vars, &context.funs))?;
-                for (i, e) in evals.to_vec().iter().enumerate() {
-                    if sums.len() <= i {
-                        sums.push(e.clone());
-                    } else {
-                        sums[i] = add(&sums[i], &e)?;
-                    }
-                    if to_inf && abs(vec![e.clone()])?.get_scalar().unwrap() < N::EPSILON {
-                        break 'outer;
-                    }
-                }
-                mut_vars.remove(mut_vars.len()-1);
-            }
-
-            return Ok(sums)
-        }
-        _ => {return Err(EvalError::MathError("Only scalar bounds are allowed!".to_string()))}
     }
 }
 
@@ -316,11 +271,11 @@ pub fn abs<N: Number>(args: Vec<Value<N>>) -> Result<Value<N>, String> {
     };
     match lv {
         Value::Scalar(a) => {
-            if *a < N::ZERO {return Ok(Value::Scalar(*a* -N::ONE));}
+            if *a < N::zero() {return Ok(Value::Scalar(*a* -N::one()));}
             else {return Ok(Value::Scalar(*a));}
         },
         Value::Vector(a) => {
-            let mut sum = N::ZERO;
+            let mut sum = N::zero();
             for i in a {
                 sum = sum + i.powi(2);
             }

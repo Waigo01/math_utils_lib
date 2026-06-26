@@ -340,11 +340,11 @@ impl<N> Value<N> where N: Number {
     /// rounds the value.
     pub fn round(&self, prec: usize) -> Value<N> {
         match self {
-            Value::Scalar(a) => return Value::Scalar((*a*N::BASE.powi(prec as i32)).round()/N::BASE.powi(prec as i32)),
+            Value::Scalar(a) => return Value::Scalar((*a*N::base().powi(prec as i32)).round()/N::base().powi(prec as i32)),
             Value::Vector(v) => {
                 let mut new_vec = vec![];
                 for i in v {
-                    new_vec.push((*i*N::BASE.powi(prec as i32)).round()/N::BASE.powi(prec as i32));
+                    new_vec.push((*i*N::base().powi(prec as i32)).round()/N::base().powi(prec as i32));
                 }
                 return Value::Vector(new_vec);
             },
@@ -353,7 +353,7 @@ impl<N> Value<N> where N: Number {
                 for i in m {
                     let mut row = vec![];
                     for j in i {
-                        row.push((*j*N::BASE.powi(prec as i32)).round()/N::BASE.powi(prec as i32));
+                        row.push((*j*N::base().powi(prec as i32)).round()/N::base().powi(prec as i32));
                     }
                     new_matrix.push(row);
                 }
@@ -364,11 +364,11 @@ impl<N> Value<N> where N: Number {
     /// rounds the value to the precision of the number type.
     pub fn round_to_precision(&self) -> Value<N> {
         match self {
-            Value::Scalar(a) => return Value::Scalar((*a/N::EPSILON).round()*N::EPSILON),
+            Value::Scalar(a) => return Value::Scalar((*a/N::epsilon()).round()*N::epsilon()),
             Value::Vector(v) => {
                 let mut new_vec = vec![];
                 for i in v {
-                    new_vec.push((*i/N::EPSILON).round()*N::EPSILON);
+                    new_vec.push((*i/N::epsilon()).round()*N::epsilon());
                 }
                 return Value::Vector(new_vec);
             },
@@ -377,7 +377,7 @@ impl<N> Value<N> where N: Number {
                 for i in m {
                     let mut row = vec![];
                     for j in i {
-                        row.push((*j/N::EPSILON).round()*N::EPSILON);
+                        row.push((*j/N::epsilon()).round()*N::epsilon());
                     }
                     new_matrix.push(row);
                 }
@@ -388,11 +388,11 @@ impl<N> Value<N> where N: Number {
     /// rounds the value to the display precision of the number type.
     pub fn round_to_display_precision(&self) -> Value<N> {
         match self {
-            Value::Scalar(a) => return Value::Scalar((*a/N::DISPLAY_EPSILON).round()*N::DISPLAY_EPSILON),
+            Value::Scalar(a) => return Value::Scalar((*a/N::display_epsilon()).round()*N::display_epsilon()),
             Value::Vector(v) => {
                 let mut new_vec = vec![];
                 for i in v {
-                    new_vec.push((*i/N::DISPLAY_EPSILON).round()*N::DISPLAY_EPSILON);
+                    new_vec.push((*i/N::display_epsilon()).round()*N::display_epsilon());
                 }
                 return Value::Vector(new_vec);
             },
@@ -401,7 +401,7 @@ impl<N> Value<N> where N: Number {
                 for i in m {
                     let mut row = vec![];
                     for j in i {
-                        row.push((*j/N::DISPLAY_EPSILON).round()*N::DISPLAY_EPSILON);
+                        row.push((*j/N::display_epsilon()).round()*N::display_epsilon());
                     }
                     new_matrix.push(row);
                 }

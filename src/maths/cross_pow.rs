@@ -19,8 +19,8 @@ pub fn vcross<N: Number>(a: &Vec<N>, b: &Vec<N>) -> Result<Value<N>, String> {
             expand_va.push(a[i]);
             expand_vb.push(b[i]);
         } else {
-            expand_va.push(N::ZERO);
-            expand_vb.push(N::ZERO);
+            expand_va.push(N::zero());
+            expand_vb.push(N::zero());
         }
     }
 
@@ -47,9 +47,9 @@ pub fn mspow<N: Number>(a: &Vec<Vec<N>>, b: &N) -> Result<Value<N>, String> {
         let mut row = vec![];
         for j in 0..a[0].len() {
             if i == j {
-                row.push(N::ONE);
+                row.push(N::one());
             } else {
-                row.push(N::ZERO);
+                row.push(N::zero());
             }
         }
         mult.push(row);

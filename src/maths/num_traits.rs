@@ -1,4 +1,4 @@
-use std::{fmt::{Debug, Display, LowerExp}, iter::Sum, ops::{Add, Div, Mul, Neg, Sub}, str::FromStr};
+use std::{fmt::{Debug, Display, LowerExp}, ops::{Add, Div, Mul, Neg, Sub}, str::FromStr};
 
 use crate::{Variable, basetypes::InternalFunction, maths};
 
@@ -14,7 +14,6 @@ use crate::{Variable, basetypes::InternalFunction, maths};
 #[cfg(feature = "parallelism")]
 pub trait Number:
 Add<Self, Output = Self> +
-Sum +
 Sub<Self, Output = Self> +
 Div<Self, Output = Self> +
 Mul<Self, Output = Self> +
@@ -33,20 +32,23 @@ Send +
 Sync +
 'static
 {
-    /// The neutral element of addition of this number type.
-    const ZERO: Self;
-    /// The neutral element of multiplication of this number type.
-    const ONE: Self;
-    /// A small number indicating the precision of this number type.
-    const EPSILON: Self;
-    /// The base/radix of this number type.
-    const BASE: Self;
-    /// The nan value of this number type.
-    const NAN: Self;
-    /// The inf value of this number type.
-    const INFINITY: Self;
-    /// The -inf value of this number type.
-    const NEG_INFINITY: Self;
+    /// returns the neutral element of addition of this number type.
+    fn zero() -> Self;
+    /// returns the neutral element of multiplication of this number type.
+    fn one() -> Self;
+    /// returns a small number indicating the precision of this number type.
+    fn epsilon() -> Self;
+    /// returns a small number indicating the display precision of this number type. This number MUST be
+    /// larger than EPSILON.
+    fn display_epsilon() -> Self;
+    /// returns the base/radix of this number type.
+    fn base() -> Self;
+    /// returns the nan value of this number type.
+    fn nan() -> Self;
+    /// returns the inf value of this number type.
+    fn infinity() -> Self;
+    /// returns the -inf value of this number type.
+    fn neg_infinity() -> Self;
     /// returns the default constants that should be added to [Context::default()](crate::Context::default()).
     fn default_vars() -> Vec<Variable<Self>>;
     /// returns the default functions that should be added to
@@ -97,7 +99,6 @@ Sync +
 #[cfg(not(feature = "parallelism"))]
 pub trait Number:
 Add<Self, Output = Self> +
-Sum +
 Sub<Self, Output = Self> +
 Div<Self, Output = Self> +
 Mul<Self, Output = Self> +
@@ -113,23 +114,23 @@ Display +
 Debug +
 LowerExp +
 {
-    /// The neutral element of addition of this number type.
-    const ZERO: Self;
-    /// The neutral element of multiplication of this number type.
-    const ONE: Self;
-    /// A small number indicating the precision of this number type.
-    const EPSILON: Self;
-    /// A small number indicating the display precision of this number type. This number MUST be
+    /// returns the neutral element of addition of this number type.
+    fn zero() -> Self;
+    /// returns the neutral element of multiplication of this number type.
+    fn one() -> Self;
+    /// returns a small number indicating the precision of this number type.
+    fn epsilon() -> Self;
+    /// returns a small number indicating the display precision of this number type. This number MUST be
     /// larger than EPSILON.
-    const DISPLAY_EPSILON: Self;
-    /// The base/radix of this number type.
-    const BASE: Self;
-    /// The nan value of this number type.
-    const NAN: Self;
-    /// The inf value of this number type.
-    const INFINITY: Self;
-    /// The -inf value of this number type.
-    const NEG_INFINITY: Self;
+    fn display_epsilon() -> Self;
+    /// returns the base/radix of this number type.
+    fn base() -> Self;
+    /// returns the nan value of this number type.
+    fn nan() -> Self;
+    /// returns the inf value of this number type.
+    fn infinity() -> Self;
+    /// returns the -inf value of this number type.
+    fn neg_infinity() -> Self;
     /// returns the default constants that should be added to [Context::default()](crate::Context::default()).
     fn default_vars() -> Vec<Variable<Self>>;
     /// returns the default functions that should be added to

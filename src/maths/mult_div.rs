@@ -32,7 +32,7 @@ pub fn vvmult<N: Number>(a: &Vec<N>, b: &Vec<N>) -> Result<Value<N>, String> {
     if a.len() != b.len() {
         return Err("Vectors have different dimensions!".to_string());
     }
-    let mut sum = N::ZERO;
+    let mut sum = N::zero();
     for i in 0..a.len() {
         sum = sum + a[i]*b[i];
     }
@@ -46,7 +46,7 @@ pub fn mvmult<N: Number>(a: &Vec<Vec<N>>, b: &Vec<N>) -> Result<Value<N>, String
     }
     let mut output_v = vec![];
     for i in 0..a.len() {
-        let mut sum = N::ZERO;
+        let mut sum = N::zero();
         for j in 0..a[i].len() {
             sum = sum + a[i][j]*b[j]
         }
@@ -64,7 +64,7 @@ pub fn mmmult<N: Number>(a: &Vec<Vec<N>>, b: &Vec<Vec<N>>) -> Result<Value<N>, S
     for i in 0..a.len() {
         let mut row = vec![];
         for j in 0..b[0].len() {
-            let mut sum = N::ZERO;
+            let mut sum = N::zero();
             for k in 0..a[0].len() {
                 sum = sum + a[i][k]*b[k][j]
             }
@@ -90,7 +90,7 @@ pub fn vvdiv<N: Number>(a: &Vec<N>, b: &Vec<N>) -> Result<Value<N>, String> {
     if a.len() != b.len() {
         return Err("Vectors have incompatible dimensions!".to_string());
     }
-    let mut sum = N::ZERO;
+    let mut sum = N::zero();
     for i in 0..a.len() {
         sum = sum + a[i]/b[i];
     }

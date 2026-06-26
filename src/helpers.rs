@@ -33,13 +33,13 @@ pub fn center_in_string(f: String, n: i32) -> String {
 
 #[doc(hidden)]
 pub fn round_and_format<N>(x: N, latex: bool) -> String where N: Number {
-    if (x/N::DISPLAY_EPSILON).round()*N::DISPLAY_EPSILON == N::ZERO && !latex && x != N::ZERO {
+    if (x/N::display_epsilon()).round()*N::display_epsilon() == N::zero() && !latex && x != N::zero() {
         let mut scientific = format!("{:+e}", x);
         if scientific.chars().nth(0).unwrap() == '+' {
             scientific = scientific[1..].to_string();
         }
         return scientific;
-    } else if (x/N::DISPLAY_EPSILON).round()*N::DISPLAY_EPSILON == N::ZERO && x != N::ZERO {
+    } else if (x/N::display_epsilon()).round()*N::display_epsilon() == N::zero() && x != N::zero() {
         let mut scientific = format!("{:+e}", x);
         if scientific.chars().nth(0).unwrap() == '+' {
             scientific = scientific[1..].to_string();
@@ -48,9 +48,9 @@ pub fn round_and_format<N>(x: N, latex: bool) -> String where N: Number {
         let right = scientific.split("e").nth(1).unwrap();
         return format!("{}\\cdot 10^{{{}}}", left, right);
     } else {
-        let rounded = (x/N::DISPLAY_EPSILON).round()*N::DISPLAY_EPSILON;
+        let rounded = (x/N::display_epsilon()).round()*N::display_epsilon();
         let rounded_string;
-        if rounded == N::ZERO && rounded.to_string().len() > 1 {
+        if rounded == N::zero() && rounded.to_string().len() > 1 {
             rounded_string = rounded.to_string()[1..].to_string();
         } else {
             rounded_string = rounded.to_string();
@@ -126,9 +126,9 @@ pub fn lanczos_approx<N: Number + RealNumber + StandardFunctions>(mut z: Complex
     let y;
     let pi = Complex::from(std::f64::consts::PI);
     if z.re() < N::from(0.5) {
-        y = pi / ((pi * z).sin() * lanczos_approx(Complex::ONE-z));
+        y = pi / ((pi * z).sin() * lanczos_approx(Complex::one()-z));
     } else {
-        z = z - Complex::ONE;
+        z = z - Complex::one();
         let mut x = Complex::from(P[0]);
         for i in 1..P.len() {
             x = x + Complex::from(P[i]) / (z + Complex::from(i as i32));
@@ -138,4 +138,60 @@ pub fn lanczos_approx<N: Number + RealNumber + StandardFunctions>(mut z: Complex
     }
 
     return y;
+}
+
+#[doc(hidden)]
+pub fn replace_in_ast<N: Number>(ast: AST<N>, search: &AST<N>, replace: &AST<N>) -> AST<N> {
+    if ast == *search {
+        return replace.clone();
+    } else {
+        match ast {
+            AST::Operation(op) => {
+                match *op {
+                    Operation::SimpleOperation { op_type, left, right } => {
+                        AST::Operation(Box::new(Operation::SimpleOperation { op_type, left: replace_in_ast(left, search, replace), right: replace_in_ast(right, search, replace) }))
+                    },
+                    Operation::AdvancedOperation(aop) => {
+                        AST::Operation(Box::new(Operation::AdvancedOperation(
+                            match aop {
+                                AdvancedOperation::Sum { expr, lower_bound, upper_bound, in_terms_of } => {
+                                    AdvancedOperation::Sum { expr: replace_in_ast(expr, search, replace), in_terms_of: in_terms_of, lower_bound: replace_in_ast(lower_bound, search, replace), upper_bound: replace_in_ast(upper_bound, search, replace) }
+                                },
+                                AdvancedOperation::Integral { expr, in_terms_of, lower_bound, upper_bound } => {
+                                    AdvancedOperation::Integral { expr: replace_in_ast(expr, search, replace), in_terms_of: in_terms_of, lower_bound: replace_in_ast(lower_bound, search, replace), upper_bound: replace_in_ast(upper_bound, search, replace) }
+                                },
+                                AdvancedOperation::Equation { equations, search_vars } => {
+                                    AdvancedOperation::Equation { equations: equations.into_iter().map(|(left, right)| (replace_in_ast(left, search, replace), replace_in_ast(right, search, replace))).collect(), search_vars }
+                                },
+                                AdvancedOperation::Derivative { expr, in_terms_of, at } => {
+                                    AdvancedOperation::Derivative { expr: replace_in_ast(expr, search, replace), in_terms_of, at: replace_in_ast(at, search, replace) }
+                                },
+                                AdvancedOperation::Conditional { condition, then, r#else } => {
+                                    AdvancedOperation::Conditional { condition: replace_in_ast(condition, search, replace), then: replace_in_ast(then, search, replace), r#else: if let Some(else_ast) = r#else {Some(replace_in_ast(else_ast, search, replace))} else {None} }
+                                }
+                            }
+                        )))
+                    }
+                }
+            },
+            AST::List(asts) => {
+                AST::List(asts.into_iter().map(|ast| replace_in_ast(ast, search, replace)).collect())
+            },
+            AST::Function { name, inputs } => {
+                AST::Function { name: name.to_string(), inputs: inputs.into_iter().map(|ast| replace_in_ast(ast, search, replace)).collect() }
+            },
+            AST::Vector(elements) => {
+                AST::Vector(elements.into_iter().map(|ast| replace_in_ast(ast, search, replace)).collect())
+            },
+            AST::Matrix(rows) => {
+                AST::Matrix(rows.into_iter().map(|row| row.into_iter().map(|el| replace_in_ast(el, search, replace)).collect()).collect())
+            },
+            AST::Scalar(s) => {
+                AST::Scalar(s.clone())
+            },
+            AST::Variable(v) => {
+                AST::Variable(v.clone())
+            }
+        }
+    }
 }

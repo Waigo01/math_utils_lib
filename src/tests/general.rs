@@ -35,12 +35,3 @@ fn tetration1() -> Result<(), MathLibError> {
 
     Ok(())
 }
-//
-// #[test]
-// fn sum1() -> Result<(), MathLibError> {
-//     let res = quick_eval!("S((-1)^k/(2k+1), k, 0, inf)*4")?.round(3).to_vec();
-//
-//     assert_eq!(res[0], value!(3.142));
-//
-//     Ok(())
-// }

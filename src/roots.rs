@@ -48,7 +48,7 @@ fn gauss_algorithm<N: Number>(v: &mut Vec<Vec<N>>) -> Result<Value<N>, EvalError
             let mut zero_line = true;
             for k in i..v[j].len() {
                 v[j][k] = v[j][k] - v[i][k]/divisor; 
-                if v[j][k] != N::ZERO {
+                if v[j][k] != N::zero() {
                     zero_line = false;
                 }
             }
@@ -75,7 +75,7 @@ fn gauss_algorithm<N: Number>(v: &mut Vec<Vec<N>>) -> Result<Value<N>, EvalError
             let mut zero_line = true;
             for k in i..v[j].len() {
                 v[j][k] = v[j][k] - v[i][k]/divisor;
-                if v[j][k] != N::ZERO {
+                if v[j][k] != N::zero() {
                     zero_line = false;
                 }
             }
@@ -121,7 +121,7 @@ fn jacobi_and_gauss<N: Number>(search_expres: &[AST<N>], x: &[Variable<N>], cont
     } 
 
     for i in 0..jacobi.len() {
-        jacobi[i].push(-N::ONE * fx[i]);
+        jacobi[i].push(-N::one() * fx[i]);
     }
 
     let x_new_minus_x = gauss_algorithm(&mut jacobi)?;
@@ -152,7 +152,12 @@ fn newton<N: Number>(search_expres: &Vec<AST<N>>, check_expres: &Vec<AST<N>> , x
         context.remove_var(&i.name);
     }
 
-    if -N::EPSILON < fx.iter().map(|f| f.powi(2)).sum::<N>().sqrt() && fx.iter().map(|f| f.powi(2)).sum::<N>().sqrt() < N::EPSILON {
+    let mut sum = N::zero();
+    for f in &fx {
+        sum = sum + f.powi(2)
+    }
+
+    if -N::epsilon() < sum.sqrt() && sum.sqrt() < N::epsilon() {
         let mut check_results = vec![]; 
         for i in x {
             context.add_var(i);
@@ -166,7 +171,11 @@ fn newton<N: Number>(search_expres: &Vec<AST<N>>, check_expres: &Vec<AST<N>> , x
         if check_results.is_empty() {
             return Ok(NewtonReturn::FinishedX(x.to_vec()));
         }
-        if -N::EPSILON < check_results.iter().map(|f| f.powi(2)).sum::<N>().sqrt() && check_results.iter().map(|f| f.powi(2)).sum::<N>().sqrt() < N::EPSILON {
+        let mut sum = N::zero();
+        for f in check_results {
+            sum = sum + f.powi(2);
+        }
+        if -N::epsilon() < sum.sqrt() && sum.sqrt() < N::epsilon() {
             return Ok(NewtonReturn::FinishedX(x.to_vec()));
         } else {
             return Err(EvalError::ExpressionCheckFailed);
@@ -242,7 +251,7 @@ impl<N: Number> RootFinder<N> {
         }
 
         for i in &search_vars_names {
-            context.add_var(&Variable::new(i, vec![Value::Scalar(N::ONE)]));
+            context.add_var(&Variable::new(i, vec![Value::Scalar(N::one())]));
         }
 
         let initial_res = eval(&expressions[0], &mut context)?;

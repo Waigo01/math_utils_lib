@@ -37,7 +37,7 @@ pub fn madd<N: Number>(a: &Vec<Vec<N>>, b: &Vec<Vec<N>>) -> Result<Value<N>, Str
 pub fn vsub<N: Number>(a: &Vec<N>, b: &Vec<N>) -> Result<Value<N>, String> {
     let mut b_neg = vec![];
     for i in 0..b.len() {
-        b_neg.push(b[i] * -N::ONE);
+        b_neg.push(b[i] * -N::one());
     }
     vadd(a, &b_neg)
 }
@@ -48,7 +48,7 @@ pub fn msub<N: Number>(a: &Vec<Vec<N>>, b: &Vec<Vec<N>>) -> Result<Value<N>, Str
     for i in 0..b.len() {
         let mut r_neg = vec![];
         for j in 0..b[0].len() {
-            r_neg.push(b[i][j] * -N::ONE);
+            r_neg.push(b[i][j] * -N::one());
         }
         b_neg.push(r_neg);
     }

@@ -152,7 +152,7 @@ fn parse_inner<N: Number>(tokens: &[Box<Token>]) -> Result<AST<N>, ParserError> 
             if left_ts.is_empty() && (op.0 == SimpleOpType::AddSub || op.0 == SimpleOpType::Neg || op.0 == SimpleOpType::BoolNot) {
                 return Ok(AST::from_operation(Operation::SimpleOperation {
                     op_type: op.0.clone(), 
-                    left: AST::Scalar(N::ZERO), 
+                    left: AST::Scalar(N::zero()), 
                     right: right_b
                 }));
             } else if left_ts.is_empty() {

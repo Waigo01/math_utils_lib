@@ -45,7 +45,7 @@ impl StandardFunctions for f64 {
         self.exp()
     }
     fn fact(self) -> Self {
-        let res = crate::helpers::lanczos_approx(Complex { re: self + Self::ONE, im: Self::ZERO });
+        let res = crate::helpers::lanczos_approx(Complex { re: self + Self::one(), im: Self::zero() });
         if res.im < Self::EPSILON {
             return res.re;
         } else {
@@ -61,14 +61,30 @@ impl RealNumber for f64 {
 }
 
 impl Number for f64 {
-    const ONE: Self = 1.;
-    const ZERO: Self = 0.;
-    const NAN: Self = f64::NAN*2.;
-    const INFINITY: Self = f64::INFINITY;
-    const NEG_INFINITY: Self = f64::NEG_INFINITY;
-    const EPSILON: Self = 0.00000001;
-    const DISPLAY_EPSILON: Self = 0.000001;
-    const BASE: Self = 10.;
+    fn one() -> Self {
+        1.
+    }
+    fn zero() -> Self {
+        0.
+    }
+    fn nan() -> Self {
+        f64::NAN
+    }
+    fn infinity() -> Self {
+        f64::INFINITY
+    }
+    fn neg_infinity() -> Self {
+        f64::NEG_INFINITY
+    }
+    fn epsilon() -> Self {
+        1e-8
+    }
+    fn display_epsilon() -> Self {
+        1e-6
+    }
+    fn base() -> Self {
+        10.
+    }
     fn default_vars() -> Vec<Variable<Self>> {
         vec![
             Variable::new("pi".to_string(), Value::Scalar(std::f64::consts::PI)),
@@ -133,32 +149,34 @@ pub struct Complex<N: Number + StandardFunctions + RealNumber> {
 
 impl<N: Number + StandardFunctions + RealNumber> Display for Complex<N> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}{}", self.re, if self.im != N::ZERO && self.im > N::ZERO {"+".to_string() + &self.im.to_string()} else if self.im != N::ZERO && self.im < N::ZERO {self.im.to_string()} else {"".to_string()})
+        write!(f, "{}{}", self.re, if self.im != N::zero() && self.im > N::zero() {"+".to_string() + &self.im.to_string()} else if self.im != N::zero() && self.im < N::zero() {self.im.to_string()} else {"".to_string()})
     }
 }
 
 impl<N: Number + StandardFunctions + RealNumber> FromStr for Complex<N> {
     type Err = N::Err;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(Complex { re: s.parse::<N>()?, im: N::ZERO })
+        Ok(Complex { re: s.parse::<N>()?, im: N::zero() })
     }
 }
 
 impl<N: Number + StandardFunctions + RealNumber> From<f64> for Complex<N> {
     fn from(value: f64) -> Self {
-        Complex { re: N::from(value), im: N::ZERO }
+        Complex { re: N::from(value), im: N::zero() }
     }
 }
 
 impl<N: Number + StandardFunctions + RealNumber> From<i32> for Complex<N> {
     fn from(value: i32) -> Self {
-        Complex { re: N::from(value), im: N::ZERO }
+        Complex { re: N::from(value), im: N::zero() }
     }
 }
 
 impl<N: Number + StandardFunctions + RealNumber> Complex<N> {
-    /// The imaginary unit.
-    const I: Self = Complex{re: N::ZERO, im: N::ONE};
+    /// returns the imaginary unit.
+    fn i() -> Self {
+        Complex{re: <N as Number>::zero(), im: <N as Number>::one()}
+    }
     /// returns the argument of the complex number.
     fn argument(self) -> N {
         self.im.atan2(self.re)
@@ -179,8 +197,8 @@ impl<N: Number + StandardFunctions + RealNumber> Complex<N> {
 
 impl<N: Number + StandardFunctions + RealNumber> LowerExp for Complex<N> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if self.im != N::ZERO {
-            write!(f, "{:+e}{}{:+e}", self.re, if self.im > N::ZERO {"+".to_string()} else {"".to_string()}, self.im)
+        if self.im != N::zero() {
+            write!(f, "{:+e}{}{:+e}", self.re, if self.im > N::zero() {"+".to_string()} else {"".to_string()}, self.im)
         } else {
             write!(f, "{:+e}", self.re)
         }
@@ -224,7 +242,7 @@ impl<N: Number + StandardFunctions + RealNumber> Div for Complex<N> {
 
 impl<N: Number + StandardFunctions + RealNumber> Sum for Complex<N> {
     fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
-        let mut sum = Self::ZERO;
+        let mut sum = Self::zero();
         for item in iter {
             sum = sum + item
         }
@@ -233,14 +251,30 @@ impl<N: Number + StandardFunctions + RealNumber> Sum for Complex<N> {
 }
 
 impl<N: Number + StandardFunctions + RealNumber> Number for Complex<N> {
-    const ONE: Self = Complex{re: N::ONE, im: N::ZERO};
-    const ZERO: Self = Complex{re: N::ZERO, im: N::ZERO};
-    const NAN: Self = Complex{re: N::NAN, im: N::NAN};
-    const INFINITY: Self = Complex{re: N::INFINITY, im: N::INFINITY};
-    const NEG_INFINITY: Self = Complex{re: N::NEG_INFINITY, im: N::NEG_INFINITY};
-    const EPSILON: Self = Complex{re: N::EPSILON, im: N::ZERO};
-    const DISPLAY_EPSILON: Self = Complex{re: N::DISPLAY_EPSILON, im: N::ZERO};
-    const BASE: Self = Complex{re: N::BASE, im: N::ZERO};
+    fn one() -> Self {
+        Complex { re: N::one(), im: N::zero() }
+    }
+    fn zero() -> Self {
+        Complex { re: N::zero(), im: N::zero() }
+    }
+    fn nan() -> Self {
+        Complex { re: N::nan(), im: N::nan() }
+    }
+    fn infinity() -> Self {
+        Complex { re: N::infinity(), im: N::infinity() }
+    }
+    fn neg_infinity() -> Self {
+        Complex { re: N::neg_infinity(), im: N::neg_infinity() }
+    }
+    fn epsilon() -> Self {
+        Complex { re: N::epsilon(), im: N::zero() }
+    }
+    fn display_epsilon() -> Self {
+        Complex { re: N::display_epsilon(), im: N::zero() }
+    }
+    fn base() -> Self {
+        Complex { re: N::base(), im: N::zero() }
+    }
     fn default_vars() -> Vec<Variable<Self>> {
         let mut default_vars = vec![];
 
@@ -248,15 +282,15 @@ impl<N: Number + StandardFunctions + RealNumber> Number for Complex<N> {
             let mut new_values = vec![];
             for value in var.values.to_vec() {
                 match value {
-                    Value::Scalar(s) => new_values.push(Value::Scalar(Complex{re: s, im: N::ZERO})),
-                    Value::Vector(v) => new_values.push(Value::Vector(v.into_iter().map(|s| Complex{re: s, im: N::ZERO}).collect())),
-                    Value::Matrix(m) => new_values.push(Value::Matrix(m.into_iter().map(|v| v.into_iter().map(|s| Complex{re: s, im: N::ZERO}).collect()).collect()))
+                    Value::Scalar(s) => new_values.push(Value::Scalar(Complex{re: s, im: N::zero()})),
+                    Value::Vector(v) => new_values.push(Value::Vector(v.into_iter().map(|s| Complex{re: s, im: N::zero()}).collect())),
+                    Value::Matrix(m) => new_values.push(Value::Matrix(m.into_iter().map(|v| v.into_iter().map(|s| Complex{re: s, im: N::zero()}).collect()).collect()))
                 }
             }
             default_vars.push(Variable::new(var.name, new_values));
         }
 
-        default_vars.push(Variable::new("i".to_string(), Value::Scalar(Complex{re: N::ZERO, im: N::ONE})));
+        default_vars.push(Variable::new("i".to_string(), Value::Scalar(Complex{re: N::zero(), im: N::one()})));
 
         default_vars
     }
@@ -264,10 +298,10 @@ impl<N: Number + StandardFunctions + RealNumber> Number for Complex<N> {
         <Self as StandardFunctions>::default_functions()
     }
     fn newton_search_pattern(n_values: usize) -> Vec<Self> {
-        ((-(n_values as i32)/2)..(n_values as i32/2)).map(|v| Self::from(v/4)*(Self::I*Self::from(v/4)).exp()).collect()
+        ((-(n_values as i32)/2)..(n_values as i32/2)).map(|v| Self::from(v/4)*(Self::i()*Self::from(v/4)).exp()).collect()
     }
     fn abs(self) -> Self {
-        Complex{re: (self.re.powi(2) + self.im.powi(2)).sqrt(), im: N::ZERO}
+        Complex{re: (self.re.powi(2) + self.im.powi(2)).sqrt(), im: N::zero()}
     }
     fn ceil(self) -> Self {
         Complex { re: self.re.ceil(), im: self.im.ceil() }
@@ -312,8 +346,8 @@ impl<N: Number + StandardFunctions + RealNumber> Number for Complex<N> {
     }
     fn sqrt(self) -> Self {
         let argument = self.argument();
-        let a = (self.re.powi(2) + self.im.powi(2)).sqrt().sqrt() * N::ZERO.mean(argument).cos();
-        let b = (self.re.powi(2) + self.im.powi(2)).sqrt().sqrt() * N::ZERO.mean(argument).sin();
+        let a = (self.re.powi(2) + self.im.powi(2)).sqrt().sqrt() * N::zero().mean(argument).cos();
+        let b = (self.re.powi(2) + self.im.powi(2)).sqrt().sqrt() * N::zero().mean(argument).sin();
         Complex { re: a, im: b }
     }
 }
@@ -326,33 +360,33 @@ impl<N: Number + StandardFunctions + RealNumber> StandardFunctions for Complex<N
         Complex { re: self.re.cos()*self.im.cosh(), im: self.re.sin()*self.im.sinh() }
     }
     fn tan(self) -> Self {
-        Complex { re: self.re.tan(), im: self.im.tanh() }/Complex{re: N::ONE, im: -self.re.tan()*self.im.tanh()}
+        Complex { re: self.re.tan(), im: self.im.tanh() }/Complex{re: N::one(), im: -self.re.tan()*self.im.tanh()}
     }
     fn sinh(self) -> Self {
-        Complex { re: -self.im, im: self.re }.sin()/Complex{re: N::ZERO, im: N::ONE}
+        Complex { re: -self.im, im: self.re }.sin()/Complex{re: N::zero(), im: N::one()}
     }
     fn cosh(self) -> Self {
         Complex { re: -self.im, im: self.re }.cos()
     }
     fn tanh(self) -> Self {
-        Complex { re: -self.im, im: self.re }.tan()/Complex{re: N::ZERO, im: N::ONE}
+        Complex { re: -self.im, im: self.re }.tan()/Complex{re: N::zero(), im: N::one()}
     }
     fn ln(self) -> Self {
         Complex { re: self.abs().re.ln(), im: self.argument() }
     }
     fn asin(self) -> Self {
-        Complex::I.recip()*(Complex::I*self + (Complex::ONE-self.powi(2)).sqrt()).ln()
+        Complex::i().recip()*(Complex::i()*self + (Complex::one()-self.powi(2)).sqrt()).ln()
     }
     fn acos(self) -> Self {
-        Complex::I.recip()*(self+(self.powi(2)-Complex::ONE).sqrt()).ln()
+        Complex::i().recip()*(self+(self.powi(2)-Complex::one()).sqrt()).ln()
     }
     fn atan(self) -> Self {
-        Complex::ZERO.mean(Complex::I.recip()*((Complex::I-self)/(Complex::I+self)).ln())
+        Complex::zero().mean(Complex::i().recip()*((Complex::i()-self)/(Complex::i()+self)).ln())
     }
     fn exp(self) -> Self {
-        Complex { re: self.re.exp(), im: N::ZERO }*Complex{re: self.im.cos(), im: self.im.sin()}
+        Complex { re: self.re.exp(), im: N::zero() }*Complex{re: self.im.cos(), im: self.im.sin()}
     }
     fn fact(self) -> Self {
-        crate::helpers::lanczos_approx(self + Self::ONE)
+        crate::helpers::lanczos_approx(self + Self::one())
     }
 }
