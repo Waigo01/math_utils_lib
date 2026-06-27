@@ -118,6 +118,10 @@ impl<N: Number> Step<N> {
 
         return output;
     }
+    /// converts a step to a different number type.
+    pub fn into<B: Number + From<N>>(self) -> Step<B> {
+        Step { term: self.term.into(), result: self.result.into() }
+    }
 }
 
 /// describes the type of export done by the [export()] function:

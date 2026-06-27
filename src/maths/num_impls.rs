@@ -138,6 +138,12 @@ impl Number for f64 {
     }
 }
 
+impl From<Complex<f64>> for f64 {
+    fn from(value: Complex<f64>) -> Self {
+        value.re()
+    }
+}
+
 /// A simple complex number type that can be used to build a complex number from a type that
 /// implements [Number](crate::Number), [StandardFunctions](crate::StandardFunctions) and [RealNumber](crate::RealNumber).
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]

@@ -53,6 +53,10 @@ impl<N: Number> Variable<N> {
     pub fn as_string(&self) -> String {
         format!("{} = {}", self.name, self.values.as_string())
     }
+    /// converts the variable to a different number type.
+    pub fn into<B: Number + From<N>>(self) -> Variable<B> {
+        Variable { name: self.name, values: self.values.into() }
+    }
 }
 
 /// describes a function that can be used in the context of an evaluation.
@@ -90,6 +94,10 @@ impl<N: Number> Function<N> {
     /// converts the function to a string using basic string formatting.
     pub fn as_string(&self) -> String {
         format!("{}({}) = {}", self.name, self.inputs.join(", "), self.ast.as_string())
+    }
+    /// converts the function to a different number type.
+    pub fn into<B: Number + From<N>>(self) -> Function<B> {
+        Function { name: self.name, ast: self.ast.into(), inputs: self.inputs }
     }
 }
 
@@ -226,6 +234,14 @@ impl<N: Number> Context<N> {
     /// returns the function with the given name or None if it does not exist in the context.
     pub fn get_internal_fun<S: Into<String> + Clone>(&self, fun_name: S) -> Option<InternalFunction<N>> {
         self.internal_funs.iter().filter(|f| f.name == fun_name.clone().into()).map(|f| f.to_owned()).nth(0)
+    }
+    /// converts the context to a different number type.
+    pub fn into<B: Number + From<N>>(self) -> Context<B> {
+        Context {
+            vars: self.vars.into_iter().map(|v| v.into()).collect(),
+            funs: self.funs.into_iter().map(|f| f.into()).collect(),
+            internal_funs: B::default_functions()
+        }
     }
 }
 
@@ -644,6 +660,14 @@ impl<N> Value<N> where N: Number {
             }
         }
     }
+    /// converts the value to a different number type.
+    pub fn into<B: Number + From<N>>(self) -> Value<B> {
+        match self {
+            Self::Scalar(s) => Value::<B>::Scalar(s.into()),
+            Self::Vector(v) => Value::<B>::Vector(v.into_iter().map(|s| s.into()).collect()),
+            Self::Matrix(m) => Value::<B>::Matrix(m.into_iter().map(|v| v.into_iter().map(|s| s.into()).collect()).collect())
+        }
+    }
 }
 
 impl<N: Number> Into<Values<N>> for Value<N> {
@@ -710,6 +734,10 @@ impl<N: Number> Values<N> {
         } else {
             return format!("\\left\\{{{}\\right\\}}", self.clone().to_vec().iter().map(|v| v.as_latex()).collect::<Vec<String>>().join(", "));
         }
+    }
+    /// converts the values to a different number type.
+    pub fn into<B: Number + From<N>>(self) -> Values<B> {
+        self.to_vec().into_iter().map(|v| v.into()).collect::<Vec<Value<B>>>().into()
     }
 }
 
@@ -1002,6 +1030,52 @@ impl<N: Number> AST<N> {
                         }
                     }
                 } 
+            }
+        }
+    }
+    /// converts the ast to a different number type.
+    pub fn into<B: Number + From<N>>(self) -> AST<B> {
+        match self {
+            AST::Scalar(s) => AST::Scalar(s.into()),
+            AST::List(l) => AST::List(l.into_iter().map(|ast| ast.into()).collect()),
+            AST::Vector(v) => AST::Vector(v.into_iter().map(|ast| ast.into()).collect()),
+            AST::Matrix(m) => AST::Matrix(m.into_iter().map(|v| v.into_iter().map(|ast| ast.into()).collect()).collect()),
+            AST::Variable(var_name) => AST::Variable(var_name.clone()),
+            AST::Function { name, inputs } => AST::Function { name, inputs: inputs.into_iter().map(|ast| ast.into()).collect() },
+            AST::Operation(op) => {
+                AST::Operation(Box::new(match *op {
+                    Operation::SimpleOperation { op_type, left, right } => Operation::SimpleOperation { op_type, left: left.into(), right: right.into() },
+                    Operation::AdvancedOperation(aop) => {
+                        Operation::AdvancedOperation(match aop {
+                            AdvancedOperation::Integral { expr, in_terms_of, lower_bound, upper_bound } => AdvancedOperation::Integral {
+                                expr: expr.into(),
+                                in_terms_of,
+                                lower_bound: lower_bound.into(),
+                                upper_bound: upper_bound.into()
+                            },
+                            AdvancedOperation::Equation { equations, search_vars } => AdvancedOperation::Equation {
+                                equations: equations.into_iter().map(|(e1, e2)| (e1.into(), e2.into())).collect(),
+                                search_vars
+                            },
+                            AdvancedOperation::Conditional { condition, then, r#else } => AdvancedOperation::Conditional {
+                                condition: condition.into(),
+                                then: then.into(),
+                                r#else: if let Some(some_else) = r#else { Some(some_else.into()) } else {None}
+                            },
+                            AdvancedOperation::Derivative { expr, in_terms_of, at } => AdvancedOperation::Derivative {
+                                expr: expr.into(),
+                                in_terms_of,
+                                at: at.into()
+                            },
+                            AdvancedOperation::Sum { expr, in_terms_of, lower_bound, upper_bound } => AdvancedOperation::Sum {
+                                expr: expr.into(),
+                                in_terms_of,
+                                lower_bound: lower_bound.into(),
+                                upper_bound: upper_bound.into()
+                            },
+                        })
+                    }
+                }))
             }
         }
     }
