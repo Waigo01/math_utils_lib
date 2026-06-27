@@ -149,7 +149,15 @@ pub struct Complex<N: Number + StandardFunctions + RealNumber> {
 
 impl<N: Number + StandardFunctions + RealNumber> Display for Complex<N> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}{}", self.re, if self.im != N::zero() && self.im > N::zero() {"+".to_string() + &self.im.to_string() + "i"} else if self.im != N::zero() && self.im < N::zero() {self.im.to_string() + "i"} else {"".to_string()})
+        if self.is_nan() {
+            write!(f, "NaN")
+        } else if self.is_infinite() && *self < Self::zero() {
+            write!(f, "-inf")
+        } else if self.is_infinite() {
+            write!(f, "inf")
+        } else {
+            write!(f, "{}{}", self.re, if self.im != N::zero() && self.im > N::zero() {"+".to_string() + &self.im.to_string() + "i"} else if self.im != N::zero() && self.im < N::zero() {self.im.to_string() + "i"} else {"".to_string()})
+        }
     }
 }
 

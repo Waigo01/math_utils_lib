@@ -33,7 +33,11 @@ pub fn center_in_string(f: String, n: i32) -> String {
 
 #[doc(hidden)]
 pub fn round_and_format<N>(x: N, latex: bool) -> String where N: Number {
-    if (x/N::display_epsilon()).round()*N::display_epsilon() == N::zero() && !latex && x != N::zero() {
+    if x.is_infinite() && x < N::zero() && latex {
+        return r"-\infty".to_string();
+    } else if x.is_infinite() && latex {
+        return r"\infty".to_string();
+    } else if (x/N::display_epsilon()).round()*N::display_epsilon() == N::zero() && !latex && x != N::zero() {
         let mut scientific = format!("{:+e}", x);
         if scientific.chars().nth(0).unwrap() == '+' {
             scientific = scientific[1..].to_string();
