@@ -237,11 +237,7 @@ impl<N: Number> Context<N> {
     }
     /// converts the context to a different number type.
     pub fn into<B: Number + From<N>>(self) -> Context<B> {
-        Context {
-            vars: self.vars.into_iter().map(|v| v.into()).collect(),
-            funs: self.funs.into_iter().map(|f| f.into()).collect(),
-            internal_funs: B::default_functions()
-        }
+        Context::with(self.vars.into_iter().map(|v| v.into()).collect::<Vec<Variable<B>>>(), self.funs.into_iter().map(|f| f.into()).collect::<Vec<Function<B>>>())
     }
 }
 
