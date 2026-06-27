@@ -67,7 +67,7 @@ impl<N: Number> Variable<N> {
 /// let function = Function::new("f", parsed_expr, vec!["x"]);
 /// # Ok::<(), MathLibError>(())
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Function<N: Number> {
     pub name: String,
