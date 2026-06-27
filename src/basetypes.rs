@@ -929,7 +929,7 @@ impl<N: Number> AST<N> {
                         let lv = &left.latex_print(false);
                         let rv = &right.latex_print(false); 
                         match op_type {
-                            SimpleOpType::Assign => return format!("{}{}\\coloneq {}", lv, if add_aligner {"&"} else {""}, rv),
+                            SimpleOpType::Assign => return format!("{}{}\\coloneqq {}", lv, if add_aligner {"&"} else {""}, rv),
                             SimpleOpType::BoolAnd => return format!("{}\\land {}", lv, rv),
                             SimpleOpType::BoolOr => return format!("{}\\lor {}", lv, rv),
                             SimpleOpType::BoolEq => return format!("{}={}", lv, rv),
