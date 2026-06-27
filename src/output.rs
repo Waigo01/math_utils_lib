@@ -51,8 +51,8 @@ pub fn svg_from_latex<S: Into<String>>(latex: String, line_color: S) -> Result<S
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Step<N: Number> {
-    term: AST<N>,
-    result: Values<N>
+    pub term: AST<N>,
+    pub result: Values<N>
 }
 
 impl<N: Number> Step<N> {
