@@ -149,7 +149,7 @@ pub struct Complex<N: Number + StandardFunctions + RealNumber> {
 
 impl<N: Number + StandardFunctions + RealNumber> Display for Complex<N> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}{}", self.re, if self.im != N::zero() && self.im > N::zero() {"+".to_string() + &self.im.to_string()} else if self.im != N::zero() && self.im < N::zero() {self.im.to_string()} else {"".to_string()})
+        write!(f, "{}{}", self.re, if self.im != N::zero() && self.im > N::zero() {"+".to_string() + &self.im.to_string() + "i"} else if self.im != N::zero() && self.im < N::zero() {self.im.to_string() + "i"} else {"".to_string()})
     }
 }
 
@@ -198,7 +198,7 @@ impl<N: Number + StandardFunctions + RealNumber> Complex<N> {
 impl<N: Number + StandardFunctions + RealNumber> LowerExp for Complex<N> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if self.im != N::zero() {
-            write!(f, "{:+e}{}{:+e}", self.re, if self.im > N::zero() {"+".to_string()} else {"".to_string()}, self.im)
+            write!(f, "{:+e}{}{:+e}i", self.re, if self.im > N::zero() {"+".to_string()} else {"".to_string()}, self.im)
         } else {
             write!(f, "{:+e}", self.re)
         }
