@@ -141,15 +141,9 @@ pub enum ExportType {
 /// by export_type (see [ExportType] for further details).
 #[cfg(feature = "output")]
 pub fn export_history<N: Number>(history: Vec<Step<N>>, export_type: ExportType) -> Result<Vec<u8>, LatexError> {
-    let mut output_string = "\\documentclass[12pt, letterpaper]{article}\n\\usepackage{amsmath}\n\\usepackage[margin=1in]{geometry}\n\\allowdisplaybreaks\n\\begin{document}\n\\begin{align*}\n".to_string();
-    for (i, s) in history.iter().enumerate() {
-        output_string += &s.as_latex_with_tag(i as i32+1);
-    }
-    output_string += "\\end{align*}\n\\end{document}";
-
     match export_type {
         ExportType::Pdf => {
-            let mut output_string = "\\documentclass[12pt, letterpaper]{article}\n\\usepackage{amsmath}\n\\usepackage[margin=1in]{geometry}\n\\allowdisplaybreaks\n\\begin{document}\n\\begin{align*}\n".to_string();
+            let mut output_string = "\\documentclass[12pt, letterpaper]{article}\n\\usepackage{amsmath}\n\\usepackage{mathtools}\n\\usepackage[margin=1in]{geometry}\n\\allowdisplaybreaks\n\\begin{document}\n\\begin{align*}\n".to_string();
             for (i, s) in history.iter().enumerate() {
                 output_string += &s.as_latex_with_tag(i as i32+1);
             }
@@ -159,7 +153,7 @@ pub fn export_history<N: Number>(history: Vec<Step<N>>, export_type: ExportType)
             return Ok(pdf.to_vec());
         },
         ExportType::Tex => {
-            let mut output_string = "\\documentclass[12pt, letterpaper]{article}\n\\usepackage{amsmath}\n\\usepackage[margin=1in]{geometry}\n\\allowdisplaybreaks\n\\begin{document}\n\\begin{align*}\n".to_string();
+            let mut output_string = "\\documentclass[12pt, letterpaper]{article}\n\\usepackage{amsmath}\n\\usepackage{mathtools}\n\\usepackage[margin=1in]{geometry}\n\\allowdisplaybreaks\n\\begin{document}\n\\begin{align*}\n".to_string();
             for (i, s) in history.iter().enumerate() {
                 output_string += &s.as_latex_with_tag(i as i32+1);
             }
