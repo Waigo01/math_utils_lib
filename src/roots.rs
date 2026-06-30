@@ -222,7 +222,7 @@ impl<N: Number> RootFinder<N> {
     /// should be solved.
     ///
     /// This functionality has been implemented into the eval process using the
-    /// [Equation](crate::basetypes::AdvancedOpType::Equation) operator.
+    /// [Equation](crate::basetypes::AdvancedOperation::Equation) operator.
     pub fn new(expressions: Vec<AST<N>>, mut context: Context<N>, search_vars_names: Vec<String>) -> Result<RootFinder<N>, EvalError> {
         if expressions.len() == 0 {
             return Err(EvalError::NothingToDoEq);

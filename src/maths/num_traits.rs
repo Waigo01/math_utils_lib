@@ -210,8 +210,8 @@ pub trait StandardFunctions {
     ///
     /// The default functions are: sin(x), cos(x), tan(x), sinh(x), cosh(x), tanh(x), exp(x), abs(x),
     /// sqrt(x), root(x, n) (the nth root of x), ln(x), arcsin(x), arccos(x), arctan(x), det(M) (the determinant of the matrix M),
-    /// inv(M) (the inverse of the matrix M), fact(x) (the factorial of x, in the case of f64 and
-    /// Complex<f64> this is implemented with the Gamma function)
+    /// inv(M) (the inverse of the matrix M), fact(x) (the factorial of x, in the case of [f64] and
+    /// [Complex](crate::Complex) this is implemented with the Gamma function)
     fn default_functions() -> Vec<InternalFunction<Self>> where Self: Number {
         vec![
             InternalFunction::new("sin".to_string(), 1, maths::sin),

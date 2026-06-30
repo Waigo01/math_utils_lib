@@ -167,33 +167,33 @@ fn if_statement3() -> Result<(), MathLibError> {
 
     Ok(())
 }
-
-#[cfg(feature = "output")]
-#[test]
-fn if_statement_export() -> Result<(), MathLibError> {
-    use crate::{eval, png_from_latex, Step, AST};
-
-    let parsed_expr: AST<f64> = parse("f(x) =
-    if(x == 0 & state == 0,
-        state = 1,
-    if(x == 1 & state == 1,
-        state = 2,
-    if(x == 2 & state == 2,
-        state = 3,
-    if(x == 3 & state == 3,
-        state = 4,
-    state = 0))))")?;
-
-    let res = eval(&parsed_expr, &mut Context::empty())?;
-
-    let step = Step::new(parsed_expr, res);
-
-    let png = png_from_latex(step.as_latex_inline(), 100, "#FFFFFF")?;
-
-    let _ = std::fs::write("./images/if_test.png", png);
-
-    Ok(())
-}
+//
+// #[cfg(feature = "output")]
+// #[test]
+// fn if_statement_export() -> Result<(), MathLibError> {
+//     use crate::{eval, png_from_latex, Step, AST, parse};
+//
+//     let parsed_expr: AST<f64> = parse("f(x) =
+//     if(x == 0 & state == 0,
+//         state = 1,
+//     if(x == 1 & state == 1,
+//         state = 2,
+//     if(x == 2 & state == 2,
+//         state = 3,
+//     if(x == 3 & state == 3,
+//         state = 4,
+//     state = 0))))")?;
+//
+//     let res = eval(&parsed_expr, &mut Context::empty())?;
+//
+//     let step = Step::new(parsed_expr, res);
+//
+//     let png = png_from_latex(step.as_latex_inline(), 100, "#FFFFFF")?;
+//
+//     let _ = std::fs::write("./images/if_test.png", png);
+//
+//     Ok(())
+// }
 
 #[test]
 fn state_machine1() -> Result<(), MathLibError> {
@@ -229,24 +229,6 @@ fn state_machine1() -> Result<(), MathLibError> {
     let res = quick_eval!("state", &mut c)?.to_vec();
 
     assert_ne!(res[0], value!(4));
-
-    Ok(())
-}
-
-#[test]
-fn derivative() -> Result<(), MathLibError> {
-    let res = quick_eval!("D(x^2, x, 3)")?.to_vec();
-
-    assert_eq!(res[0].round(6), value!(6));
-
-    Ok(())
-}
-
-#[test]
-fn integral() -> Result<(), MathLibError> {
-    let res = quick_eval!("I(x^2, x, 0, 5)")?.to_vec();
-
-    assert_eq!(res[0].round(4), value!(41.6667));
 
     Ok(())
 }

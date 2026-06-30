@@ -1,6 +1,24 @@
 use crate::{Context, MathLibError, quick_eval, value};
 
 #[test]
+fn derivative() -> Result<(), MathLibError> {
+    let res = quick_eval!("D(x^2, x, 3)")?.to_vec();
+
+    assert_eq!(res[0].round(6), value!(6));
+
+    Ok(())
+}
+
+#[test]
+fn integral() -> Result<(), MathLibError> {
+    let res = quick_eval!("I(x^2, x, 0, 5)")?.to_vec();
+
+    assert_eq!(res[0].round(4), value!(41.6667));
+
+    Ok(())
+}
+
+#[test]
 fn hard_integral() -> Result<(), MathLibError> {
     let res = quick_eval!("1/sqrt(2*250^2*pi)*I(e^(-(x-4000)^2/(2*250^2)), x, 3500, 4500)")?.to_vec();
 

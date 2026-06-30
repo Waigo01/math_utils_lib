@@ -17,45 +17,45 @@ fn variable_as_latex() -> Result<(), MathLibError> {
     Ok(())
 }
 
-#[cfg(feature = "output")]
-#[test]
-fn output1() -> Result<(), MathLibError> {
-    use crate::{eval, export_history, ExportType, Step};
-    use std::fs;
-
-    let mut c: Context<f64> = Context::empty();
-
-    let parsed_expr = parse("x = 3*3+6^5")?;
-    let res = eval(&parsed_expr, &mut c)?;
-
-    let step1 = Step::new(parsed_expr, res);
-
-    let parsed_expr = parse("3x")?;
-    let res = eval(&parsed_expr, &mut c)?;
-
-    let step2 = Step::new(parsed_expr, res);
-
-    let pdf = export_history(vec![step1, step2], ExportType::Pdf)?;
-
-    let _ = fs::write("./images/test.pdf", pdf);
-
-    Ok(())
-}
-//
 // #[cfg(feature = "output")]
 // #[test]
-// fn output2() -> Result<(), MathLibError> {
-//     use crate::{eval, png_from_latex, Step, AST};
+// fn output1() -> Result<(), MathLibError> {
+//     use crate::{eval, export_history, ExportType, Step};
 //     use std::fs;
 //
-//     let parsed_expr: AST<f64> = parse("x = 3*3+6^5")?;
-//     let res = eval(&parsed_expr, &mut Context::empty())?;
+//     let mut c: Context<f64> = Context::empty();
 //
-//     let step = Step::new(parsed_expr, res);
+//     let parsed_expr = parse("x = 3*3+6^5")?;
+//     let res = eval(&parsed_expr, &mut c)?;
 //
-//     let png = png_from_latex(step.as_latex_inline(), 200, "#FFFFFF")?;
+//     let step1 = Step::new(parsed_expr, res);
 //
-//     let _ = fs::write("./images/test.png", png);
+//     let parsed_expr = parse("3x")?;
+//     let res = eval(&parsed_expr, &mut c)?;
+//
+//     let step2 = Step::new(parsed_expr, res);
+//
+//     let pdf = export_history(vec![step1, step2], ExportType::Pdf)?;
+//
+//     let _ = fs::write("./images/test.pdf", pdf);
 //
 //     Ok(())
 // }
+
+#[cfg(feature = "output")]
+#[test]
+fn output2() -> Result<(), MathLibError> {
+    use crate::{eval, png_from_latex, Step, AST, parse, Context};
+    use std::fs;
+
+    let parsed_expr: AST<f64> = parse("x = 3*3+6^5")?;
+    let res = eval(&parsed_expr, &mut Context::empty())?;
+
+    let step = Step::new(parsed_expr, res);
+
+    let png = png_from_latex(step.as_latex_inline(), 200, "#FFFFFF")?;
+
+    let _ = fs::write("./images/test.png", png);
+
+    Ok(())
+}

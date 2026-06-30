@@ -309,7 +309,7 @@ pub use maths::num_impls::Complex;
 ///
 /// For more information about the context, take a look at [Context] and for more information about
 /// the possible operations, take a look at [SimpleOpType](basetypes::SimpleOpType) and
-/// [AdvancedOpType](basetypes::AdvancedOpType).
+/// [AdvancedOperation](basetypes::AdvancedOperation).
 ///
 /// When calling this macro with just a string argument, it will internally crate a new Context
 /// using [Context::default()]. You can also specify your own context, as the second argument. With the argument following the semicolon you can specify the number 

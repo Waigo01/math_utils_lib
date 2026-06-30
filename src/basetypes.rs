@@ -1080,7 +1080,7 @@ impl<N: Number> AST<N> {
 /// specifies the type of operation for the [SimpleOperation](Operation::SimpleOperation) struct.
 /// 
 /// This enum only contains simple mathematical operations with a left and right side or a maximum
-/// of two arguments. For more advanced operations, see [AdvancedOpType].
+/// of two arguments. For more advanced operations, see [AdvancedOperation].
 /// 
 /// The order of the enum also represents the reverse order of the operation priority.
 #[derive(Debug, PartialEq, Clone)]
@@ -1128,28 +1128,12 @@ pub enum SimpleOpType {
     HiddenMult = 17,
     /// Take a scalar or a matrix to the power of a scalar using "^" (a^b)
     Pow = 19,
-    /// Calculate the repeated exponensial (a^^n), i.e. a^a^a^a.. n times.
+    /// Calculate the repeated exponential (a^^n), i.e. a^a^a^a.. n times.
     Tetration = 20,
     /// Index into vector using "@" ([3, 4, 5]@1 = 4)
     Get = 21,
     /// Prioritise expressions in parentheses (3*(5+5))
     Parenths = 22
-}
-
-/// specifies the type of operation for the [AdvancedOperation] struct.
-///
-/// This enum only contains advanced operations with more than 2 arguments. For simple operations,
-/// see [SimpleOpType].
-#[derive(Clone, Debug, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum AdvancedOpType {
-    /// Calculate the derivative of a function f in respect to n at a value m (D(f, n, m))
-    Derivative,
-    /// Calculate the integral of a function f in respect to n with the bounds a and b (I(f, n, a, b))
-    Integral,
-    /// Solve the given equation(s) in terms of the given variable(s) (eq(eq_1, eq_2, eq_3, ..., x, y,
-    /// z, ...))
-    Equation,
 }
 
 /// used to specify an operation in a parsed string. It is used together with [AST] to
