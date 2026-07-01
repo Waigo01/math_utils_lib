@@ -1,7 +1,4 @@
-#[cfg(feature = "output")]
-use crate::errors::LatexError;
-
-use crate::{Values, basetypes::{AST, Operation, SimpleOpType}, maths::num_traits::Number};
+use crate::{Values, basetypes::{AST, Operation, SimpleOpType}, errors::LatexError, maths::num_traits::Number};
 
 #[cfg(feature = "output")]
 /// converts the given latex string to a png image with the given height in pixels, returned as its raw bytes. 
@@ -126,22 +123,23 @@ impl<N: Number> Step<N> {
 
 /// describes the type of export done by the [export()] function:
 ///
-/// - Pdf: Save as a pdf file.
+/// - Pdf: Save as a pdf file (only available with output feature).
+/// - Png: Save as the generated .png file (only available with output feature).
 /// - Tex: Save as the generated .tex file.
-/// - Png: Save as the generated .png file.
-#[cfg(feature = "output")]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum ExportType {
+    #[cfg(feature = "output")]
     Pdf,
+    #[cfg(feature = "output")]
+    Png,
     Tex,
-    Png
 }
 
 /// exports a history of [Step] to a file named <file_name> with the file type defined
 /// by export_type (see [ExportType] for further details).
-#[cfg(feature = "output")]
 pub fn export_history<N: Number>(history: Vec<Step<N>>, export_type: ExportType) -> Result<Vec<u8>, LatexError> {
     match export_type {
+        #[cfg(feature = "output")]
         ExportType::Pdf => {
             let mut output_string = "\\documentclass[12pt, letterpaper]{article}\n\\usepackage{amsmath}\n\\usepackage{mathtools}\n\\usepackage[margin=1in]{geometry}\n\\allowdisplaybreaks\n\\begin{document}\n\\begin{align*}\n".to_string();
             for (i, s) in history.iter().enumerate() {
@@ -152,15 +150,7 @@ pub fn export_history<N: Number>(history: Vec<Step<N>>, export_type: ExportType)
             let pdf = tectonic::latex_to_pdf(output_string)?;
             return Ok(pdf.to_vec());
         },
-        ExportType::Tex => {
-            let mut output_string = "\\documentclass[12pt, letterpaper]{article}\n\\usepackage{amsmath}\n\\usepackage{mathtools}\n\\usepackage[margin=1in]{geometry}\n\\allowdisplaybreaks\n\\begin{document}\n\\begin{align*}\n".to_string();
-            for (i, s) in history.iter().enumerate() {
-                output_string += &s.as_latex_with_tag(i as i32+1);
-            }
-            output_string += "\\end{align*}\n\\end{document}";
-
-            return Ok(output_string.into_bytes());
-        },
+        #[cfg(feature = "output")]
         ExportType::Png => {
             let mut output_string = "\\begin{align*}\n".to_string();
             for (i, s) in history.iter().enumerate() {
@@ -171,6 +161,15 @@ pub fn export_history<N: Number>(history: Vec<Step<N>>, export_type: ExportType)
             let png = png_from_latex(output_string, 1080, "#FFFFFF")?;
 
             return Ok(png)
-        }
+        },
+        ExportType::Tex => {
+            let mut output_string = "\\documentclass[12pt, letterpaper]{article}\n\\usepackage{amsmath}\n\\usepackage{mathtools}\n\\usepackage[margin=1in]{geometry}\n\\allowdisplaybreaks\n\\begin{document}\n\\begin{align*}\n".to_string();
+            for (i, s) in history.iter().enumerate() {
+                output_string += &s.as_latex_with_tag(i as i32+1);
+            }
+            output_string += "\\end{align*}\n\\end{document}";
+
+            return Ok(output_string.into_bytes());
+        },
     } 
 }

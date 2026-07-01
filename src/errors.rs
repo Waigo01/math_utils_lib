@@ -7,7 +7,6 @@ pub enum MathLibError {
     ParserError(ParserError),
     EvalError(EvalError),
     QuickEvalError(QuickEvalError),
-    #[cfg(feature = "output")]
     LatexError(LatexError),
     TokenizerError(TokenizerError),
     Other(String)
@@ -20,7 +19,6 @@ impl MathLibError {
             MathLibError::ParserError(s) => return s.get_reason(),
             MathLibError::EvalError(s) => return s.get_reason(),
             MathLibError::QuickEvalError(s) => return s.get_reason(),
-            #[cfg(feature = "output")]
             MathLibError::LatexError(s) => return s.get_reason(),
             MathLibError::TokenizerError(s) => return s.get_reason(),
             MathLibError::Other(s) => return s.to_string()
@@ -52,7 +50,6 @@ impl From<TokenizerError> for MathLibError {
     }
 }
 
-#[cfg(feature = "output")]
 impl From<LatexError> for MathLibError {
     fn from(value: LatexError) -> Self {
         MathLibError::LatexError(value)
@@ -229,7 +226,6 @@ impl From<ParserError> for QuickEvalError {
     }
 }
 
-#[cfg(feature = "output")]
 #[derive(Debug, PartialEq, Clone)]
 pub enum LatexError {
     LatexToPdfError(String),
@@ -237,7 +233,6 @@ pub enum LatexError {
     LatexToSvgError(String)
 }
 
-#[cfg(feature = "output")]
 impl LatexError {
     pub fn get_reason(&self) -> String {
         match self {
