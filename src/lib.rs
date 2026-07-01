@@ -185,7 +185,6 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //!
 //! ```rust
 //! # use math_utils_lib::{MathLibError, quick_eval, value, Context, Value};
-//!
 //! let mut c = Context::empty();
 //! quick_eval!("state = 0", &mut c)?;
 //!
@@ -329,10 +328,18 @@ pub use maths::num_impls::Complex;
 ///
 /// ```
 /// # use math_utils_lib::{basetypes::Function, errors::{EvalError, MathLibError, ParserError, QuickEvalError}, parse, quick_eval, value, Context, Value, Variable};
-/// let x = Variable::new("x".to_string(), vec![value!(3.)]);
-/// let res = quick_eval!("3x".to_string(), &mut Context::from_vars(vec![x]))?.to_vec();
+/// let x = Variable::new("x", vec![value!(3.)]);
+/// let res = quick_eval!("3x", &mut Context::from_vars(vec![x]))?.to_vec();
 ///
 /// assert_eq!(res[0], value!(9.));
+/// # Ok::<(), MathLibError>(())
+/// ```
+///
+/// ```
+/// # use math_utils_lib::{basetypes::Function, errors::{EvalError, MathLibError, ParserError, QuickEvalError}, parse, quick_eval, value, Context, Value, Variable, Complex};
+/// let res = quick_eval!("e^(i*pi)"; Complex<f64>)?.to_vec();
+///
+/// assert_eq!(res[0], value!(-1));
 /// # Ok::<(), MathLibError>(())
 /// ```
 

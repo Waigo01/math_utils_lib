@@ -13,10 +13,7 @@ const VAR_SYMBOLS: [(&str, &str); 48] = [("\\alpha", "𝛼"), ("\\Alpha", "𝛢"
 /// Variables in this implementation can contain multiple values, in order to make the storage of
 /// results from equations easier.
 /// 
-/// Variable Names following the LaTeX format for greek letters (e.g \sigma) (except pi which is not
-/// \pi but just pi) will get replaced with their unicode counterparts when pretty printing.
-/// 
-/// Variable Names are not allowed to contain numbers outside of LaTeX style subscript. Additionally
+/// Variable names are not allowed to contain numbers outside of LaTeX style subscript. Additionally
 /// they must start with an alphabetical letter or a "\\".
 /// 
 /// # Example
@@ -33,16 +30,12 @@ pub struct Variable<N: Number> {
 }
 
 impl<N: Number> Variable<N> {
-    /// creates a new variable from a Vec of [Value].
+    /// creates a new variable from a name and associated values.
     pub fn new<S: Into<String>, V: Into<Values<N>>>(name: S, values: V) -> Self {
         Variable { name: name.into(), values: values.into()}
     }
-    /// creates a new variable from [Values].
-    pub fn new_from_values<S: Into<String>>(name: S, values: Values<N>) -> Self {
-        Variable { name: name.into(), values }
-    }
     /// converts the variable to latex. The function also provides the option to add a "&" aligner before the
-    /// "=".
+    /// ":=".
     pub fn as_latex(&self, add_aligner: bool) -> String {
         let right = AST::from_values(self.values.clone());
 
@@ -101,6 +94,7 @@ impl<N: Number> Function<N> {
     }
 }
 
+/// Provides a way to call an internal rust function from the evaluation context.
 #[derive(Debug, Clone)]
 pub struct InternalFunction<N: Number> {
     pub name: String,
@@ -109,12 +103,14 @@ pub struct InternalFunction<N: Number> {
 }
 
 impl<N: Number> InternalFunction<N> {
+    /// creates a new InternalFunction based on the name of the function, the number of arguments of
+    /// the function and the actual function that should be called.
     pub fn new<S: Into<String>>(name: S, n_args: usize, function: fn(Vec<Value<N>>) -> Result<Value<N>, String>) -> Self {
         InternalFunction { name: name.into(), n_arguments: n_args, function }
     }
 }
 
-/// combines [Variable]s and [Function]s into a convenient struct, which then gets passed to the
+/// combines [Variable]s, [Function]s and [InternalFunction]s into a convenient struct, which then gets passed to the
 /// evaluator.
 ///
 /// # Example
@@ -140,7 +136,7 @@ impl<N: Number> Context<N> {
     /// When using [f64] default vars are pi and e. When using [Complex](crate::Complex) default
     /// vars are pi, e and i.
     ///
-    /// The both [f64] and [Complex](crate::Complex) provide the same default functions. Take a look
+    /// Both [f64] and [Complex](crate::Complex) provide the same default functions. Take a look
     /// at [StandardFunctions::default_functions()](crate::StandardFunctions::default_functions()).
     pub fn default() -> Self {
         return Context::new(N::default_vars(), vec![]);
@@ -231,7 +227,7 @@ impl<N: Number> Context<N> {
     pub fn get_fun<S: Into<String> + Clone>(&self, fun_name: S) -> Option<Function<N>> {
         self.funs.iter().filter(|f| f.name == fun_name.clone().into()).map(|f| f.to_owned()).nth(0)
     }
-    /// returns the function with the given name or None if it does not exist in the context.
+    /// returns the internal_function with the given name or None if it does not exist in the context.
     pub fn get_internal_fun<S: Into<String> + Clone>(&self, fun_name: S) -> Option<InternalFunction<N>> {
         self.internal_funs.iter().filter(|f| f.name == fun_name.clone().into()).map(|f| f.to_owned()).nth(0)
     }
@@ -328,7 +324,7 @@ impl<N> Value<N> where N: Number {
             Value::Vector(_) => return None
         }
     }
-    /// return true if the value is a scalar.
+    /// returns true if the value is a scalar.
     pub fn is_scalar(&self) -> bool {
         match self {
             Value::Scalar(_) => return true,
@@ -1077,10 +1073,10 @@ impl<N: Number> AST<N> {
     }
 }
 
-/// specifies the type of operation for the [SimpleOperation](Operation::SimpleOperation) struct.
+/// specifies the type of operation for the [SimpleOperation](Operation::SimpleOperation) enum
+/// variant.
 /// 
-/// This enum only contains simple mathematical operations with a left and right side or a maximum
-/// of two arguments. For more advanced operations, see [AdvancedOperation].
+/// This enum only contains simple mathematical operations with a left and right side. For more advanced operations, see [AdvancedOperation].
 /// 
 /// The order of the enum also represents the reverse order of the operation priority.
 #[derive(Debug, PartialEq, Clone)]
@@ -1149,8 +1145,7 @@ pub enum Operation<N: Number> {
     AdvancedOperation(AdvancedOperation<N>)
 }
 
-/// used to specify an advanced operation for more complex mathematical operations, such as
-/// functions with more than two inputs and the equation solver.
+/// used to specify an advanced operation for more complex mathematical operations.
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum AdvancedOperation<N: Number>{

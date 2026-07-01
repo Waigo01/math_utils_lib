@@ -37,7 +37,7 @@ pub fn svg_from_latex<S: Into<String>>(latex: String, line_color: S) -> Result<S
     Ok(svg)
 }
 
-/// provides a way of saving a step. A step can either be a: 
+/// provides a way of saving a step.
 ///
 /// # Example
 /// ```
@@ -84,8 +84,7 @@ impl<N: Number> Step<N> {
 
         return latex;
     }
-    /// converts a step to latex with an added equation tag, which number is given by the equation
-    /// number. This function also adds a "&" aligner before the "=".
+    /// converts a step to latex with an added equation tag. The number is given by the equation_number. This function also adds a "&" aligner before the "=".
     pub fn as_latex_with_tag(&self, equation_number: i32) -> String {
         return self.as_latex_base(true, Some(equation_number));
     }
@@ -139,7 +138,7 @@ pub enum ExportType {
     Tex,
 }
 
-/// exports a history of [Step] to a file named <file_name> with the file type defined
+/// exports a history of [Step] with the file type defined
 /// by export_type (see [ExportType] for further details).
 pub fn export_history<N: Number>(history: Vec<Step<N>>, export_type: ExportType) -> Result<Vec<u8>, LatexError> {
     match export_type {

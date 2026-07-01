@@ -84,7 +84,7 @@ fn parse_matrix_vector<N: Number>(s: &Token) -> Result<AST<N>, ParserError> {
 }
 
 /// used to construct an AST from a string.
-pub fn parse<S: Into<String> + Clone, N: Number>(expr: S) -> Result<AST<N>, ParserError> {
+pub fn parse<S: Into<String>, N: Number>(expr: S) -> Result<AST<N>, ParserError> {
     let mut tokenizer = Tokenizer::new();
     let tokens = tokenizer.tokenize(expr)?;
 

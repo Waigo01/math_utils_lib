@@ -3,8 +3,8 @@ use crate::{Context, Value, Values, Variable, basetypes::{AST, AdvancedOperation
 /// used to evaluate an AST with the provided context.
 ///
 /// If you are searching for a quick and easy way to evaluate an expression, have a look at [quick_eval()](crate::quick_eval!).
-pub fn eval<N: Number>(b: &AST<N>, context: &mut Context<N>) -> Result<Values<N>, EvalError> {
-   Ok(Values::from_vec(eval_rec(b, context, "")?))
+pub fn eval<N: Number>(tree: &AST<N>, context: &mut Context<N>) -> Result<Values<N>, EvalError> {
+   Ok(Values::from_vec(eval_rec(tree, context, "")?))
 }
 
 fn eval_rec<N: Number>(b: &AST<N>, context: &mut Context<N>, last_fn: &str) -> Result<Vec<Value<N>>, EvalError> {
