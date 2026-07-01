@@ -1,3 +1,5 @@
+#![cfg_attr(docsrs, feature(doc_cfg))]
+
 //! This repo/crate provides a number of math utilities:
 //!
 #![cfg_attr(feature = "doc-images",
@@ -311,8 +313,8 @@ pub use maths::num_impls::Complex;
 /// the possible operations, take a look at [SimpleOpType](basetypes::SimpleOpType) and
 /// [AdvancedOperation](basetypes::AdvancedOperation).
 ///
-/// When calling this macro with just a string argument, it will internally crate a new Context
-/// using [Context::default()]. You can also specify your own context, as the second argument. With the argument following the semicolon you can specify the number 
+/// When calling this macro with just a string argument, it will internally create a new Context
+/// using [Context::default()]. You can also specify your own context as the second argument. With the argument following the semicolon you can specify the number 
 /// type that should be used. By default [f64] is used, other number types must implement [Number].
 ///
 /// # Examples

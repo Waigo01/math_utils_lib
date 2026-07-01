@@ -1,6 +1,7 @@
 use crate::{Values, basetypes::{AST, Operation, SimpleOpType}, errors::LatexError, maths::num_traits::Number};
 
 #[cfg(feature = "output")]
+#[cfg_attr(docsrs, doc(cfg(feature = "output")))]
 /// converts the given latex string to a png image with the given height in pixels, returned as its raw bytes. 
 /// This function allows for a change of line color. The line color is defined by a hex string
 /// e.g. "#FFFFFF". The background is always transparent.
@@ -23,6 +24,7 @@ pub fn png_from_latex<S: Into<String>>(latex: String, height: u32, line_color: S
 }
 
 #[cfg(feature = "output")]
+#[cfg_attr(docsrs, doc(cfg(feature = "output")))]
 /// converts the given latex string to an svg string. The function also takes a line color, which
 /// is given as a hex string e.g. "#FFFFFF".
 pub fn svg_from_latex<S: Into<String>>(latex: String, line_color: S) -> Result<String, LatexError> {
@@ -121,7 +123,7 @@ impl<N: Number> Step<N> {
     }
 }
 
-/// describes the type of export done by the [export()] function:
+/// describes the type of export done by the [export_history()] function:
 ///
 /// - Pdf: Save as a pdf file (only available with output feature).
 /// - Png: Save as the generated .png file (only available with output feature).
@@ -129,8 +131,10 @@ impl<N: Number> Step<N> {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum ExportType {
     #[cfg(feature = "output")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "output")))]
     Pdf,
     #[cfg(feature = "output")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "output")))]
     Png,
     Tex,
 }

@@ -8,10 +8,9 @@ use crate::{Variable, basetypes::InternalFunction, maths};
 /// implementing this trait. It is therefore very important that the from_str method returns an error if
 /// a string cannot be parsed.
 ///
-/// The other two [From] trait implementations are only used for the value! macro as a
-/// quality of life feature. It is up to the person implementing this trait on a type to think of a
-/// reasonable way to convert an f64 and i32 to their number type.
+/// Send and Sync only have to be implemented when using parallelism.
 #[cfg(feature = "parallelism")]
+#[cfg_attr(docsrs, doc(cfg(feature = "parallelism")))]
 pub trait Number:
 Add<Self, Output = Self> +
 Sub<Self, Output = Self> +
@@ -37,9 +36,10 @@ Sync +
     /// returns the neutral element of multiplication of this number type.
     fn one() -> Self;
     /// returns a small number indicating the precision of this number type.
+    ///
+    /// Don't choose epsilon too small, think what precision you want the calculations to be and choose accordingly.
     fn epsilon() -> Self;
-    /// returns a small number indicating the display precision of this number type. This number MUST be
-    /// larger than EPSILON.
+    /// returns a small number indicating the display precision of this number type.
     fn display_epsilon() -> Self;
     /// returns the base/radix of this number type.
     fn base() -> Self;
@@ -93,10 +93,9 @@ Sync +
 /// implementing this trait. It is therefore very important that the from_str method returns an error if
 /// a string cannot be parsed.
 ///
-/// The other two [From] trait implementations are only used for the value! macro as a
-/// quality of life feature. It is up to the person implementing this trait on a type to think of a
-/// reasonable way to convert an f64 and i32 to their number type.
+/// Send and Sync only have to be implemented when using parallelism.
 #[cfg(not(feature = "parallelism"))]
+#[cfg_attr(docsrs, doc(cfg(not(feature = "parallelism"))))]
 pub trait Number:
 Add<Self, Output = Self> +
 Sub<Self, Output = Self> +
@@ -118,10 +117,11 @@ LowerExp +
     fn zero() -> Self;
     /// returns the neutral element of multiplication of this number type.
     fn one() -> Self;
-    /// returns a small number indicating the precision of this number type.
+    /// returns a small number indicating the precision of this number type. 
+    ///
+    /// Don't choose epsilon too small, think what precision you want the calculations to be and choose accordingly.
     fn epsilon() -> Self;
-    /// returns a small number indicating the display precision of this number type. This number MUST be
-    /// larger than EPSILON.
+    /// returns a small number indicating the display precision of this number type.
     fn display_epsilon() -> Self;
     /// returns the base/radix of this number type.
     fn base() -> Self;
