@@ -296,9 +296,9 @@ pub mod tokenizer;
 mod tests;
 
 pub use basetypes::{Value, Values, Variable, Context, Function, AST, InternalFunction};
-pub use output::Step;
+pub use output::{export_history, ExportType, Step};
 #[cfg(feature = "output")]
-pub use output::{export_history, ExportType, png_from_latex, svg_from_latex};
+pub use output::{png_from_latex, svg_from_latex};
 pub use parser::parse;
 pub use evaluator::eval;
 pub use errors::MathLibError;
