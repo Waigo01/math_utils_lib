@@ -8,7 +8,7 @@ pub fn sadd<N: Number>(a: &N, b: &N) -> Result<Value<N>, String> {
 #[doc(hidden)]
 pub fn vadd<N: Number>(a: &Vec<N>, b: &Vec<N>) -> Result<Value<N>, String> { 
     if a.len() != b.len() {
-        return Err(format!("Vectors have different dimensions!"));
+        return Err(format!("vectors have different dimensions"));
     }
     let mut output_v = vec![];
     for i in 0..a.len() {
@@ -20,7 +20,7 @@ pub fn vadd<N: Number>(a: &Vec<N>, b: &Vec<N>) -> Result<Value<N>, String> {
 #[doc(hidden)]
 pub fn madd<N: Number>(a: &Vec<Vec<N>>, b: &Vec<Vec<N>>) -> Result<Value<N>, String> {
     if a.len() != b.len() || a[0].len() != b[0].len() {
-        return Err(format!("Matrices have different dimensions!"));
+        return Err(format!("matrices have different dimensions"));
     }
     let mut output_m = vec![];
     for i in 0..a.len() {

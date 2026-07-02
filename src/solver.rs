@@ -1,7 +1,7 @@
 use crate::{Context, Value, basetypes::{AST, Operation, SimpleOpType}, errors::EvalError, maths::num_traits::Number, roots::RootFinder};
 
 #[deprecated(since="0.4.0", note="This functionality has been directly implemented into the eval process using the eq AdvancedOperator")]
-/// used to solve an equation or a system of equations.
+/// Used to solve an equation or a system of equations.
 ///
 /// This function takes a Vec of a Tuple of ASTs, which are the parsed left and right sides of
 /// the equation(s). Multiple Tuples describe a system of equations. It also takes the global context.

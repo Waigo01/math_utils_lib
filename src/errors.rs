@@ -1,6 +1,6 @@
-use std::fmt::{self, Display};
+use std::{error::Error, fmt::{self, Display}};
 
-/// provides an enum with the corresponding From implementations in order to use as a convenient return
+/// Provides an enum with the corresponding From implementations in order to use as a convenient return
 /// error type for this library.
 #[derive(Debug, PartialEq, Clone)]
 pub enum MathLibError {
@@ -12,19 +12,20 @@ pub enum MathLibError {
     Other(String)
 }
 
-impl MathLibError {
-    /// returns the reason behind the MathLibError.
-    pub fn get_reason(&self) -> String {
+impl Display for MathLibError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            MathLibError::ParserError(s) => return s.get_reason(),
-            MathLibError::EvalError(s) => return s.get_reason(),
-            MathLibError::QuickEvalError(s) => return s.get_reason(),
-            MathLibError::LatexError(s) => return s.get_reason(),
-            MathLibError::TokenizerError(s) => return s.get_reason(),
-            MathLibError::Other(s) => return s.to_string()
+            MathLibError::ParserError(s) => return write!(f, "{}", s),
+            MathLibError::EvalError(s) => return write!(f, "{}", s),
+            MathLibError::QuickEvalError(s) => return write!(f, "{}", s),
+            MathLibError::LatexError(s) => return write!(f, "{}", s),
+            MathLibError::TokenizerError(s) => return write!(f, "{}", s),
+            MathLibError::Other(s) => return write!(f, "{}", s)
         }
     }
 }
+
+impl Error for MathLibError {}
 
 impl From<ParserError> for MathLibError {
     fn from(value: ParserError) -> Self {
@@ -75,28 +76,6 @@ pub enum ParserError {
     TokenizerError(TokenizerError)
 }
 
-impl ParserError {
-    pub fn get_reason(&self) -> String {
-        match self {
-            ParserError::ParseValue(s) => return format!("Could not parse value {}!", s),
-            ParserError::EmptyVec => return "Could not parse vector/matrix because it is (partially) empty!".to_string(),
-            ParserError::NotRectMatrix => return "Could not parse matrix because it is not rectangular!".to_string(),
-            ParserError::EmptyExpr => return "Could not parse empty expression!".to_string(),
-            ParserError::UnrecognizedPunct => return "Unrecognized punctuation!".to_string(),
-            ParserError::EquationWithoutEqual => return "Must have = in equation!".to_string(),
-            ParserError::TooManyEquals => return "Too many = in equation. If you want to specify a system of equations please seperate each equation with a ','.".to_string(),
-            ParserError::NoEquation => return "Equation does not contain an '='!".to_string(),
-            ParserError::InvalidArg(s) => return format!("Invalid argument for operation {s}!"),
-            ParserError::WrongNumberOfArgs(s) => return format!("Wrong number of arguments for {} operation!", s),
-            ParserError::OperationNeedsLeftValue => return "The operation needs to have a left side!".to_string(),
-            ParserError::LeftSideOfAssignmentIncorrect => return "The left side of an assignment needs to be a variable or a function!".to_string(),
-            ParserError::InvalidState => return "An invalid state was reached!".to_string(),
-            ParserError::DerivNotITOVar => return "Second input (in terms of) to derivative/integral function must be a variable!".to_string(),
-            ParserError::TokenizerError(e) => return e.get_reason()
-        }
-    } 
-}
-
 impl From<TokenizerError> for ParserError {
     fn from(value: TokenizerError) -> Self {
         ParserError::TokenizerError(value)
@@ -105,9 +84,27 @@ impl From<TokenizerError> for ParserError {
 
 impl Display for ParserError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.get_reason())
+        match self {
+            ParserError::ParseValue(s) => return write!(f, "could not parse value {s}"),
+            ParserError::EmptyVec => return write!(f, "could not parse vector/matrix because it is (partially) empty"),
+            ParserError::NotRectMatrix => return write!(f, "could not parse matrix because it is not rectangular"),
+            ParserError::EmptyExpr => return write!(f, "could not parse empty expression"),
+            ParserError::UnrecognizedPunct => return write!(f, "unrecognized punctuation"),
+            ParserError::EquationWithoutEqual => return write!(f, "must have = in equation"),
+            ParserError::TooManyEquals => return write!(f, "too many = in equation. If you want to specify a system of equations please seperate each equation with a ','"),
+            ParserError::NoEquation => return write!(f, "equation does not contain an '='"),
+            ParserError::InvalidArg(s) => return write!(f, "invalid argument for operation {s}"),
+            ParserError::WrongNumberOfArgs(s) => return write!(f, "wrong number of arguments for {s} operation"),
+            ParserError::OperationNeedsLeftValue => return write!(f, "the operation needs to have a left side"),
+            ParserError::LeftSideOfAssignmentIncorrect => return write!(f, "the left side of an assignment needs to be a variable or a function"),
+            ParserError::InvalidState => return write!(f, "an invalid state was reached"),
+            ParserError::DerivNotITOVar => return write!(f, "second input (in terms of) to derivative/integral function must be a variable"),
+            ParserError::TokenizerError(e) => return write!(f, "{e}")
+        }
     }
 }
+
+impl Error for ParserError {}
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum TokenizerError {
@@ -118,29 +115,25 @@ pub enum TokenizerError {
     InvalidState
 }
 
-impl TokenizerError {
-    pub fn get_reason(&self) -> String {
-        match self {
-            TokenizerError::InvalidIdentName => return "A function/variable name is invalid!".to_string(),
-            TokenizerError::UnmatchedDelimiter => return "Unmatched delimiter".to_string(),
-            TokenizerError::InvalidLiteral(l) => return format!("Invalid literal {l}!"),
-            TokenizerError::InvalidPunct(c) => return format!("Invalid punt {c}!"),
-            TokenizerError::InvalidState => return "An invalid state was encountered!".to_string()
-        }
-    } 
-}
-
 impl Display for TokenizerError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.get_reason())
+        match self {
+            TokenizerError::InvalidIdentName => return write!(f, "a function/variable name is invalid"),
+            TokenizerError::UnmatchedDelimiter => return write!(f, "unmatched delimiter"),
+            TokenizerError::InvalidLiteral(l) => return write!(f, "invalid literal {l}"),
+            TokenizerError::InvalidPunct(c) => return write!(f, "invalid punt {c}"),
+            TokenizerError::InvalidState => return write!(f, "an invalid state was encountered")
+        }
     }
 }
+
+impl Error for TokenizerError {}
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum EvalError {
     NonScalarInVector,
     NonScalarInMatrix,
-    RecursiveFunction,
+    RecursiveFunctionDepth,
     VectorInEq,
     MatrixInEq,
     NothingToDoEq,
@@ -156,32 +149,26 @@ pub enum EvalError {
     MathError(String),
 }
 
-impl EvalError {
-    pub fn get_reason(&self) -> String {
-        match self {
-            EvalError::RecursiveFunction => return "Can't call a recursive function!".to_string(),
-            EvalError::NonScalarInVector => return "Vectors can only contain scalars!".to_string(),
-            EvalError::NonScalarInMatrix => return "Matrices can only contain scalars!".to_string(),
-            EvalError::VectorInEq => return "Can't have vectors in equations! Please convert your equation into a system of equations!".to_string(),
-            EvalError::MatrixInEq => return "Can't have matrices in equations!".to_string(),
-            EvalError::NothingToDoEq => return "Nothing to do!".to_string(),
-            EvalError::UnderdeterminedSystem => return "Underdetermined system of equations!".to_string(),
-            EvalError::InfiniteSolutions => return "Infinite Solutions!".to_string(),
-            EvalError::NaNOrInf => return "NaN or Inf".to_string(),
-            EvalError::ExpressionCheckFailed => return "Expression Check Failed!".to_string(),
-            EvalError::SearchVarsInVars => return "The given solve variables already exist in the context!".to_string(),
-            EvalError::NoVariable(s) => return format!("Could not find variable {}!", s),
-            EvalError::NoFunction(s) => return format!("Could not find function {}!", s),
-            EvalError::WrongNumberOfArgs((e, g)) => return format!("Wrong number of arguments! Expected {} arguments, {} were given!", e, g),
-            EvalError::MathError(s) => return s.to_string(),
-            EvalError::MultiVariableAssignmentItemNumber => return "Number of variables does not match number of results on the right side of the assignment!".to_string(),
-        }
-    }
-}
-
 impl Display for EvalError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.get_reason())
+        match self {
+            EvalError::RecursiveFunctionDepth => return write!(f, "maximum recursive function depth exceeded"),
+            EvalError::NonScalarInVector => return write!(f, "vectors can only contain scalars"),
+            EvalError::NonScalarInMatrix => return write!(f, "matrices can only contain scalars"),
+            EvalError::VectorInEq => return write!(f, "can't have vectors in equations, please convert your equation into a system of equations"),
+            EvalError::MatrixInEq => return write!(f, "can't have matrices in equations"),
+            EvalError::NothingToDoEq => return write!(f, "nothing to do"),
+            EvalError::UnderdeterminedSystem => return write!(f, "underdetermined system of equations"),
+            EvalError::InfiniteSolutions => return write!(f, "infinite solutions"),
+            EvalError::NaNOrInf => return write!(f, "nan or inf"),
+            EvalError::ExpressionCheckFailed => return write!(f, "expression check failed"),
+            EvalError::SearchVarsInVars => return write!(f, "the given solve variables already exist in the context"),
+            EvalError::NoVariable(s) => return write!(f, "could not find variable {s}"),
+            EvalError::NoFunction(s) => return write!(f, "Could not find function {s}"),
+            EvalError::WrongNumberOfArgs((e, g)) => return write!(f, "wrong number of arguments, expected {e} arguments, {g} were given"),
+            EvalError::MathError(s) => return write!(f, "{s}"),
+            EvalError::MultiVariableAssignmentItemNumber => return write!(f, "number of variables does not match number of results on the right side of the assignment"),
+        }
     }
 }
 
@@ -191,6 +178,8 @@ impl From<String> for EvalError {
     }
 }
 
+impl Error for EvalError {}
+
 #[derive(Debug, PartialEq, Clone)]
 pub enum QuickEvalError {
     DuplicateVars,
@@ -198,19 +187,13 @@ pub enum QuickEvalError {
     EvalError(EvalError)
 }
 
-impl QuickEvalError {
-    pub fn get_reason(&self) -> String {
-        match self {
-            QuickEvalError::DuplicateVars => return "Can't specify e and pi twice!".to_string(),
-            QuickEvalError::EvalError(e) => return e.get_reason(),
-            QuickEvalError::ParserError(e) => return e.get_reason()
-        }
-    }
-}
-
 impl Display for QuickEvalError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.get_reason())
+        match self {
+            QuickEvalError::DuplicateVars => return write!(f, "can't specify e and pi twice"),
+            QuickEvalError::EvalError(e) => return write!(f, "{e}"),
+            QuickEvalError::ParserError(e) => return write!(f, "{e}")
+        }
     }
 }
 
@@ -226,6 +209,8 @@ impl From<ParserError> for QuickEvalError {
     }
 }
 
+impl Error for QuickEvalError {}
+
 #[derive(Debug, PartialEq, Clone)]
 pub enum LatexError {
     LatexToPdfError(String),
@@ -233,12 +218,12 @@ pub enum LatexError {
     LatexToSvgError(String)
 }
 
-impl LatexError {
-    pub fn get_reason(&self) -> String {
+impl Display for LatexError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            LatexError::LatexToPdfError(s) => return format!("Could not convert Latex to PDF: {}!", s),
-            LatexError::LatexToImageError(s) => return format!("Could not convert Latex to Image: {}!", s),
-            LatexError::LatexToSvgError(s) => return format!("Could not convert Latex to SVG: {}!", s)
+            LatexError::LatexToPdfError(s) => return write!(f, "could not convert latex to pdf: {s}"),
+            LatexError::LatexToImageError(s) => return write!(f, "could not convert latex to image: {s}"),
+            LatexError::LatexToSvgError(s) => return write!(f, "could not convert latex to svg: {s}")
         }
     }
 }
@@ -263,3 +248,5 @@ impl From<resvg::usvg::Error> for LatexError {
         LatexError::LatexToImageError(value.to_string())
     }
 }
+
+impl Error for LatexError {}

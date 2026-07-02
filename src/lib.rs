@@ -306,7 +306,7 @@ pub use errors::MathLibError;
 pub use maths::num_traits::{Number, StandardFunctions, RealNumber};
 pub use maths::num_impls::Complex;
 
-/// evaluates a given expression in the given context. If you just want the AST, have a look at [parse()].
+/// Evaluates a given expression in the given context. If you just want the AST, have a look at [parse()].
 ///
 /// For more information about the context, take a look at [Context] and for more information about
 /// the possible operations, take a look at [SimpleOpType](basetypes::SimpleOpType) and

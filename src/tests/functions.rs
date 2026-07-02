@@ -35,13 +35,26 @@ fn custom_function_vector_input() -> Result<(), MathLibError> {
 }
 
 #[test]
-fn custom_function_recursion() -> Result<(), MathLibError> {
+fn custom_function_recursion1() -> Result<(), MathLibError> {
     let function = parse("3*f(x)")?;
     let function_var = Function::new("f", function, vec!["x"]);
     
     let res = quick_eval!("f(5)", &mut Context::new(vec![], vec![function_var]));
 
-    assert_eq!(res.err().unwrap(), QuickEvalError::EvalError(EvalError::RecursiveFunction));
+    assert_eq!(res.err().unwrap(), QuickEvalError::EvalError(EvalError::RecursiveFunctionDepth));
+
+    Ok(())
+}
+
+#[test]
+fn custom_function_recursion2() -> Result<(), MathLibError> {
+    let mut c = Context::empty();
+
+    quick_eval!("fib(x) = if(x==0, 0, if(x==1, 1, fib(x-1) + fib(x-2)))", &mut c)?;
+    
+    let res = quick_eval!("fib(10)", &mut c)?.to_vec();
+
+    assert_eq!(res[0], value!(55));
 
     Ok(())
 }

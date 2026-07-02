@@ -30,7 +30,7 @@ pub fn smmult<N: Number>(a: &N, b: &Vec<Vec<N>>) -> Result<Value<N>, String> {
 #[doc(hidden)]
 pub fn vvmult<N: Number>(a: &Vec<N>, b: &Vec<N>) -> Result<Value<N>, String> {
     if a.len() != b.len() {
-        return Err("Vectors have different dimensions!".to_string());
+        return Err("vectors have different dimensions".to_string());
     }
     let mut sum = N::zero();
     for i in 0..a.len() {
@@ -42,7 +42,7 @@ pub fn vvmult<N: Number>(a: &Vec<N>, b: &Vec<N>) -> Result<Value<N>, String> {
 #[doc(hidden)]
 pub fn mvmult<N: Number>(a: &Vec<Vec<N>>, b: &Vec<N>) -> Result<Value<N>, String> {
     if a[0].len() != b.len() {
-        return Err("Vector and matrix have incompatible dimensions!".to_string());
+        return Err("vector and matrix have incompatible dimensions".to_string());
     }
     let mut output_v = vec![];
     for i in 0..a.len() {
@@ -58,7 +58,7 @@ pub fn mvmult<N: Number>(a: &Vec<Vec<N>>, b: &Vec<N>) -> Result<Value<N>, String
 #[doc(hidden)]
 pub fn mmmult<N: Number>(a: &Vec<Vec<N>>, b: &Vec<Vec<N>>) -> Result<Value<N>, String> {
     if a[0].len() != b.len() {
-        return Err("Matrices have incompatible dimensions!".to_string());
+        return Err("matrices have incompatible dimensions".to_string());
     }
     let mut output_m = vec![];
     for i in 0..a.len() {
@@ -88,7 +88,7 @@ pub fn vsdiv<N: Number>(a: &Vec<N>, b: &N) -> Result<Value<N>, String> {
 #[doc(hidden)]
 pub fn vvdiv<N: Number>(a: &Vec<N>, b: &Vec<N>) -> Result<Value<N>, String> {
     if a.len() != b.len() {
-        return Err("Vectors have incompatible dimensions!".to_string());
+        return Err("vectors have incompatible dimensions".to_string());
     }
     let mut sum = N::zero();
     for i in 0..a.len() {

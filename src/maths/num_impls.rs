@@ -146,11 +146,23 @@ impl From<Complex<f64>> for f64 {
 
 /// A simple complex number type that can be used to build a complex number from a type that
 /// implements [Number](crate::Number), [StandardFunctions](crate::StandardFunctions) and [RealNumber](crate::RealNumber).
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+///
+/// PartialOrd orders a complex number first by the real part and then if Re(a) == Re(b) by the imaginary part.
+#[derive(Debug, Clone, Copy, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Complex<N: Number + StandardFunctions + RealNumber> {
     re: N,
     im: N
+}
+
+impl<N: Number + StandardFunctions + RealNumber> PartialOrd for Complex<N> {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        if self.re != other.re {
+            return self.re.partial_cmp(&other.re)
+        } else {
+            return self.im.partial_cmp(&other.im)
+        }
+    }
 }
 
 impl<N: Number + StandardFunctions + RealNumber> Display for Complex<N> {

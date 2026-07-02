@@ -202,7 +202,7 @@ pub fn calculate_integral<N: Number>(expr: &AST<N>, in_terms_of: String, lower_b
             }
             
         }
-        _ => {return Err(EvalError::MathError("Only scalar bounds are allowed!".to_string()))}
+        _ => {return Err(EvalError::MathError("only scalar bounds are allowed".to_string()))}
     }
 }
 /// calculates the derivative of an expression in terms of a variable at a certain value.
@@ -227,7 +227,7 @@ pub fn calculate_derivative<N: Number>(expr: &AST<N>, in_terms_of: &str, at: &Va
             context.add_var(&Variable::new(in_terms_of, vec![Value::Scalar(*s+N::epsilon())]));
             let fxhs = &eval(expr, context)?.to_vec();
             if fxs.len() != fxhs.len() {
-                return Err(EvalError::MathError("Amount of solutions for f(x) and f(x+h) are different!".to_string()));
+                return Err(EvalError::MathError("amount of solutions for f(x) and f(x+h) are different".to_string()));
             }
             let mut res = vec![];
             for i in 0..fxs.len() {
@@ -247,7 +247,7 @@ pub fn calculate_derivative<N: Number>(expr: &AST<N>, in_terms_of: &str, at: &Va
 
             return Ok(res.into_iter().flatten().collect()); 
         } 
-        _ => {return Err(EvalError::MathError("Only scalar values are allowed!".to_string()))}
+        _ => {return Err(EvalError::MathError("only scalar values are allowed".to_string()))}
     }
 }
 
@@ -280,7 +280,7 @@ pub fn calculate_derivative_newton<N: Number>(expr: &AST<N>, in_terms_of: &str, 
             context.remove_var(in_terms_of);
             return Ok(res);
         } 
-        _ => {return Err(EvalError::MathError("Only scalar values are allowed!".to_string()))}
+        _ => {return Err(EvalError::MathError("only scalar values are allowed".to_string()))}
     }
 }
 
@@ -329,6 +329,6 @@ pub fn calculate_sum<N: Number>(expr: &AST<N>, in_terms_of: String, lower_bound:
                 return sum(expr, &in_terms_of, lb, ub, &mut mut_context);
             }
         }
-        _ => {return Err(EvalError::MathError("Only integer bounds are allowed!".to_string()))}
+        _ => {return Err(EvalError::MathError("only integer bounds are allowed".to_string()))}
     }
 }

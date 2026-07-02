@@ -4,7 +4,7 @@ use crate::{Values, basetypes::{AST, Operation, SimpleOpType}, errors::LatexErro
 
 #[cfg(feature = "output")]
 #[cfg_attr(docsrs, doc(cfg(feature = "output")))]
-/// converts the given latex string to a png image with the given height in pixels, returned as its raw bytes. 
+/// Converts the given latex string to a png image with the given height in pixels, returned as its raw bytes. 
 /// This function allows for a change of line color. The line color is defined by a hex string
 /// e.g. "#FFFFFF". The background is always transparent.
 pub fn png_from_latex<S: Into<String>>(latex: String, height: u32, line_color: S) -> Result<Vec<u8>, LatexError> {
@@ -27,7 +27,7 @@ pub fn png_from_latex<S: Into<String>>(latex: String, height: u32, line_color: S
 
 #[cfg(feature = "output")]
 #[cfg_attr(docsrs, doc(cfg(feature = "output")))]
-/// converts the given latex string to an svg string. The function also takes a line color, which
+/// Converts the given latex string to an svg string. The function also takes a line color, which
 /// is given as a hex string e.g. "#FFFFFF".
 pub fn svg_from_latex<S: Into<String>>(latex: String, line_color: S) -> Result<String, LatexError> {
     use mathjax_svg::convert_to_svg;
@@ -39,7 +39,7 @@ pub fn svg_from_latex<S: Into<String>>(latex: String, line_color: S) -> Result<S
     Ok(svg)
 }
 
-/// provides a way of saving a step.
+/// Provides a way of saving a step.
 ///
 /// # Example
 /// ```
@@ -57,7 +57,7 @@ pub struct Step<N: Number> {
 }
 
 impl<N: Number> Step<N> {
-    /// creates a new step based on a term and the associated results.
+    /// Creates a new step based on a term and the associated results.
     pub fn new(term: AST<N>, result: Values<N>) -> Step<N> {
         return Step { term, result };
     }
@@ -85,19 +85,19 @@ impl<N: Number> Step<N> {
 
         return latex;
     }
-    /// converts a step to latex with an added equation tag. The number is given by the equation_number. This function also adds a "&" aligner before the "=".
+    /// Converts a step to latex with an added equation tag. The number is given by the equation_number. This function also adds a "&" aligner before the "=".
     pub fn to_latex_with_tag(&self, equation_number: i32) -> String {
         return self.to_latex_base(true, Some(equation_number));
     }
-    /// converts a step to latex. This function also adds a "&" aligner before the "=".
+    /// Converts a step to latex. This function also adds a "&" aligner before the "=".
     pub fn to_latex(&self) -> String {
         return self.to_latex_base(true, None);
     }
-    /// converts a step to inline latex (without the "&" aligner).
+    /// Converts a step to inline latex (without the "&" aligner).
     pub fn to_latex_inline(&self) -> String {
         return self.to_latex_base(false, None);
     }
-    /// converts a step to a different number type.
+    /// Converts a step to a different number type.
     pub fn into<B: Number + From<N>>(self) -> Step<B> {
         Step { term: self.term.into(), result: self.result.into() }
     }
@@ -125,7 +125,7 @@ impl<N: Number> Display for Step<N> {
     }
 }
 
-/// describes the type of export done by the [export_history()] function:
+/// Describes the type of export done by the [export_history()] function:
 ///
 /// - Pdf: Save as a pdf file (only available with output feature).
 /// - Png: Save as the generated .png file (only available with output feature).
@@ -141,7 +141,7 @@ pub enum ExportType {
     Tex,
 }
 
-/// exports a history of [Step] with the file type defined
+/// Exports a history of [Step] with the file type defined
 /// by export_type (see [ExportType] for further details).
 pub fn export_history<N: Number>(history: Vec<Step<N>>, export_type: ExportType) -> Result<Vec<u8>, LatexError> {
     match export_type {

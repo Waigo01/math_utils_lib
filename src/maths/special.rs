@@ -3,7 +3,7 @@ use crate::{Value, maths::num_traits::Number};
 #[doc(hidden)]
 pub fn det_m<N: Number>(a: &Vec<Vec<N>>) -> Result<Value<N>, String> {
     if a.iter().filter(|r| r.len() != a[0].len()).count() != 0 || a.len() != a[0].len() {
-        return Err("Can't calculate determinant of a non-square matrix!".to_string());
+        return Err("can't calculate determinant of a non-square matrix".to_string());
     } else if a.len() == 1 {
         return Ok(Value::Scalar(a[0][0]));
     } else if a.len() == 2 {
@@ -21,8 +21,8 @@ pub fn det_m<N: Number>(a: &Vec<Vec<N>>) -> Result<Value<N>, String> {
 #[doc(hidden)]
 pub fn inv_m<N: Number>(a: &Vec<Vec<N>>) -> Result<Value<N>, String> {
     match det_m(a) {
-        Err(_) => return Err("Can't calculate inverse of a non-square matrix!".to_string()),
-        Ok(Value::Scalar(s)) if s == N::zero() => return Err("Can't calculate inverse of a matrix with determinant 0!".to_string()),
+        Err(_) => return Err("can't calculate inverse of a non-square matrix".to_string()),
+        Ok(Value::Scalar(s)) if s == N::zero() => return Err("can't calculate inverse of a matrix with determinant 0".to_string()),
         _ => {}
     };
 
@@ -51,7 +51,7 @@ pub fn inv_m<N: Number>(a: &Vec<Vec<N>>) -> Result<Value<N>, String> {
                 }
             }
             if zero_line {
-                return Err("Infinite solutions".to_string());
+                return Err("infinite solutions".to_string());
             }
         }
     }
@@ -78,7 +78,7 @@ pub fn inv_m<N: Number>(a: &Vec<Vec<N>>) -> Result<Value<N>, String> {
                 }
             }
             if zero_line {
-                return Err("Infinite solutions".to_string());
+                return Err("infinite solutions".to_string());
             }
         }
     }

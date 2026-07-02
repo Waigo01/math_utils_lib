@@ -206,7 +206,7 @@ fn generate_combinations(arr: Vec<usize>, len: usize, prev_arr: Vec<usize>) -> V
     return combs;
 }
 
-/// defines a root finder to find the roots of an expression/multiple expressions (system of equations).
+/// Defines a root finder to find the roots of an expression/multiple expressions (system of equations).
 #[derive(Debug)]
 pub struct RootFinder<N: Number> {
     expressions: Vec<AST<N>>,
@@ -216,7 +216,7 @@ pub struct RootFinder<N: Number> {
 }
 
 impl<N: Number> RootFinder<N> {
-    /// creates a new [RootFinder](struct@crate::roots::RootFinder) using a vec of expressions which represents
+    /// Creates a new [RootFinder](struct@crate::roots::RootFinder) using a vec of expressions which represents
     /// the functions that you want the roots to be found of. Multiple expressions act as a system
     /// of equations. Additionally you have to pass the context and the variables in terms of which
     /// should be solved.
@@ -276,7 +276,7 @@ impl<N: Number> RootFinder<N> {
 
         return Ok(RootFinder { expressions, combinations: combs, context, search_vars_names });
     }
-    /// starts the root finding process.
+    /// Starts the root finding process.
     /// 
     /// In the case of a system of equations results will be represented as a vector with the
     /// result order being that in which the search_vars_names have been passed to the

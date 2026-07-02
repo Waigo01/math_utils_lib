@@ -10,7 +10,7 @@ const VAR_SYMBOLS: [(&str, &str); 48] = [("\\alpha", "𝛼"), ("\\Alpha", "𝛢"
 ("\\Pi", "𝛱"), ("\\rho", "𝜌"), ("\\Rho", "𝛲"), ("\\sigma", "𝜎"), ("\\Sigma", "𝛴"), ("\\tau", "𝜏"), ("\\Tau", "𝛵"), ("\\upsilon", "𝜐"),
 ("\\Upsilon", "𝛶"), ("\\phi", "𝜑"), ("\\Phi", "𝛷"), ("\\xi", "𝜒"), ("\\Xi", "𝛸"), ("\\psi", "𝜓"), ("\\Psi", "𝛹"), ("\\omega", "𝜔"), ("\\Omega", "𝛺")];
 
-/// describes a Variable that can be used in the context of an evaluation. 
+/// Describes a Variable that can be used in the context of an evaluation. 
 /// 
 /// Variables in this implementation can contain multiple values, in order to make the storage of
 /// results from equations easier.
@@ -32,11 +32,11 @@ pub struct Variable<N: Number> {
 }
 
 impl<N: Number> Variable<N> {
-    /// creates a new variable from a name and associated values.
+    /// Creates a new variable from a name and associated values.
     pub fn new<S: Into<String>, V: Into<Values<N>>>(name: S, values: V) -> Self {
         Variable { name: name.into(), values: values.into()}
     }
-    /// converts the variable to latex. The function also provides the option to add a "&" aligner before the
+    /// Converts the variable to latex. The function also provides the option to add a "&" aligner before the
     /// ":=".
     pub fn to_latex(&self, add_aligner: bool) -> String {
         let right = AST::from_values(self.values.clone());
@@ -44,7 +44,7 @@ impl<N: Number> Variable<N> {
         let ast = AST::from_operation(Operation::SimpleOperation { op_type: SimpleOpType::Assign, left: AST::Variable(self.name.clone()), right});
         return if add_aligner {ast.to_latex()} else {ast.to_latex_inline()};
     }
-    /// converts the variable to a different number type.
+    /// Converts the variable to a different number type.
     pub fn into<B: Number + From<N>>(self) -> Variable<B> {
         Variable { name: self.name, values: self.values.into() }
     }
@@ -56,7 +56,7 @@ impl<N: Number> Display for Variable<N> {
     }
 }
 
-/// describes a function that can be used in the context of an evaluation.
+/// Describes a function that can be used in the context of an evaluation.
 ///
 /// Function names must follow the same criteria as [Variable] names.
 ///
@@ -77,18 +77,18 @@ pub struct Function<N: Number> {
 }
 
 impl<N: Number> Function<N> {
-    /// creates a new function from an [AST] (a parsed expression) and a Vec of input variable
+    /// Creates a new function from an [AST] (a parsed expression) and a Vec of input variable
     /// names.
     pub fn new<S: Into<String>>(name: S, ast: AST<N>, inputs: Vec<S>) -> Self {
         Function { name: name.into(), ast, inputs: inputs.into_iter().map(|s| s.into()).collect() }
     }
-    /// converts the function to latex. The function also provides the option to add a "&" aligner before
+    /// Converts the function to latex. The function also provides the option to add a "&" aligner before
     /// the "=".
     pub fn to_latex(&self, add_aligner: bool) -> String {
         let ast = AST::from_operation(Operation::SimpleOperation { op_type: SimpleOpType::Assign, left: AST::Function { name: self.name.clone(), inputs: self.inputs.iter().map(|i| AST::Variable(i.to_string())).collect() }, right: self.ast.clone() });
         return if add_aligner {ast.to_latex()} else {ast.to_latex_inline()};
     }
-    /// converts the function to a different number type.
+    /// Converts the function to a different number type.
     pub fn into<B: Number + From<N>>(self) -> Function<B> {
         Function { name: self.name, ast: self.ast.into(), inputs: self.inputs }
     }
@@ -109,14 +109,14 @@ pub struct InternalFunction<N: Number> {
 }
 
 impl<N: Number> InternalFunction<N> {
-    /// creates a new InternalFunction based on the name of the function, the number of arguments of
+    /// Creates a new InternalFunction based on the name of the function, the number of arguments of
     /// the function and the actual function that should be called.
     pub fn new<S: Into<String>>(name: S, n_args: usize, function: fn(Vec<Value<N>>) -> Result<Value<N>, String>) -> Self {
         InternalFunction { name: name.into(), n_arguments: n_args, function }
     }
 }
 
-/// combines [Variable]s, [Function]s and [InternalFunction]s into a convenient struct, which then gets passed to the
+/// Combines [Variable]s, [Function]s and [InternalFunction]s into a convenient struct, which then gets passed to the
 /// evaluator.
 ///
 /// # Example
@@ -135,7 +135,7 @@ pub struct Context<N: Number> {
 }
 
 impl<N: Number> Default for Context<N> {
-    /// creates a new context with variables specified by
+    /// Creates a new context with variables specified by
     /// [Number::default_vars()](crate::Number::default_vars()). And functions specified by
     /// [Number::default_functions()](crate::Number::default_functions()).
     ///
@@ -150,11 +150,11 @@ impl<N: Number> Default for Context<N> {
 }
 
 impl<N: Number> Context<N> {
-    /// creates a context containing only the given variables and functions.
+    /// Creates a context containing only the given variables and functions.
     pub fn new<V: AsRef<[Variable<N>]>, F: AsRef<[Function<N>]>>(vars: V, funs: F) -> Context<N> {
         Context {vars: vars.as_ref().to_vec(), funs: funs.as_ref().to_vec(), internal_funs: N::default_functions()}
     }
-    /// creates a context containing the given variables and functions in addition to the default
+    /// Creates a context containing the given variables and functions in addition to the default
     /// variables and functions.
     pub fn with<V: AsRef<[Variable<N>]>, F: AsRef<[Function<N>]>>(vars: V, funs: F) -> Context<N> {
         let mut c = Context::default();
@@ -166,19 +166,19 @@ impl<N: Number> Context<N> {
         }
         c
     }
-    /// creates an empty context.
+    /// Creates an empty context.
     pub fn empty() -> Context<N> {
         Context { vars: vec![], funs: vec![], internal_funs: vec![] }
     }
-    /// creates a new context containing only the given variables.
+    /// Creates a new context containing only the given variables.
     pub fn from_vars<V: AsRef<[Variable<N>]>>(vars: V) -> Context<N> {
         Context { vars: vars.as_ref().to_vec(), funs: vec![], internal_funs: vec![] }
     }
-    /// creates a new context containing only the given functions.
+    /// Creates a new context containing only the given functions.
     pub fn from_funs<F: AsRef<[Function<N>]>>(funs: F) -> Context<N> {
         Context { vars: vec![], funs: funs.as_ref().to_vec(), internal_funs: vec![] }
     }
-    /// creates a new context containing the given variables in addition to the default variables
+    /// Creates a new context containing the given variables in addition to the default variables
     /// and functions.
     pub fn with_vars<V: AsRef<[Variable<N>]>>(vars: V) -> Context<N> {
         let mut c = Context::default();
@@ -187,7 +187,7 @@ impl<N: Number> Context<N> {
         }
         c
     }
-    /// creates a new context containing the given functions in addition to the default variables
+    /// Creates a new context containing the given functions in addition to the default variables
     /// and functions.
     pub fn with_funs<F: AsRef<[Function<N>]>>(funs: F) -> Context<N> {
         let mut c = Context::default();
@@ -196,7 +196,7 @@ impl<N: Number> Context<N> {
         }
         c
     }
-    /// adds a variable to the context, replacing an already existing variable with the same name.
+    /// Adds a variable to the context, replacing an already existing variable with the same name.
     pub fn add_var(&mut self, var: &Variable<N>) {
         self.vars = self.vars.iter()
             .filter(|v| v.name != var.name)
@@ -205,7 +205,7 @@ impl<N: Number> Context<N> {
 
         self.vars.push(var.to_owned());
     }
-    /// adds a function to the context, replacing an already existing function with the same name.
+    /// Adds a function to the context, replacing an already existing function with the same name.
     pub fn add_fun(&mut self, fun: &Function<N>) {
         self.funs = self.funs.iter()
             .filter(|f| f.name != fun.name)
@@ -214,39 +214,39 @@ impl<N: Number> Context<N> {
 
         self.funs.push(fun.to_owned());
     }
-    /// removes all variables with the given variable name.
+    /// Removes all variables with the given variable name.
     pub fn remove_var<S: Into<String> + Clone>(&mut self, var_name: S) {
         self.vars = self.vars.iter()
             .filter(|v| v.name != var_name.clone().into())
             .map(|v| v.to_owned())
             .collect();
     }
-    /// removes all functions with the given variable name.
+    /// Removes all functions with the given variable name.
     pub fn remove_fun<S: Into<String> + Clone>(&mut self, fun_name: S) {
         self.funs = self.funs.iter()
             .filter(|f| f.name != fun_name.clone().into())
             .map(|f| f.to_owned())
             .collect()
     }
-    /// returns the variable with the given name or None if it does not exist in the context.
+    /// Returns the variable with the given name or None if it does not exist in the context.
     pub fn get_var<S: Into<String> + Clone>(&self, var_name: S) -> Option<Variable<N>> {
         self.vars.iter().filter(|v| v.name == var_name.clone().into()).map(|v| v.to_owned()).nth(0)
     }
-    /// returns the function with the given name or None if it does not exist in the context.
+    /// Returns the function with the given name or None if it does not exist in the context.
     pub fn get_fun<S: Into<String> + Clone>(&self, fun_name: S) -> Option<Function<N>> {
         self.funs.iter().filter(|f| f.name == fun_name.clone().into()).map(|f| f.to_owned()).nth(0)
     }
-    /// returns the internal_function with the given name or None if it does not exist in the context.
+    /// Returns the internal_function with the given name or None if it does not exist in the context.
     pub fn get_internal_fun<S: Into<String> + Clone>(&self, fun_name: S) -> Option<InternalFunction<N>> {
         self.internal_funs.iter().filter(|f| f.name == fun_name.clone().into()).map(|f| f.to_owned()).nth(0)
     }
-    /// converts the context to a different number type.
+    /// Converts the context to a different number type.
     pub fn into<B: Number + From<N>>(self) -> Context<B> {
         Context::with(self.vars.into_iter().map(|v| v.into()).collect::<Vec<Variable<B>>>(), self.funs.into_iter().map(|f| f.into()).collect::<Vec<Function<B>>>())
     }
 }
 
-/// helps to quickly initialize a [Value].
+/// Helps to quickly initialize a [Value].
 ///
 /// Matrices are processed in a row-major fashion.
 ///
@@ -289,7 +289,7 @@ macro_rules! value {
     };
 }
 
-/// specifies a Value that can be a Matrix, Vector or a Scalar.
+/// Specifies a Value that can be a Matrix, Vector or a Scalar.
 /// 
 /// # Example
 /// 
@@ -306,7 +306,7 @@ pub enum Value<N> where N: Number {
 }
 
 impl<N> Value<N> where N: Number {
-    /// returns the scalar if the value is a scalar and None if it is a matrix or a
+    /// Returns the scalar if the value is a scalar and None if it is a matrix or a
     /// vector.
     pub fn get_scalar(&self) -> Option<N> {
         match self {
@@ -315,7 +315,7 @@ impl<N> Value<N> where N: Number {
             Value::Vector(_) => return None
         }
     }
-    /// returns the vector if the value is a vector and None if it is a matrix or a
+    /// Returns the vector if the value is a vector and None if it is a matrix or a
     /// scalar.
     pub fn get_vector(&self) -> Option<Vec<N>> {
         match self {
@@ -324,7 +324,7 @@ impl<N> Value<N> where N: Number {
             Value::Scalar(_) => return None
         }
     }
-    /// returns the matrix if the value is a matrix and None if it is a scalar or a
+    /// Returns the matrix if the value is a matrix and None if it is a scalar or a
     /// vector.
     pub fn get_matrix(&self) -> Option<Vec<Vec<N>>> {
         match self {
@@ -333,28 +333,28 @@ impl<N> Value<N> where N: Number {
             Value::Vector(_) => return None
         }
     }
-    /// returns true if the value is a scalar.
+    /// Returns true if the value is a scalar.
     pub fn is_scalar(&self) -> bool {
         match self {
             Value::Scalar(_) => return true,
             _ => return false
         }
     }
-    /// returns true if the value is a vector.
+    /// Returns true if the value is a vector.
     pub fn is_vector(&self) -> bool {
         match self {
             Value::Vector(_) => return true,
             _ => return false
         }
     }
-    /// returns true if the value is a matrix.
+    /// Returns true if the value is a matrix.
     pub fn is_matrix(&self) -> bool {
         match self {
             Value::Matrix(_) => return true,
             _ => return false
         }
     }
-    /// rounds the value.
+    /// Rounds the value.
     pub fn round(&self, prec: usize) -> Value<N> {
         match self {
             Value::Scalar(a) => return Value::Scalar((*a*N::base().powi(prec as i32)).round()/N::base().powi(prec as i32)),
@@ -378,7 +378,7 @@ impl<N> Value<N> where N: Number {
             }
         }
     }
-    /// rounds the value to the precision of the number type.
+    /// Rounds the value to the precision of the number type.
     pub fn round_to_precision(&self) -> Value<N> {
         match self {
             Value::Scalar(a) => return Value::Scalar((*a/N::epsilon()).round()*N::epsilon()),
@@ -402,7 +402,7 @@ impl<N> Value<N> where N: Number {
             }
         }
     }
-    /// rounds the value to the display precision of the number type.
+    /// Rounds the value to the display precision of the number type.
     pub fn round_to_display_precision(&self) -> Value<N> {
         match self {
             Value::Scalar(a) => return Value::Scalar((*a/N::display_epsilon()).round()*N::display_epsilon()),
@@ -426,7 +426,7 @@ impl<N> Value<N> where N: Number {
             }
         }
     }
-    /// checks if any part of the value is infinite or NaN.
+    /// Checks if any part of the value is infinite or NaN.
     pub fn is_inf_or_nan(&self) -> bool {
         match self {
             Value::Scalar(s) => {if s.is_infinite() || s.is_nan() {return true}},
@@ -450,12 +450,12 @@ impl<N> Value<N> where N: Number {
         return false;
     }
     #[deprecated(since="0.4.0", note="Because of the complexity of Value, Values and ASTs this function can still be used to convert a single Value but will not be implemented for ASTs or Values in the forseeable future.")]
-    /// converts the given value to unicode, using unicode symbols for vectors and matrices.
+    /// Converts the given value to unicode, using unicode symbols for vectors and matrices.
     pub fn as_unicode(&self) -> String {
         self.pretty_print(None)
     }
     #[deprecated(since="0.4.0", note="Because of the complexity of Value, Values and ASTs this function can still be used to convert a single Value but will not be implemented for ASTs or Values in the forseeable future.")]
-    /// converts the given value to unicode, same as [as_unicode](Value::as_unicode) but with a variable name in
+    /// Converts the given value to unicode, same as [as_unicode](Value::as_unicode) but with a variable name in
     /// front of the value.
     pub fn as_unicode_at_var<S: Into<String>>(&self, var_name: S) -> String {
         let mut var_name_string = var_name.into();
@@ -585,7 +585,7 @@ impl<N> Value<N> where N: Number {
             }
         }
     }
-    /// converts the value to a latex expression using amsmath's p and bmatrix.
+    /// Converts the value to a latex expression using amsmath's p and bmatrix.
     pub fn to_latex(&self) -> String {
         self.latex_print()
     }
@@ -622,7 +622,7 @@ impl<N> Value<N> where N: Number {
             }
         }
     }
-    /// converts the value to a different number type.
+    /// Converts the value to a different number type.
     pub fn into<B: Number + From<N>>(self) -> Value<B> {
         match self {
             Self::Scalar(s) => Value::<B>::Scalar(s.into()),
@@ -684,7 +684,7 @@ impl<N: Number> Into<Values<N>> for Vec<Value<N>> {
     }
 }
 
-/// provides a wrapper around Vec of Value with some quality of life implementations.
+/// Provides a wrapper around Vec of Value with some quality of life implementations.
 ///
 /// # Example
 ///
@@ -697,28 +697,28 @@ impl<N: Number> Into<Values<N>> for Vec<Value<N>> {
 pub struct Values<N: Number>(Vec<Value<N>>);
 
 impl<N: Number> Values<N> {
-    /// creates the values from a Vec of [Value].
+    /// Creates the values from a Vec of [Value].
     pub fn from_vec<V: AsRef<[Value<N>]>>(values: V) -> Self {
         return Values(values.as_ref().to_vec());
     }
-    /// converts the values back to a Vec of [Value].
+    /// Converts the values back to a Vec of [Value].
     pub fn to_vec(self) -> Vec<Value<N>> {
         return self.0;
     }
-    /// gets the [Value] at the given index.
+    /// Gets the [Value] at the given index.
     pub fn get(&self, i: usize) -> Option<&Value<N>> {
         self.0.iter().nth(i)
     }
-    /// returns the amount of values.
+    /// Returns the amount of values.
     pub fn len(&self) -> usize {
         return self.0.len()
     }
-    /// rounds all values.
+    /// Rounds all values.
     pub fn round(&self, prec: usize) -> Values<N> {
         let rounded_vals = self.0.iter().map(|x| x.round(prec)).collect::<Vec<Value<N>>>();
         Values::from_vec(rounded_vals)
     }
-    /// converts the values to latex using "{}" and "," to print multiple Values.
+    /// Converts the values to latex using "{}" and "," to print multiple Values.
     pub fn to_latex(&self) -> String {
         if self.len() == 1 {
             return format!("{}", self.0[0].to_latex());
@@ -728,7 +728,7 @@ impl<N: Number> Values<N> {
             return format!("\\left\\{{{}\\right\\}}", self.clone().to_vec().iter().map(|v| v.to_latex()).collect::<Vec<String>>().join(", "));
         }
     }
-    /// converts the values to a different number type.
+    /// Converts the values to a different number type.
     pub fn into<B: Number + From<N>>(self) -> Values<B> {
         self.to_vec().into_iter().map(|v| v.into()).collect::<Vec<Value<B>>>().into()
     }
@@ -771,7 +771,7 @@ pub enum AST<N: Number> {
 }
 
 impl<N: Number> AST<N> {
-    /// creates an AST node from a [Value].
+    /// Creates an AST node from a [Value].
     pub fn from_value(val: Value<N>) -> AST<N> {
         match val {
             Value::Scalar(s) => return AST::Scalar(s),
@@ -795,7 +795,7 @@ impl<N: Number> AST<N> {
             }
         }
     }
-    /// creates an AST node from [Values].
+    /// Creates an AST node from [Values].
     pub fn from_values(vals: Values<N>) -> AST<N> {
         if vals.len() == 1 {
             return AST::from_value(vals.get(0).unwrap().clone());
@@ -809,19 +809,19 @@ impl<N: Number> AST<N> {
             return AST::List(ast_vals);
         }
     }
-    /// creates an AST node from a variable name.
+    /// Creates an AST node from a variable name.
     pub fn from_variable_name<S: Into<String>>(val: S) -> AST<N> {
         return AST::Variable(val.into());
     }
-    /// creates an AST node from an operation.
+    /// Creates an AST node from an operation.
     pub fn from_operation(val: Operation<N>) -> AST<N> {
         return AST::Operation(Box::new(val));
     }
-    /// converts the AST to latex.
+    /// Converts the AST to latex.
     pub fn to_latex(&self) -> String {
         self.latex_print(true)
     }
-    /// converts the AST to latex but without an aligner if the AST contains an assignment.
+    /// Converts the AST to latex but without an aligner if the AST contains an assignment.
     pub fn to_latex_inline(&self) -> String {
         self.latex_print(false)
     }
@@ -959,7 +959,7 @@ impl<N: Number> AST<N> {
             }
         }
     }
-    /// converts the ast to a different number type.
+    /// Converts the ast to a different number type.
     pub fn into<B: Number + From<N>>(self) -> AST<B> {
         match self {
             AST::Scalar(s) => AST::Scalar(s.into()),
@@ -1086,7 +1086,7 @@ impl<N: Number> Display for AST<N> {
     }
 }
 
-/// specifies the type of operation for the [SimpleOperation](Operation::SimpleOperation) enum
+/// Specifies the type of operation for the [SimpleOperation](Operation::SimpleOperation) enum
 /// variant.
 /// 
 /// This enum only contains simple mathematical operations with a left and right side. For more advanced operations, see [AdvancedOperation].
@@ -1145,7 +1145,7 @@ pub enum SimpleOpType {
     Parenths = 22
 }
 
-/// used to specify an operation in a parsed string. It is used together with [AST] to
+/// Used to specify an operation in a parsed string. It is used together with [AST] to
 /// construct an AST from a mathematical expression.
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -1158,7 +1158,7 @@ pub enum Operation<N: Number> {
     AdvancedOperation(AdvancedOperation<N>)
 }
 
-/// used to specify an advanced operation for more complex mathematical operations.
+/// Used to specify an advanced operation for more complex mathematical operations.
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum AdvancedOperation<N: Number>{

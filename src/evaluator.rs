@@ -1,19 +1,25 @@
 use crate::{Context, Value, Values, Variable, basetypes::{AST, AdvancedOperation, Function, InternalFunction, Operation, SimpleOpType}, errors::EvalError, helpers::cart_prod, maths::{self, calculus::calculate_sum, num_traits::Number}, roots::RootFinder};
 
-/// used to evaluate an AST with the provided context.
+/// Used to evaluate an AST with the provided context.
 ///
 /// If you are searching for a quick and easy way to evaluate an expression, have a look at [quick_eval()](crate::quick_eval!).
 pub fn eval<N: Number>(tree: &AST<N>, context: &mut Context<N>) -> Result<Values<N>, EvalError> {
-   Ok(Values::from_vec(eval_rec(tree, context, "")?))
+   Ok(Values::from_vec(eval_rec(tree, context, "", 0)?))
 }
 
-fn eval_rec<N: Number>(b: &AST<N>, context: &mut Context<N>, last_fn: &str) -> Result<Vec<Value<N>>, EvalError> {
+#[cfg(debug_assertions)]
+const MAX_RECURSION: i32 = 100;
+
+#[cfg(not(debug_assertions))]
+const MAX_RECURSION: i32 = 800;
+
+fn eval_rec<N: Number>(b: &AST<N>, context: &mut Context<N>, last_fn: &str, depth: i32) -> Result<Vec<Value<N>>, EvalError> {
     match b {
         AST::Scalar(s) => return Ok(vec![Value::Scalar(N::from(*s))]),
         AST::Vector(v) => {
             let mut evaled_fields: Vec<Vec<N>> = vec![];
             for i in &**v {
-                let values = eval_rec(i, context, last_fn)?;
+                let values = eval_rec(i, context, last_fn, depth + 1)?;
                 for i in &values {
                     if i.get_scalar().is_none() {
                         return Err(EvalError::NonScalarInVector);
@@ -31,7 +37,7 @@ fn eval_rec<N: Number>(b: &AST<N>, context: &mut Context<N>, last_fn: &str) -> R
             for i in &**m {
                 let mut row = vec![];
                 for j in i {
-                    let values = eval_rec(j, context, last_fn)?;
+                    let values = eval_rec(j, context, last_fn, depth + 1)?;
                     for i in &values {
                         if i.get_scalar().is_none() {
                             return Err(EvalError::NonScalarInMatrix);
@@ -51,7 +57,7 @@ fn eval_rec<N: Number>(b: &AST<N>, context: &mut Context<N>, last_fn: &str) -> R
             Ok(permuts.iter().map(|m| Value::Matrix(m.to_vec())).collect())
         },
         AST::List(l) => {
-            return Ok(l.iter().map(|e| eval_rec(e, context, last_fn)).collect::<Result<Vec<Vec<Value<N>>>, EvalError>>()?.into_iter().flatten().collect());
+            return Ok(l.iter().map(|e| eval_rec(e, context, last_fn, depth + 1)).collect::<Result<Vec<Vec<Value<N>>>, EvalError>>()?.into_iter().flatten().collect());
         }
         AST::Variable(v) => {
             for i in context.vars.iter() {
@@ -63,13 +69,13 @@ fn eval_rec<N: Number>(b: &AST<N>, context: &mut Context<N>, last_fn: &str) -> R
             return Err(EvalError::NoVariable(v.to_string()));
         },
         AST::Function { name, inputs } => {
-            if last_fn == name {
-                return Err(EvalError::RecursiveFunction);
+            if last_fn == name && depth >= MAX_RECURSION {
+                return Err(EvalError::RecursiveFunctionDepth);
             }
 
             let mut eval_inputs = vec![];
             for i in inputs.iter() {
-                eval_inputs.push(eval_rec(i, context, last_fn)?);
+                eval_inputs.push(eval_rec(i, context, last_fn, depth + 1)?);
             }
 
             let permuts = cart_prod(&eval_inputs);
@@ -100,7 +106,7 @@ fn eval_rec<N: Number>(b: &AST<N>, context: &mut Context<N>, last_fn: &str) -> R
                         context.add_var(&Variable::new(var_name, vec![p[i].clone()]));
                     }
 
-                    res.append(&mut eval_rec(&ast, context, name)?);
+                    res.append(&mut eval_rec(&ast, context, name, depth+1)?);
 
                     for var_name in &fn_inputs {
                         context.remove_var(var_name);
@@ -121,7 +127,7 @@ fn eval_rec<N: Number>(b: &AST<N>, context: &mut Context<N>, last_fn: &str) -> R
                 Operation::SimpleOperation {op_type, left, right} => {
                     if *op_type == SimpleOpType::Assign {
                         if let AST::Variable(var_name) = left {
-                            let rv = eval_rec(&right, context, last_fn)?;
+                            let rv = eval_rec(&right, context, last_fn, depth + 1)?;
                             context.add_var(&Variable::new(var_name, rv.clone()));
                             return Ok(rv);
                         } else if let AST::Function { name, inputs } = left {
@@ -129,7 +135,7 @@ fn eval_rec<N: Number>(b: &AST<N>, context: &mut Context<N>, last_fn: &str) -> R
                             context.add_fun(&Function::new(name.to_string(), right.clone(), inputs));
                             return Ok(vec![]);
                         } else if let AST::List(list) = left {
-                            let rv = eval_rec(&right, context, last_fn)?;
+                            let rv = eval_rec(&right, context, last_fn, depth + 1)?;
                             if rv.len() != list.len() {
                                 return Err(EvalError::MultiVariableAssignmentItemNumber);
                             } else {
@@ -144,8 +150,8 @@ fn eval_rec<N: Number>(b: &AST<N>, context: &mut Context<N>, last_fn: &str) -> R
 
                     }
                     
-                    let rv = eval_rec(&right, context, last_fn)?;
-                    let lv = eval_rec(&left, context, last_fn)?;
+                    let rv = eval_rec(&right, context, last_fn, depth + 1)?;
+                    let lv = eval_rec(&left, context, last_fn, depth + 1)?;
 
                     let mut res = vec![];
 
@@ -183,8 +189,8 @@ fn eval_rec<N: Number>(b: &AST<N>, context: &mut Context<N>, last_fn: &str) -> R
                 Operation::AdvancedOperation(a) => {
                     match a {
                         AdvancedOperation::Integral {expr, in_terms_of, lower_bound, upper_bound} => {
-                            let lb = eval_rec(&lower_bound, context, last_fn)?;
-                            let ub = eval_rec(&upper_bound, context, last_fn)?;
+                            let lb = eval_rec(&lower_bound, context, last_fn, depth + 1)?;
+                            let ub = eval_rec(&upper_bound, context, last_fn, depth + 1)?;
 
                             let mut res = vec![];
 
@@ -197,8 +203,8 @@ fn eval_rec<N: Number>(b: &AST<N>, context: &mut Context<N>, last_fn: &str) -> R
                             return Ok(res.into_iter().flatten().collect());
                         },
                         AdvancedOperation::Sum {expr, in_terms_of, lower_bound, upper_bound} => {
-                            let lb = eval_rec(&lower_bound, context, last_fn)?;
-                            let ub = eval_rec(&upper_bound, context, last_fn)?;
+                            let lb = eval_rec(&lower_bound, context, last_fn, depth + 1)?;
+                            let ub = eval_rec(&upper_bound, context, last_fn, depth + 1)?;
 
                             let mut res = vec![];
 
@@ -211,7 +217,7 @@ fn eval_rec<N: Number>(b: &AST<N>, context: &mut Context<N>, last_fn: &str) -> R
                             return Ok(res.into_iter().flatten().collect());
                         },
                         AdvancedOperation::Derivative {expr, in_terms_of, at} => {
-                            let eat = eval_rec(&at, context, last_fn)?;
+                            let eat = eval_rec(&at, context, last_fn, depth + 1)?;
 
                             let mut res = vec![];
 
@@ -238,16 +244,16 @@ fn eval_rec<N: Number>(b: &AST<N>, context: &mut Context<N>, last_fn: &str) -> R
                             return root_finder.find_roots();
                         },
                         AdvancedOperation::Conditional { condition, then, r#else } => {
-                            let econdition = eval_rec(&condition, context, last_fn)?;
+                            let econdition = eval_rec(&condition, context, last_fn, depth + 1)?;
 
                             let mut res = vec![];
 
                             for con in econdition {
                                 if maths::bool::eq(&con, &Value::Scalar(N::zero()))? == Value::Scalar(N::zero()) {
-                                    let ethen = eval_rec(&then, context, last_fn)?;
+                                    let ethen = eval_rec(&then, context, last_fn, depth + 1)?;
                                     res.push(ethen);
                                 } else {
-                                    let eelse = if let Some(r#else) = r#else {Some(eval_rec(r#else, context, last_fn)?)} else {None};
+                                    let eelse = if let Some(r#else) = r#else {Some(eval_rec(r#else, context, last_fn, depth + 1)?)} else {None};
                                     if let Some(eelse) = eelse {
                                         res.push(eelse);
                                     }
