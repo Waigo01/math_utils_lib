@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::{Values, basetypes::{AST, Operation, SimpleOpType}, errors::LatexError, maths::num_traits::Number};
 
 #[cfg(feature = "output")]
@@ -59,22 +61,21 @@ impl<N: Number> Step<N> {
     pub fn new(term: AST<N>, result: Values<N>) -> Step<N> {
         return Step { term, result };
     }
-    fn as_latex_base(&self, mut with_align: bool, with_equation_number: Option<i32>) -> String {
-
+    fn to_latex_base(&self, mut with_align: bool, with_equation_number: Option<i32>) -> String {
         let tag_with_label = if let Some(equation_number) = with_equation_number {format!("\\tag{{{}}}\\label{{eq:{}}} \\\\ \\\\ \n", equation_number, equation_number)} else {String::new()};
 
-        let expression = if with_align {self.term.as_latex()} else {self.term.as_latex_inline()};
+        let expression = if with_align {self.term.to_latex()} else {self.term.to_latex_inline()};
 
         let result_expression = if let AST::Operation(ref op) = self.term && let Operation::SimpleOperation{ref op_type, ref right, ..} = **op && *op_type == SimpleOpType::Assign {
             if with_align {with_align = false}
-            right.as_latex()
+            right.to_latex()
         } else {
             expression.clone()
         };
         
         let aligner = if with_align {"&"} else {""};
 
-        let res = self.result.as_latex();
+        let res = self.result.to_latex();
 
         let latex = if self.result.len() != 0 && result_expression != res {
             format!("{} {}= {} {}", expression, aligner, res, tag_with_label)
@@ -85,28 +86,34 @@ impl<N: Number> Step<N> {
         return latex;
     }
     /// converts a step to latex with an added equation tag. The number is given by the equation_number. This function also adds a "&" aligner before the "=".
-    pub fn as_latex_with_tag(&self, equation_number: i32) -> String {
-        return self.as_latex_base(true, Some(equation_number));
+    pub fn to_latex_with_tag(&self, equation_number: i32) -> String {
+        return self.to_latex_base(true, Some(equation_number));
     }
     /// converts a step to latex. This function also adds a "&" aligner before the "=".
-    pub fn as_latex(&self) -> String {
-        return self.as_latex_base(true, None);
+    pub fn to_latex(&self) -> String {
+        return self.to_latex_base(true, None);
     }
     /// converts a step to inline latex (without the "&" aligner).
-    pub fn as_latex_inline(&self) -> String {
-        return self.as_latex_base(false, None);
+    pub fn to_latex_inline(&self) -> String {
+        return self.to_latex_base(false, None);
     }
-    /// converts a step to a string using basic formatting.
-    pub fn as_string(&self) -> String {
-        let expression = self.term.as_string();
+    /// converts a step to a different number type.
+    pub fn into<B: Number + From<N>>(self) -> Step<B> {
+        Step { term: self.term.into(), result: self.result.into() }
+    }
+}
+
+impl<N: Number> Display for Step<N> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let expression = self.term.to_string();
 
         let result_expression = if let AST::Operation(ref op) = self.term && let Operation::SimpleOperation{ref op_type, ref right, ..} = **op && *op_type == SimpleOpType::Assign {
-            right.as_string()
+            right.to_string()
         } else {
             expression.clone()
         };
 
-        let res = self.result.as_string();
+        let res = self.result.to_string();
 
         let output = if self.result.len() != 0 && result_expression != res {
             format!("{} = {}", expression, res)
@@ -114,11 +121,7 @@ impl<N: Number> Step<N> {
             format!("{}", expression)
         };
 
-        return output;
-    }
-    /// converts a step to a different number type.
-    pub fn into<B: Number + From<N>>(self) -> Step<B> {
-        Step { term: self.term.into(), result: self.result.into() }
+        write!(f, "{}", output)
     }
 }
 
@@ -146,7 +149,7 @@ pub fn export_history<N: Number>(history: Vec<Step<N>>, export_type: ExportType)
         ExportType::Pdf => {
             let mut output_string = "\\documentclass[12pt, letterpaper]{article}\n\\usepackage{amsmath}\n\\usepackage{mathtools}\n\\usepackage[margin=1in]{geometry}\n\\allowdisplaybreaks\n\\begin{document}\n\\begin{align*}\n".to_string();
             for (i, s) in history.iter().enumerate() {
-                output_string += &s.as_latex_with_tag(i as i32+1);
+                output_string += &s.to_latex_with_tag(i as i32+1);
             }
             output_string += "\\end{align*}\n\\end{document}";
 
@@ -157,7 +160,7 @@ pub fn export_history<N: Number>(history: Vec<Step<N>>, export_type: ExportType)
         ExportType::Png => {
             let mut output_string = "\\begin{align*}\n".to_string();
             for (i, s) in history.iter().enumerate() {
-                output_string += &s.as_latex_with_tag(i as i32+1);
+                output_string += &s.to_latex_with_tag(i as i32+1);
             }
             output_string += "\\end{align*}";
 
@@ -168,7 +171,7 @@ pub fn export_history<N: Number>(history: Vec<Step<N>>, export_type: ExportType)
         ExportType::Tex => {
             let mut output_string = "\\documentclass[12pt, letterpaper]{article}\n\\usepackage{amsmath}\n\\usepackage{mathtools}\n\\usepackage[margin=1in]{geometry}\n\\allowdisplaybreaks\n\\begin{document}\n\\begin{align*}\n".to_string();
             for (i, s) in history.iter().enumerate() {
-                output_string += &s.as_latex_with_tag(i as i32+1);
+                output_string += &s.to_latex_with_tag(i as i32+1);
             }
             output_string += "\\end{align*}\n\\end{document}";
 

@@ -34,7 +34,7 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //!
 //! - row-major: parses matrices in a row major format.
 //! - output: enables dependencies in order to provide rendered PDFs, PNGs and SVGs.
-//! - serde: enables serde::Serialize and serde::Deserialize on most structs and enums.
+//! - serde: enables Serialize and Deserialize implementations on most structs and enums.
 //! - parallelism: enables multithreading for the equation solver.
 //!
 //! ## Usage
@@ -70,7 +70,7 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //! ```rust
 //! # use math_utils_lib::{MathLibError, quick_eval, value, Context, Value};
 //! // We can also define a mutable context to be used later.
-//! let mut context = Context::empty();
+//! let mut context = Context::default();
 //!
 //! // We can now assign 3 to the variable x in the expression itself.
 //! quick_eval!("x=3", &mut context)?;
@@ -109,7 +109,7 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //! ```rust
 //! # use math_utils_lib::{MathLibError, quick_eval, value, Context, Value};
 //! // Like before this assignment can also be done in an expression.
-//! let mut context = Context::empty();
+//! let mut context = Context::default();
 //!
 //! quick_eval!("f(x)=5x^2+2x+x", &mut context)?;
 //! let res = quick_eval!("f(5)", &mut context)?.to_vec();
@@ -157,7 +157,7 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //!
 //! ```rust
 //! # use math_utils_lib::{MathLibError, quick_eval, value, Context, Value};
-//! let mut c = Context::empty();
+//! let mut c = Context::default();
 //!
 //! quick_eval!("a = 6", &mut c)?;
 //! quick_eval!("b = 10", &mut c)?;
@@ -185,7 +185,7 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //!
 //! ```rust
 //! # use math_utils_lib::{MathLibError, quick_eval, value, Context, Value};
-//! let mut c = Context::empty();
+//! let mut c = Context::default();
 //! quick_eval!("state = 0", &mut c)?;
 //!
 //! // Using the power of lists, side effects in functions and if statements,
@@ -347,7 +347,7 @@ pub use maths::num_impls::Complex;
 macro_rules! quick_eval {
     ( $e:expr ) => {
         {
-            pub fn quick_eval<S: Into<String>, N: $crate::Number>(expr: S, context: &mut $crate::Context<N>) -> Result<$crate::Values<N>, $crate::errors::QuickEvalError> {
+            fn quick_eval<S: Into<String>, N: $crate::Number>(expr: S, context: &mut $crate::Context<N>) -> Result<$crate::Values<N>, $crate::errors::QuickEvalError> {
                 let expr = expr.into();
                 let b_tree = $crate::parse(expr)?; 
                 Ok($crate::eval(&b_tree, context)?)
@@ -358,7 +358,7 @@ macro_rules! quick_eval {
     };
     ( $e:expr, $c:expr ) => {
         {
-            pub fn quick_eval<S: Into<String>, N: $crate::Number>(expr: S, context: &mut $crate::Context<N>) -> Result<$crate::Values<N>, $crate::errors::QuickEvalError> {
+            fn quick_eval<S: Into<String>, N: $crate::Number>(expr: S, context: &mut $crate::Context<N>) -> Result<$crate::Values<N>, $crate::errors::QuickEvalError> {
                 let expr = expr.into();
                 let b_tree = $crate::parse(expr)?; 
                 Ok($crate::eval(&b_tree, context)?)
@@ -369,7 +369,7 @@ macro_rules! quick_eval {
     };
     ( $e:expr; $t:ty ) => {
         { 
-            pub fn quick_eval<S: Into<String>, N: $crate::Number>(expr: S, context: &mut $crate::Context<N>) -> Result<$crate::Values<N>, $crate::errors::QuickEvalError> {
+            fn quick_eval<S: Into<String>, N: $crate::Number>(expr: S, context: &mut $crate::Context<N>) -> Result<$crate::Values<N>, $crate::errors::QuickEvalError> {
                 let expr = expr.into();
                 let b_tree = $crate::parse(expr)?; 
                 Ok($crate::eval(&b_tree, context)?)
@@ -380,7 +380,7 @@ macro_rules! quick_eval {
     };
     ( $e:expr, $c:expr; $t:ty ) => {
         { 
-            pub fn quick_eval<S: Into<String>, N: $crate::Number>(expr: S, context: &mut $crate::Context<N>) -> Result<$crate::Values<N>, $crate::errors::QuickEvalError> {
+            fn quick_eval<S: Into<String>, N: $crate::Number>(expr: S, context: &mut $crate::Context<N>) -> Result<$crate::Values<N>, $crate::errors::QuickEvalError> {
                 let expr = expr.into();
                 let b_tree = $crate::parse(expr)?; 
                 Ok($crate::eval(&b_tree, context)?)

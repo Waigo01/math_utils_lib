@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::{helpers::{center_in_string, flatten_conditional, round_and_format}, maths::num_traits::Number};
 
 #[doc(hidden)]
@@ -36,19 +38,21 @@ impl<N: Number> Variable<N> {
     }
     /// converts the variable to latex. The function also provides the option to add a "&" aligner before the
     /// ":=".
-    pub fn as_latex(&self, add_aligner: bool) -> String {
+    pub fn to_latex(&self, add_aligner: bool) -> String {
         let right = AST::from_values(self.values.clone());
 
         let ast = AST::from_operation(Operation::SimpleOperation { op_type: SimpleOpType::Assign, left: AST::Variable(self.name.clone()), right});
-        return if add_aligner {ast.as_latex()} else {ast.as_latex_inline()};
-    }
-    /// converts the variable to a string using basic string formatting.
-    pub fn as_string(&self) -> String {
-        format!("{} = {}", self.name, self.values.as_string())
+        return if add_aligner {ast.to_latex()} else {ast.to_latex_inline()};
     }
     /// converts the variable to a different number type.
     pub fn into<B: Number + From<N>>(self) -> Variable<B> {
         Variable { name: self.name, values: self.values.into() }
+    }
+}
+
+impl<N: Number> Display for Variable<N> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} = {}", self.name, self.values)
     }
 }
 
@@ -80,17 +84,19 @@ impl<N: Number> Function<N> {
     }
     /// converts the function to latex. The function also provides the option to add a "&" aligner before
     /// the "=".
-    pub fn as_latex(&self, add_aligner: bool) -> String {
+    pub fn to_latex(&self, add_aligner: bool) -> String {
         let ast = AST::from_operation(Operation::SimpleOperation { op_type: SimpleOpType::Assign, left: AST::Function { name: self.name.clone(), inputs: self.inputs.iter().map(|i| AST::Variable(i.to_string())).collect() }, right: self.ast.clone() });
-        return if add_aligner {ast.as_latex()} else {ast.as_latex_inline()};
-    }
-    /// converts the function to a string using basic string formatting.
-    pub fn as_string(&self) -> String {
-        format!("{}({}) = {}", self.name, self.inputs.join(", "), self.ast.as_string())
+        return if add_aligner {ast.to_latex()} else {ast.to_latex_inline()};
     }
     /// converts the function to a different number type.
     pub fn into<B: Number + From<N>>(self) -> Function<B> {
         Function { name: self.name, ast: self.ast.into(), inputs: self.inputs }
+    }
+}
+
+impl<N: Number> Display for Function<N> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}({}) = {}", self.name, self.inputs.join(", "), self.ast)
     }
 }
 
@@ -128,7 +134,7 @@ pub struct Context<N: Number> {
     pub internal_funs: Vec<InternalFunction<N>>
 }
 
-impl<N: Number> Context<N> {
+impl<N: Number> Default for Context<N> {
     /// creates a new context with variables specified by
     /// [Number::default_vars()](crate::Number::default_vars()). And functions specified by
     /// [Number::default_functions()](crate::Number::default_functions()).
@@ -138,9 +144,12 @@ impl<N: Number> Context<N> {
     ///
     /// Both [f64] and [Complex](crate::Complex) provide the same default functions. Take a look
     /// at [StandardFunctions::default_functions()](crate::StandardFunctions::default_functions()).
-    pub fn default() -> Self {
+    fn default() -> Self {
         return Context::new(N::default_vars(), vec![]);
     }
+}
+
+impl<N: Number> Context<N> {
     /// creates a context containing only the given variables and functions.
     pub fn new<V: AsRef<[Variable<N>]>, F: AsRef<[Function<N>]>>(vars: V, funs: F) -> Context<N> {
         Context {vars: vars.as_ref().to_vec(), funs: funs.as_ref().to_vec(), internal_funs: N::default_functions()}
@@ -440,45 +449,6 @@ impl<N> Value<N> where N: Number {
         }
         return false;
     }
-    /// provides a crude method to convert a value to a string, using square brackets
-    /// for matrices and vectors.
-    pub fn as_string(&self) -> String {
-        let mut replace_string = String::new();
-        match &self {
-            Value::Matrix(s) => {
-                replace_string += "[";
-                for k in 0..s.len() {
-                    replace_string += "[";
-                    for l in 0..s[k].len() {
-                        replace_string += &s[k][l].to_string();
-                        if l != s[k].len() - 1 {
-                            replace_string += ", "
-                        }
-                    }
-                    replace_string += "]";
-                    if k != s.len() - 1 {
-                        replace_string += ", ";
-                    }
-                }
-                replace_string += "]";
-            },
-            Value::Vector(s) => {
-                replace_string += "[";
-                for k in 0..s.len() {
-                    replace_string += &s[k].to_string();
-                    if k != s.len() - 1 {
-                        replace_string += ", ";
-                    }    
-                }
-                replace_string += "]";
-            },
-            Value::Scalar(s) => {
-                replace_string = s.to_string();
-            }
-        }
-
-        return replace_string
-    }
     #[deprecated(since="0.4.0", note="Because of the complexity of Value, Values and ASTs this function can still be used to convert a single Value but will not be implemented for ASTs or Values in the forseeable future.")]
     /// converts the given value to unicode, using unicode symbols for vectors and matrices.
     pub fn as_unicode(&self) -> String {
@@ -616,7 +586,7 @@ impl<N> Value<N> where N: Number {
         }
     }
     /// converts the value to a latex expression using amsmath's p and bmatrix.
-    pub fn as_latex(&self) -> String {
+    pub fn to_latex(&self) -> String {
         self.latex_print()
     }
     fn latex_print(&self) -> String {
@@ -659,6 +629,46 @@ impl<N> Value<N> where N: Number {
             Self::Vector(v) => Value::<B>::Vector(v.into_iter().map(|s| s.into()).collect()),
             Self::Matrix(m) => Value::<B>::Matrix(m.into_iter().map(|v| v.into_iter().map(|s| s.into()).collect()).collect())
         }
+    }
+}
+
+impl<N: Number> Display for Value<N> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut replace_string = String::new();
+        match &self {
+            Value::Matrix(s) => {
+                replace_string += "[";
+                for k in 0..s.len() {
+                    replace_string += "[";
+                    for l in 0..s[k].len() {
+                        replace_string += &s[k][l].to_string();
+                        if l != s[k].len() - 1 {
+                            replace_string += ", "
+                        }
+                    }
+                    replace_string += "]";
+                    if k != s.len() - 1 {
+                        replace_string += ", ";
+                    }
+                }
+                replace_string += "]";
+            },
+            Value::Vector(s) => {
+                replace_string += "[";
+                for k in 0..s.len() {
+                    replace_string += &s[k].to_string();
+                    if k != s.len() - 1 {
+                        replace_string += ", ";
+                    }    
+                }
+                replace_string += "]";
+            },
+            Value::Scalar(s) => {
+                replace_string = s.to_string();
+            }
+        }
+
+        write!(f, "{}", replace_string)
     }
 }
 
@@ -708,28 +718,29 @@ impl<N: Number> Values<N> {
         let rounded_vals = self.0.iter().map(|x| x.round(prec)).collect::<Vec<Value<N>>>();
         Values::from_vec(rounded_vals)
     }
-    /// converts the values to a string using "{}" and "," to print multiple Values. This is a crude
-    /// way to convert [Values] as it uses [Value::as_string].
-    pub fn as_string(&self) -> String {
-        if self.len() == 1 {
-            return self.get(0).unwrap().as_string();
-        } else {
-            return format!("{{{}}}", self.0.iter().map(|v| v.as_string()).collect::<Vec<String>>().join(", "));
-        }
-    }
     /// converts the values to latex using "{}" and "," to print multiple Values.
-    pub fn as_latex(&self) -> String {
+    pub fn to_latex(&self) -> String {
         if self.len() == 1 {
-            return format!("{}", self.0[0].as_latex());
+            return format!("{}", self.0[0].to_latex());
         } else if self.len() <= 0 {
             return "No solutions".to_string();
         } else {
-            return format!("\\left\\{{{}\\right\\}}", self.clone().to_vec().iter().map(|v| v.as_latex()).collect::<Vec<String>>().join(", "));
+            return format!("\\left\\{{{}\\right\\}}", self.clone().to_vec().iter().map(|v| v.to_latex()).collect::<Vec<String>>().join(", "));
         }
     }
     /// converts the values to a different number type.
     pub fn into<B: Number + From<N>>(self) -> Values<B> {
         self.to_vec().into_iter().map(|v| v.into()).collect::<Vec<Value<B>>>().into()
+    }
+}
+
+impl<N: Number> Display for Values<N> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if self.len() == 1 {
+            return write!(f, "{}", self.get(0).unwrap());
+        } else {
+            return write!(f, "{{{}}}", self.0.iter().map(|v| v.to_string()).collect::<Vec<String>>().join(", "));
+        }
     }
 }
 
@@ -806,89 +817,12 @@ impl<N: Number> AST<N> {
     pub fn from_operation(val: Operation<N>) -> AST<N> {
         return AST::Operation(Box::new(val));
     }
-    /// converts the AST to a string using crude symbols for operations, vectors and matrices.
-    pub fn as_string(&self) -> String {
-        match self {
-            AST::Scalar(s) => return round_and_format(*s, false),
-            AST::Vector(v) => return format!("[{}]", v.iter().map(|a| a.as_string()).collect::<Vec<String>>().join(", ")),
-            AST::Matrix(m) => return format!("[{}]", m.iter().map(|v| "[".to_string() + &v.iter().map(|v| v.as_string()).collect::<Vec<String>>().join(", ") + "]").collect::<Vec<String>>().join(", ")),
-            AST::List(l) => return format!("{{{}}}", l.iter().map(|a| a.as_string()).collect::<Vec<String>>().join(", ")),
-            AST::Variable(v) => return v.to_string(),
-            AST::Function { name, inputs } => return format!("{}({})", name, inputs.iter().map(|i| i.as_string()).collect::<Vec<String>>().join(", ")),
-            AST::Operation(o) => {
-                match &**o  {
-                    Operation::SimpleOperation {op_type, left, right} => {
-                        let lv = &left.as_string();
-                        let rv = &right.as_string(); 
-                        match op_type {
-                            SimpleOpType::Assign => return format!("{} \u{2254} {}", lv, rv),
-                            SimpleOpType::BoolAnd => return format!("{} & {}", lv, rv),
-                            SimpleOpType::BoolOr => return format!("{} | {}", lv, rv),
-                            SimpleOpType::BoolEq => return format!("{} == {}", lv, rv),
-                            SimpleOpType::BoolNEq => return format!("{} != {}", lv, rv),
-                            SimpleOpType::BoolLt => return format!("{} < {}", lv, rv),
-                            SimpleOpType::BoolGt => return format!("{} > {}", lv, rv),
-                            SimpleOpType::BoolLtEq => return format!("{} <= {}", lv, rv),
-                            SimpleOpType::BoolGtEq => return format!("{} >= {}", lv, rv),
-                            SimpleOpType::BoolNot => return format!("!{}", rv),
-                            SimpleOpType::Get => return format!("{}_{}", lv, rv),
-                            SimpleOpType::Add => return format!("{} + {}", lv, rv),
-                            SimpleOpType::Sub => return format!("{} - {}", lv, rv),
-                            SimpleOpType::AddSub => return format!("{} +- {}", lv, rv),
-                            SimpleOpType::Mult => return format!("{} * {}", lv, rv),
-                            SimpleOpType::Neg => return format!("-{}", rv),
-                            SimpleOpType::Div => return format!("{} / {}", lv, rv),
-                            SimpleOpType::HiddenMult => return format!("{}{}", lv, rv),
-                            SimpleOpType::Pow => return format!("{}^({})", lv, rv),
-                            SimpleOpType::Cross => return format!("{}x{}", lv, rv),
-                            SimpleOpType::Tetration => return format!("{}^^{}", lv, rv),
-                            SimpleOpType::Parenths => return format!("({})", lv),
-                        }
-                    },
-                    Operation::AdvancedOperation(a) => {
-                        match a {
-                            AdvancedOperation::Integral {expr, in_terms_of, lower_bound, upper_bound} => {
-                                let eexpr = &expr.as_string();
-                                let elower_b = &lower_bound.as_string();
-                                let eupper_b = &upper_bound.as_string();
-                                return format!("I({}, {}, {}, {})", eexpr, in_terms_of, elower_b, eupper_b);
-                            },
-                            AdvancedOperation::Derivative {expr, in_terms_of, at} => {
-                                let eexpr = &expr.as_string();
-                                let eat = &at.as_string();
-                                return format!("D({}, {}, {})", eexpr, in_terms_of, eat);
-                            },
-                            AdvancedOperation::Equation { equations, .. } => {
-                                let eqs: Vec<String> = equations.iter().map(|e| format!("{}={}", e.0.as_string(), e.1.as_string())).collect();
-                                return format!("eq({})", eqs.join(","));
-                            },
-                            AdvancedOperation::Conditional { condition, then, r#else } => {
-                                let condition = condition.as_string();
-                                let then = then.as_string();
-                                if let Some(r#else) = r#else {
-                                    return format!("if({}, {}, {})", condition, then, r#else.as_string());
-                                } else {
-                                    return format!("if({}, {})", condition, then);
-                                }
-                            },
-                            AdvancedOperation::Sum { expr, in_terms_of, lower_bound, upper_bound } => {
-                                let eexpr = &expr.as_string();
-                                let elower_b = &lower_bound.as_string();
-                                let eupper_b = &upper_bound.as_string();
-                                return format!("Sum({}, {}, {}, {})", eexpr, in_terms_of, elower_b, eupper_b);
-                            }
-                        }
-                    }
-                } 
-            }
-        }
-    }
     /// converts the AST to latex.
-    pub fn as_latex(&self) -> String {
+    pub fn to_latex(&self) -> String {
         self.latex_print(true)
     }
     /// converts the AST to latex but without an aligner if the AST contains an assignment.
-    pub fn as_latex_inline(&self) -> String {
+    pub fn to_latex_inline(&self) -> String {
         self.latex_print(false)
     }
     fn latex_print(&self, add_aligner: bool) -> String {
@@ -1068,6 +1002,85 @@ impl<N: Number> AST<N> {
                         })
                     }
                 }))
+            }
+        }
+    }
+}
+
+impl<N: Number> Display for AST<N> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            AST::Scalar(s) => return write!(f, "{}", round_and_format(*s, false)),
+            AST::Vector(v) => return write!(f, "[{}]", v.iter().map(|a| a.to_string()).collect::<Vec<String>>().join(", ")),
+            AST::Matrix(m) => return write!(f, "[{}]", m.iter().map(|v| "[".to_string() + &v.iter().map(|v| v.to_string()).collect::<Vec<String>>().join(", ") + "]").collect::<Vec<String>>().join(", ")),
+            AST::List(l) => return write!(f, "{{{}}}", l.iter().map(|a| a.to_string()).collect::<Vec<String>>().join(", ")),
+            AST::Variable(v) => return write!(f, "{}", v),
+            AST::Function { name, inputs } => return write!(f, "{}({})", name, inputs.iter().map(|i| i.to_string()).collect::<Vec<String>>().join(", ")),
+            AST::Operation(o) => {
+                match &**o  {
+                    Operation::SimpleOperation {op_type, left, right} => {
+                        let lv = &left.to_string();
+                        let rv = &right.to_string(); 
+                        match op_type {
+                            SimpleOpType::Assign => return write!(f, "{} \u{2254} {}", lv, rv),
+                            SimpleOpType::BoolAnd => return write!(f, "{} & {}", lv, rv),
+                            SimpleOpType::BoolOr => return write!(f, "{} | {}", lv, rv),
+                            SimpleOpType::BoolEq => return write!(f, "{} == {}", lv, rv),
+                            SimpleOpType::BoolNEq => return write!(f, "{} != {}", lv, rv),
+                            SimpleOpType::BoolLt => return write!(f, "{} < {}", lv, rv),
+                            SimpleOpType::BoolGt => return write!(f, "{} > {}", lv, rv),
+                            SimpleOpType::BoolLtEq => return write!(f, "{} <= {}", lv, rv),
+                            SimpleOpType::BoolGtEq => return write!(f, "{} >= {}", lv, rv),
+                            SimpleOpType::BoolNot => return write!(f, "!{}", rv),
+                            SimpleOpType::Get => return write!(f, "{}_{}", lv, rv),
+                            SimpleOpType::Add => return write!(f, "{} + {}", lv, rv),
+                            SimpleOpType::Sub => return write!(f, "{} - {}", lv, rv),
+                            SimpleOpType::AddSub => return write!(f, "{} +- {}", lv, rv),
+                            SimpleOpType::Mult => return write!(f, "{} * {}", lv, rv),
+                            SimpleOpType::Neg => return write!(f, "-{}", rv),
+                            SimpleOpType::Div => return write!(f, "{} / {}", lv, rv),
+                            SimpleOpType::HiddenMult => return write!(f, "{}{}", lv, rv),
+                            SimpleOpType::Pow => return write!(f, "{}^({})", lv, rv),
+                            SimpleOpType::Cross => return write!(f, "{}x{}", lv, rv),
+                            SimpleOpType::Tetration => return write!(f, "{}^^{}", lv, rv),
+                            SimpleOpType::Parenths => return write!(f, "({})", lv),
+                        }
+                    },
+                    Operation::AdvancedOperation(a) => {
+                        match a {
+                            AdvancedOperation::Integral {expr, in_terms_of, lower_bound, upper_bound} => {
+                                let eexpr = &expr.to_string();
+                                let elower_b = &lower_bound.to_string();
+                                let eupper_b = &upper_bound.to_string();
+                                return write!(f, "I({}, {}, {}, {})", eexpr, in_terms_of, elower_b, eupper_b);
+                            },
+                            AdvancedOperation::Derivative {expr, in_terms_of, at} => {
+                                let eexpr = &expr.to_string();
+                                let eat = &at.to_string();
+                                return write!(f, "D({}, {}, {})", eexpr, in_terms_of, eat);
+                            },
+                            AdvancedOperation::Equation { equations, .. } => {
+                                let eqs: Vec<String> = equations.iter().map(|e| format!("{}={}", e.0.to_string(), e.1.to_string())).collect();
+                                return write!(f, "eq({})", eqs.join(","));
+                            },
+                            AdvancedOperation::Conditional { condition, then, r#else } => {
+                                let condition = condition.to_string();
+                                let then = then.to_string();
+                                if let Some(r#else) = r#else {
+                                    return write!(f, "if({}, {}, {})", condition, then, r#else.to_string());
+                                } else {
+                                    return write!(f, "if({}, {})", condition, then);
+                                }
+                            },
+                            AdvancedOperation::Sum { expr, in_terms_of, lower_bound, upper_bound } => {
+                                let eexpr = &expr.to_string();
+                                let elower_b = &lower_bound.to_string();
+                                let eupper_b = &upper_bound.to_string();
+                                return write!(f, "Sum({}, {}, {}, {})", eexpr, in_terms_of, elower_b, eupper_b);
+                            }
+                        }
+                    }
+                } 
             }
         }
     }

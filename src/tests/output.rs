@@ -10,9 +10,9 @@ fn variable_as_latex() -> Result<(), MathLibError> {
     let var2 = Variable::new("y", res2);
     let var3 = Variable::new("z", res3);
 
-    assert_eq!(var1.as_latex(true), r"x&\coloneqq \left\{2, 3, 4\right\}");
-    assert_eq!(var2.as_latex(true), r"y&\coloneqq \left\{\right\}");
-    assert_eq!(var3.as_latex(true), r"z&\coloneqq 4");
+    assert_eq!(var1.to_latex(true), r"x&\coloneqq \left\{2, 3, 4\right\}");
+    assert_eq!(var2.to_latex(true), r"y&\coloneqq \left\{\right\}");
+    assert_eq!(var3.to_latex(true), r"z&\coloneqq 4");
 
     Ok(())
 }
@@ -53,7 +53,7 @@ fn output2() -> Result<(), MathLibError> {
 
     let step = Step::new(parsed_expr, res);
 
-    let png = png_from_latex(step.as_latex_inline(), 200, "#FFFFFF")?;
+    let png = png_from_latex(step.to_latex_inline(), 200, "#FFFFFF")?;
 
     let _ = fs::write("./images/test.png", png);
 

@@ -40,7 +40,7 @@ fn eval_in_vector1() -> Result<(), MathLibError> {
 fn negation() -> Result<(), MathLibError> {
     let parsed_ast = parse::<_, f64>("-1")?;
 
-    assert_eq!(parsed_ast.as_latex(), "-1".to_string());
+    assert_eq!(parsed_ast.to_string(), "-1".to_string());
 
     Ok(())
 }

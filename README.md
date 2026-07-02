@@ -30,8 +30,8 @@ This repo/crate provides a number of math utilities:
 ## Crate features
 
 - row-major: parses matrices in a row major format.
-- output: enables dependencies in order to provide rendered PDFs, PNGs and SVGs. (currently broken)
-- serde: enables serde::Serialize and serde::Deserialize on most structs and enums.
+- output: enables dependencies in order to provide rendered PDFs, PNGs and SVGs.
+- serde: enables Serialize and Deserialize implementations on most structs and enums.
 - parallelism: enables multithreading for the equation solver.
 
 ## Usage
@@ -62,7 +62,7 @@ assert_eq!(res[0], value!(9));
 
 ```rust
 // We can also define a mutable context to be used later.
-let mut context = Context::empty();
+let mut context = Context::default();
 
 // We can now assign 3 to the variable x in the expression itself.
 quick_eval!("x=3", &mut context)?;
@@ -95,7 +95,7 @@ assert_eq!(res[0], value!(140));
 
 ```rust
 // Like before this assignment can also be done in an expression.
-let mut context = Context::empty();
+let mut context = Context::default();
 
 quick_eval!("f(x)=5x^2+2x+x", &mut context)?;
 let res = quick_eval!("f(5)", &mut context)?.to_vec();
@@ -134,7 +134,7 @@ assert_eq!(res, vec![value!(3, -8, -2)]);
 ```
 
 ```rust
-let mut c = Context::empty();
+let mut c = Context::default();
 
 quick_eval!("a = 6", &mut c)?;
 quick_eval!("b = 10", &mut c)?;
@@ -156,7 +156,7 @@ assert_eq!(res, vec![value!(5), value!(2)]);
 ```
 
 ```rust
-let mut c = Context::empty();
+let mut c = Context::default();
 quick_eval!("state = 0", &mut c)?;
 
 // Using the power of lists, side effects in functions and if statements,
