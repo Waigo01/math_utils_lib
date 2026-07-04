@@ -305,110 +305,40 @@ impl<N: Number> RootFinder<N> {
             } 
             let mut results = vec![];
             let search_pattern = N::newton_search_pattern(2000);
-
-            #[cfg(feature = "multithreading")]
-            {
-                let thread_count = std::thread::available_parallelism().unwrap().get();
-                let var_count = 2000/thread_count;
-                let mut threads = vec![];
-
-                for i in 0..thread_count {
-                    let search_pattern = search_pattern.clone();
-                    let search_vars_names = self.search_vars_names.clone();
-                    let search_expres = search_expres.clone();
-                    let check_expres = check_expres.clone();
-                    let mut local_context = self.context.clone();
-                    threads.push(std::thread::spawn(move || {
-                        let search_pattern = if i != thread_count-1 {
-                            search_pattern.clone()[var_count*i..var_count*(i+1)].to_vec()
-                        } else {
-                            search_pattern.clone()[var_count*i..].to_vec()
-                        };
-                        let mut results = vec![];
-                        'solve_loop_0: for j in search_pattern {
-                            let mut x = vec![];
-                            for k in &search_vars_names {
-                                x.push(Variable::new(k, vec![Value::Scalar(j)]));
-                            }
-
-                            'solve_loop_1: for _ in 0..1000 {
-                                let newton_result = newton(&search_expres, &check_expres, &x, &mut local_context);
-
-                                match newton_result {
-                                    Ok(o) => {
-                                        match o {
-                                            NewtonReturn::NextX(next_x) => {x = next_x},
-                                            NewtonReturn::FinishedX(fin_x) => {
-                                                let mut result_vec = vec![];
-                                                for i in fin_x {
-                                                    result_vec.push(i.values.get(0).unwrap().get_scalar().unwrap());
-                                                }
-                                                if result_vec.len() == 1 {
-                                                    results.push(Value::Scalar(result_vec[0].clone()));
-                                                } else {
-                                                    results.push(Value::Vector(result_vec));
-                                                }
-                                                break 'solve_loop_1;
-                                            },
-                                        }
-                                    },
-                                    Err(e) => {
-                                        match e {
-                                            EvalError::InfiniteSolutions => break 'solve_loop_0,
-                                            EvalError::NaNOrInf => break 'solve_loop_1,
-                                            EvalError::ExpressionCheckFailed => break 'solve_loop_1,
-                                            _ => return Err(e.into())
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        Ok::<Vec<Value<N>>, EvalError>(results)
-                    }));
-                }
-
-                for thread in threads {
-                    results.append(&mut thread.join().unwrap()?);
-                }
-            }
-
-            #[cfg(not(feature = "multithreading"))]
-            {
             let mut local_context = self.context.clone();
-                'solve_loop_0: for j in search_pattern {
-                    let mut x = vec![];
-                    for k in &self.search_vars_names {
-                        x.push(Variable::new(k, vec![Value::Scalar(j)]));
-                    }
+            'solve_loop_0: for j in search_pattern {
+                let mut x = vec![];
+                for k in &self.search_vars_names {
+                    x.push(Variable::new(k, vec![Value::Scalar(j)]));
+                }
 
-                    'solve_loop_1: for _ in 0..1000 {
-                        let newton_result = newton(&search_expres, &check_expres, &x, &mut local_context);
+                'solve_loop_1: for _ in 0..1000 {
+                    let newton_result = newton(&search_expres, &check_expres, &x, &mut local_context);
 
-                        match newton_result {
-                            Ok(o) => {
-                                match o {
-                                    NewtonReturn::NextX(next_x) => {x = next_x},
-                                    NewtonReturn::FinishedX(fin_x) => {
-                                        let mut result_vec = vec![];
-                                        for i in fin_x {
-                                            result_vec.push(i.values.get(0).unwrap().get_scalar().unwrap());
-                                        }
-                                        if result_vec.len() == 1 {
-                                            results.push(Value::Scalar(result_vec[0].clone()));
-                                        } else {
-                                            results.push(Value::Vector(result_vec));
-                                        }
-                                        break 'solve_loop_1;
-                                    },
-                                }
-                            },
-                            Err(e) => {
-                                match e {
-                                    EvalError::InfiniteSolutions => break 'solve_loop_0,
-                                    EvalError::NaNOrInf => break 'solve_loop_1,
-                                    EvalError::ExpressionCheckFailed => break 'solve_loop_1,
-                                    _ => return Err(e.into())
-                                }
+                    match newton_result {
+                        Ok(o) => {
+                            match o {
+                                NewtonReturn::NextX(next_x) => {x = next_x},
+                                NewtonReturn::FinishedX(fin_x) => {
+                                    let mut result_vec = vec![];
+                                    for i in fin_x {
+                                        result_vec.push(i.values.get(0).unwrap().get_scalar().unwrap());
+                                    }
+                                    if result_vec.len() == 1 {
+                                        results.push(Value::Scalar(result_vec[0].clone()));
+                                    } else {
+                                        results.push(Value::Vector(result_vec));
+                                    }
+                                    break 'solve_loop_1;
+                                },
+                            }
+                        },
+                        Err(e) => {
+                            match e {
+                                EvalError::InfiniteSolutions => break 'solve_loop_0,
+                                EvalError::NaNOrInf => break 'solve_loop_1,
+                                EvalError::ExpressionCheckFailed => break 'solve_loop_1,
+                                _ => return Err(e.into())
                             }
                         }
                     }

@@ -35,7 +35,6 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //! - row-major: parses matrices in a row major format.
 //! - output: enables dependencies in order to provide rendered PDFs, PNGs and SVGs.
 //! - serde: enables Serialize and Deserialize implementations on most structs and enums.
-//! - multithreading: enables multithreading for the equation solver.
 //! - async: exposes async versions of quick_eval, eval and parse.
 //!
 //! ## Usage
