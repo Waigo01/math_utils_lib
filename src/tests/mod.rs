@@ -9,3 +9,6 @@ mod boolean;
 mod calculus;
 mod equation;
 mod output;
+
+#[cfg(feature = "async")]
+mod async_tests;

@@ -1,3 +1,8 @@
+#[cfg(feature = "async")]
+use async_macro::function_async;
+
+use async_macro::async_call;
+
 use crate::{basetypes::Value, maths::num_traits::{Number, StandardFunctions}};
 
 pub mod add_sub;
@@ -10,11 +15,12 @@ pub mod num_traits;
 pub mod num_impls;
 
 #[doc(hidden)]
+#[cfg_attr(feature = "async", function_async)]
 pub fn add<N: Number>(lv: &Value<N>, rv: &Value<N>) -> Result<Value<N>, String> {
     match (lv, rv) {
-        (Value::Scalar(a), Value::Scalar(b)) => return add_sub::sadd(a, b),
-        (Value::Vector(a), Value::Vector(b)) => return add_sub::vadd(a, b),
-        (Value::Matrix(a), Value::Matrix(b)) => return add_sub::madd(a, b),
+        (Value::Scalar(a), Value::Scalar(b)) => return async_call!(add_sub::sadd(a, b)),
+        (Value::Vector(a), Value::Vector(b)) => return async_call!(add_sub::vadd(a, b)),
+        (Value::Matrix(a), Value::Matrix(b)) => return async_call!(add_sub::madd(a, b)),
         (Value::Vector(_), Value::Scalar(_)) => return Err("can't add scalar to vector".to_string()),
         (Value::Scalar(_), Value::Vector(_)) => return Err("can't add vector to scalar".to_string()),
         (Value::Matrix(_), Value::Scalar(_)) => return Err("can't add scalar to matrix".to_string()),
@@ -25,11 +31,12 @@ pub fn add<N: Number>(lv: &Value<N>, rv: &Value<N>) -> Result<Value<N>, String> 
 }
 
 #[doc(hidden)]
+#[cfg_attr(feature = "async", function_async)]
 pub fn sub<N: Number>(lv: &Value<N>, rv: &Value<N>) -> Result<Value<N>, String> {
     match (lv, rv) {
-        (Value::Scalar(a), Value::Scalar(b)) => return add_sub::sadd(a, &(*b * -N::one())),
-        (Value::Vector(a), Value::Vector(b)) => return add_sub::vsub(a, b),
-        (Value::Matrix(a), Value::Matrix(b)) => return add_sub::msub(a, b),
+        (Value::Scalar(a), Value::Scalar(b)) => return async_call!(add_sub::sadd(a, &(*b * -N::one()))),
+        (Value::Vector(a), Value::Vector(b)) => return async_call!(add_sub::vsub(a, b)),
+        (Value::Matrix(a), Value::Matrix(b)) => return async_call!(add_sub::msub(a, b)),
         (Value::Vector(_), Value::Scalar(_)) => return Err("can't subtract scalar from vector".to_string()),
         (Value::Scalar(_), Value::Vector(_)) => return Err("can't subtract vector from scalar".to_string()),
         (Value::Matrix(_), Value::Scalar(_)) => return Err("can't subtract scalar from matrix".to_string()),
@@ -40,21 +47,23 @@ pub fn sub<N: Number>(lv: &Value<N>, rv: &Value<N>) -> Result<Value<N>, String> 
 }
 
 #[doc(hidden)]
+#[cfg_attr(feature = "async", function_async)]
 pub fn mult<N: Number>(lv: &Value<N>, rv: &Value<N>) -> Result<Value<N>, String> {
     match (lv, rv) {
-        (Value::Scalar(a), Value::Scalar(b)) => return mult_div::ssmult(a, b),
-        (Value::Vector(a), Value::Scalar(b)) => return mult_div::svmult(b, a),
-        (Value::Scalar(a), Value::Vector(b)) => return mult_div::svmult(a, b),
-        (Value::Scalar(a), Value::Matrix(b)) => return mult_div::smmult(a, b),
-        (Value::Matrix(a), Value::Scalar(b)) => return mult_div::smmult(b, a),
-        (Value::Matrix(a), Value::Matrix(b)) => return mult_div::mmmult(a, b),
-        (Value::Vector(a), Value::Vector(b)) => return mult_div::vvmult(a, b),
-        (Value::Matrix(a), Value::Vector(b)) => return mult_div::mvmult(a, b),
+        (Value::Scalar(a), Value::Scalar(b)) => return async_call!(mult_div::ssmult(a, b)),
+        (Value::Vector(a), Value::Scalar(b)) => return async_call!(mult_div::svmult(b, a)),
+        (Value::Scalar(a), Value::Vector(b)) => return async_call!(mult_div::svmult(a, b)),
+        (Value::Scalar(a), Value::Matrix(b)) => return async_call!(mult_div::smmult(a, b)),
+        (Value::Matrix(a), Value::Scalar(b)) => return async_call!(mult_div::smmult(b, a)),
+        (Value::Matrix(a), Value::Matrix(b)) => return async_call!(mult_div::mmmult(a, b)),
+        (Value::Vector(a), Value::Vector(b)) => return async_call!(mult_div::vvmult(a, b)),
+        (Value::Matrix(a), Value::Vector(b)) => return async_call!(mult_div::mvmult(a, b)),
         (Value::Vector(_), Value::Matrix(_)) => return Err("vector has to be on the right side of linear transformation".to_string())
     }
 }
 
 #[doc(hidden)]
+#[cfg_attr(feature = "async", function_async)]
 pub fn neg<N: Number>(lv: &Value<N>) -> Result<Value<N>, String> {
     match lv {
         Value::Scalar(a) => return Ok(Value::Scalar(-N::one()* *a)),
@@ -64,12 +73,13 @@ pub fn neg<N: Number>(lv: &Value<N>) -> Result<Value<N>, String> {
 }
 
 #[doc(hidden)]
+#[cfg_attr(feature = "async", function_async)]
 pub fn div<N: Number>(lv: &Value<N>, rv: &Value<N>) -> Result<Value<N>, String> {
     match(lv, rv) {
-        (Value::Scalar(a), Value::Scalar(b)) => return mult_div::ssdiv(a, b),
-        (Value::Vector(a), Value::Scalar(b)) => return mult_div::vsdiv(a, b),
-        (Value::Matrix(a), Value::Scalar(b)) => return mult_div::msdiv(a, b),
-        (Value::Vector(a), Value::Vector(b)) => return mult_div::vvdiv(a, b),
+        (Value::Scalar(a), Value::Scalar(b)) => return async_call!(mult_div::ssdiv(a, b)),
+        (Value::Vector(a), Value::Scalar(b)) => return async_call!(mult_div::vsdiv(a, b)),
+        (Value::Matrix(a), Value::Scalar(b)) => return async_call!(mult_div::msdiv(a, b)),
+        (Value::Vector(a), Value::Vector(b)) => return async_call!(mult_div::vvdiv(a, b)),
         (Value::Scalar(_), Value::Vector(_)) => return Err("can't divide scalar by vector".to_string()),
         (Value::Scalar(_), Value::Matrix(_)) => return Err("can't divide scalar by matrix".to_string()),
         (Value::Matrix(_), Value::Vector(_)) => return Err("can't divide matrix by vector".to_string()),
@@ -79,14 +89,16 @@ pub fn div<N: Number>(lv: &Value<N>, rv: &Value<N>) -> Result<Value<N>, String> 
 }
 
 #[doc(hidden)]
+#[cfg_attr(feature = "async", function_async)]
 pub fn cross<N: Number>(lv: &Value<N>, rv: &Value<N>) -> Result<Value<N>, String> {
     match (lv, rv){
-        (Value::Vector(a), Value::Vector(b)) => return cross_pow::vcross(a, b),
+        (Value::Vector(a), Value::Vector(b)) => return async_call!(cross_pow::vcross(a, b)),
         _ => return Err("cross product can only be computed between two vectors".to_string())
     }
 }
 
 #[doc(hidden)]
+#[cfg_attr(feature = "async", function_async)]
 pub fn get<N: Number>(lv: &Value<N>, rv: &Value<N>) -> Result<Value<N>, String> {
     match (lv, rv) {
         (Value::Vector(a), Value::Scalar(b)) => {
@@ -105,15 +117,17 @@ pub fn get<N: Number>(lv: &Value<N>, rv: &Value<N>) -> Result<Value<N>, String> 
 }
 
 #[doc(hidden)]
+#[cfg_attr(feature = "async", function_async)]
 pub fn pow<N: Number>(lv: &Value<N>, rv: &Value<N>) -> Result<Value<N>, String> {
     match (lv, rv) {
-        (Value::Scalar(a), Value::Scalar(b)) => return cross_pow::sspow(a, b),
-        (Value::Matrix(m), Value::Scalar(b)) => return cross_pow::mspow(m, b),
+        (Value::Scalar(a), Value::Scalar(b)) => return async_call!(cross_pow::sspow(a, b)),
+        (Value::Matrix(m), Value::Scalar(b)) => return async_call!(cross_pow::mspow(m, b)),
         _ => return Err("can only raise scalar or matrix to the power of scalar".to_string())
     }
 }
 
 #[doc(hidden)]
+#[cfg_attr(feature = "async", function_async)]
 pub fn tetration<N: Number>(lv: &Value<N>, rv: &Value<N>) -> Result<Value<N>, String> {
     match (lv, rv) {
         (Value::Scalar(a), Value::Scalar(b)) => {
@@ -133,6 +147,7 @@ pub fn tetration<N: Number>(lv: &Value<N>, rv: &Value<N>) -> Result<Value<N>, St
 }
 
 #[doc(hidden)]
+#[cfg_attr(feature = "async", function_async)]
 pub fn sin<N: Number + StandardFunctions>(args: Vec<Value<N>>) -> Result<Value<N>, String> {
     let Some(lv) = args.get(0) else {
         return Err("sin requires exactly one argument".to_string());
@@ -145,6 +160,7 @@ pub fn sin<N: Number + StandardFunctions>(args: Vec<Value<N>>) -> Result<Value<N
 }
 
 #[doc(hidden)]
+#[cfg_attr(feature = "async", function_async)]
 pub fn cos<N: Number + StandardFunctions>(args: Vec<Value<N>>) -> Result<Value<N>, String> {
     let Some(lv) = args.get(0) else {
         return Err("Cos requires exactly one argument".to_string());
@@ -157,6 +173,7 @@ pub fn cos<N: Number + StandardFunctions>(args: Vec<Value<N>>) -> Result<Value<N
 }
 
 #[doc(hidden)]
+#[cfg_attr(feature = "async", function_async)]
 pub fn tan<N: Number + StandardFunctions>(args: Vec<Value<N>>) -> Result<Value<N>, String> {
     let Some(lv) = args.get(0) else {
         return Err("tan requires exactly one argument".to_string());
@@ -169,6 +186,7 @@ pub fn tan<N: Number + StandardFunctions>(args: Vec<Value<N>>) -> Result<Value<N
 }
 
 #[doc(hidden)]
+#[cfg_attr(feature = "async", function_async)]
 pub fn sinh<N: Number + StandardFunctions>(args: Vec<Value<N>>) -> Result<Value<N>, String> {
     let Some(lv) = args.get(0) else {
         return Err("sinh requires exactly one argument".to_string());
@@ -181,6 +199,7 @@ pub fn sinh<N: Number + StandardFunctions>(args: Vec<Value<N>>) -> Result<Value<
 }
 
 #[doc(hidden)]
+#[cfg_attr(feature = "async", function_async)]
 pub fn cosh<N: Number + StandardFunctions>(args: Vec<Value<N>>) -> Result<Value<N>, String> {
     let Some(lv) = args.get(0) else {
         return Err("cosh requires exactly one argument".to_string());
@@ -193,6 +212,7 @@ pub fn cosh<N: Number + StandardFunctions>(args: Vec<Value<N>>) -> Result<Value<
 }
 
 #[doc(hidden)]
+#[cfg_attr(feature = "async", function_async)]
 pub fn tanh<N: Number + StandardFunctions>(args: Vec<Value<N>>) -> Result<Value<N>, String> {
     let Some(lv) = args.get(0) else {
         return Err("tanh requires exactly one argument".to_string());
@@ -205,6 +225,7 @@ pub fn tanh<N: Number + StandardFunctions>(args: Vec<Value<N>>) -> Result<Value<
 }
 
 #[doc(hidden)]
+#[cfg_attr(feature = "async", function_async)]
 pub fn exp<N: Number + StandardFunctions>(args: Vec<Value<N>>) -> Result<Value<N>, String> {
     let Some(lv) = args.get(0) else {
         return Err("exp requires exactly one argument".to_string());
@@ -217,6 +238,7 @@ pub fn exp<N: Number + StandardFunctions>(args: Vec<Value<N>>) -> Result<Value<N
 }
 
 #[doc(hidden)]
+#[cfg_attr(feature = "async", function_async)]
 pub fn fact<N: Number + StandardFunctions>(args: Vec<Value<N>>) -> Result<Value<N>, String> {
     let Some(lv) = args.get(0) else {
         return Err("fact requires exactly one argument".to_string());
@@ -229,6 +251,7 @@ pub fn fact<N: Number + StandardFunctions>(args: Vec<Value<N>>) -> Result<Value<
 }
 
 #[doc(hidden)]
+#[cfg_attr(feature = "async", function_async)]
 pub fn arcsin<N: Number + StandardFunctions>(args: Vec<Value<N>>) -> Result<Value<N>, String> {
     let Some(lv) = args.get(0) else {
         return Err("arcsin requires exactly one argument".to_string());
@@ -241,6 +264,7 @@ pub fn arcsin<N: Number + StandardFunctions>(args: Vec<Value<N>>) -> Result<Valu
 }
 
 #[doc(hidden)]
+#[cfg_attr(feature = "async", function_async)]
 pub fn arccos<N: Number + StandardFunctions>(args: Vec<Value<N>>) -> Result<Value<N>, String> {
     let Some(lv) = args.get(0) else {
         return Err("arccos requires exactly one argument".to_string());
@@ -253,6 +277,7 @@ pub fn arccos<N: Number + StandardFunctions>(args: Vec<Value<N>>) -> Result<Valu
 }
 
 #[doc(hidden)]
+#[cfg_attr(feature = "async", function_async)]
 pub fn arctan<N: Number + StandardFunctions>(args: Vec<Value<N>>) -> Result<Value<N>, String> {
     let Some(lv) = args.get(0) else {
         return Err("arctan requires exactly one argument".to_string());
@@ -265,6 +290,7 @@ pub fn arctan<N: Number + StandardFunctions>(args: Vec<Value<N>>) -> Result<Valu
 }
 
 #[doc(hidden)]
+#[cfg_attr(feature = "async", function_async)]
 pub fn abs<N: Number>(args: Vec<Value<N>>) -> Result<Value<N>, String> {
     let Some(lv) = args.get(0) else {
         return Err("abs requires exactly one argument".to_string());
@@ -286,6 +312,7 @@ pub fn abs<N: Number>(args: Vec<Value<N>>) -> Result<Value<N>, String> {
 }
 
 #[doc(hidden)]
+#[cfg_attr(feature = "async", function_async)]
 pub fn sqrt<N: Number>(args: Vec<Value<N>>) -> Result<Value<N>, String> {
     let Some(lv) = args.get(0) else {
         return Err("sqrt requires exactly one argument".to_string());
@@ -298,6 +325,7 @@ pub fn sqrt<N: Number>(args: Vec<Value<N>>) -> Result<Value<N>, String> {
 }
 
 #[doc(hidden)]
+#[cfg_attr(feature = "async", function_async)]
 pub fn root<N: Number>(args: Vec<Value<N>>) -> Result<Value<N>, String> {
     let Some(lv) = args.get(0) else {
         return Err("root requires exactly two arguments".to_string());
@@ -314,6 +342,7 @@ pub fn root<N: Number>(args: Vec<Value<N>>) -> Result<Value<N>, String> {
 }
 
 #[doc(hidden)]
+#[cfg_attr(feature = "async", function_async)]
 pub fn ln<N: Number + StandardFunctions>(args: Vec<Value<N>>) -> Result<Value<N>, String> {
     let Some(lv) = args.get(0) else {
         return Err("sin requires exactly one argument".to_string());
@@ -326,6 +355,7 @@ pub fn ln<N: Number + StandardFunctions>(args: Vec<Value<N>>) -> Result<Value<N>
 }
 
 #[doc(hidden)]
+#[cfg_attr(feature = "async", function_async)]
 pub fn det<N: Number + StandardFunctions>(args: Vec<Value<N>>) -> Result<Value<N>, String> {
     let Some(lv) = args.get(0) else {
         return Err("sin requires exactly one argument".to_string());
@@ -338,6 +368,7 @@ pub fn det<N: Number + StandardFunctions>(args: Vec<Value<N>>) -> Result<Value<N
 }
 
 #[doc(hidden)]
+#[cfg_attr(feature = "async", function_async)]
 pub fn inv<N: Number>(args: Vec<Value<N>>) -> Result<Value<N>, String> {
     let Some(lv) = args.get(0) else {
         return Err("sin requires exactly one argument".to_string());

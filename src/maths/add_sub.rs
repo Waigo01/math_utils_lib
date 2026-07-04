@@ -1,11 +1,16 @@
+#[cfg(feature = "async")]
+use async_macro::function_async;
+
 use crate::{basetypes::Value, maths::num_traits::Number};
 
 #[doc(hidden)]
+#[cfg_attr(feature = "async", function_async)]
 pub fn sadd<N: Number>(a: &N, b: &N) -> Result<Value<N>, String> {
     Ok(Value::Scalar(*a + *b))
 }
 
 #[doc(hidden)]
+#[cfg_attr(feature = "async", function_async)]
 pub fn vadd<N: Number>(a: &Vec<N>, b: &Vec<N>) -> Result<Value<N>, String> { 
     if a.len() != b.len() {
         return Err(format!("vectors have different dimensions"));
@@ -18,6 +23,7 @@ pub fn vadd<N: Number>(a: &Vec<N>, b: &Vec<N>) -> Result<Value<N>, String> {
 }
 
 #[doc(hidden)]
+#[cfg_attr(feature = "async", function_async)]
 pub fn madd<N: Number>(a: &Vec<Vec<N>>, b: &Vec<Vec<N>>) -> Result<Value<N>, String> {
     if a.len() != b.len() || a[0].len() != b[0].len() {
         return Err(format!("matrices have different dimensions"));
@@ -34,6 +40,7 @@ pub fn madd<N: Number>(a: &Vec<Vec<N>>, b: &Vec<Vec<N>>) -> Result<Value<N>, Str
 }
 
 #[doc(hidden)]
+#[cfg_attr(feature = "async", function_async)]
 pub fn vsub<N: Number>(a: &Vec<N>, b: &Vec<N>) -> Result<Value<N>, String> {
     let mut b_neg = vec![];
     for i in 0..b.len() {
@@ -43,6 +50,7 @@ pub fn vsub<N: Number>(a: &Vec<N>, b: &Vec<N>) -> Result<Value<N>, String> {
 }
 
 #[doc(hidden)]
+#[cfg_attr(feature = "async", function_async)]
 pub fn msub<N: Number>(a: &Vec<Vec<N>>, b: &Vec<Vec<N>>) -> Result<Value<N>, String> {
     let mut b_neg = vec![];
     for i in 0..b.len() {

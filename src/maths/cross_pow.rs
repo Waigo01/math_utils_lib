@@ -1,8 +1,12 @@
+#[cfg(feature = "async")]
+use async_macro::function_async;
+
 use crate::{basetypes::Value, maths::num_traits::Number};
 
 use super::mult_div::mmmult;
 
 #[doc(hidden)]
+#[cfg_attr(feature = "async", function_async)]
 pub fn vcross<N: Number>(a: &Vec<N>, b: &Vec<N>) -> Result<Value<N>, String> {
     if a.len() != b.len() {
         return Err("vectors have different dimensions".to_string());
@@ -32,11 +36,13 @@ pub fn vcross<N: Number>(a: &Vec<N>, b: &Vec<N>) -> Result<Value<N>, String> {
 }
 
 #[doc(hidden)]
+#[cfg_attr(feature = "async", function_async)]
 pub fn sspow<N: Number>(a: &N, b: &N) -> Result<Value<N>, String> {
     return Ok(Value::Scalar(a.powf(*b)));
 }
 
 #[doc(hidden)]
+#[cfg_attr(feature = "async", function_async)]
 pub fn mspow<N: Number>(a: &Vec<Vec<N>>, b: &N) -> Result<Value<N>, String> {
     let rounded_b = match b.as_rounded_int() {
         Ok(r) => r,

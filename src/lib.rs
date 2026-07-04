@@ -35,7 +35,8 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //! - row-major: parses matrices in a row major format.
 //! - output: enables dependencies in order to provide rendered PDFs, PNGs and SVGs.
 //! - serde: enables Serialize and Deserialize implementations on most structs and enums.
-//! - parallelism: enables multithreading for the equation solver.
+//! - multithreading: enables multithreading for the equation solver.
+//! - async: exposes async versions of quick_eval, eval and parse.
 //!
 //! ## Usage
 //!
@@ -306,6 +307,11 @@ pub use errors::MathLibError;
 pub use maths::num_traits::{Number, StandardFunctions, RealNumber};
 pub use maths::num_impls::Complex;
 
+#[cfg(feature = "async")]
+pub use evaluator::eval_async;
+#[cfg(feature = "async")]
+pub use parser::parse_async;
+
 /// Evaluates a given expression in the given context. If you just want the AST, have a look at [parse()].
 ///
 /// For more information about the context, take a look at [Context] and for more information about
@@ -342,7 +348,6 @@ pub use maths::num_impls::Complex;
 /// assert_eq!(res[0], value!(-1));
 /// # Ok::<(), MathLibError>(())
 /// ```
-
 #[macro_export]
 macro_rules! quick_eval {
     ( $e:expr ) => {
@@ -384,6 +389,98 @@ macro_rules! quick_eval {
                 let expr = expr.into();
                 let b_tree = $crate::parse(expr)?; 
                 Ok($crate::eval(&b_tree, context)?)
+            }
+
+            quick_eval::<_, $t>($e, $c)
+        }
+    }
+}
+
+/// Evaluates a given expression in the given context. If you just want the AST, have a look at [parse_async()].
+///
+/// For more information about the context, take a look at [Context] and for more information about
+/// the possible operations, take a look at [SimpleOpType](basetypes::SimpleOpType) and
+/// [AdvancedOperation](basetypes::AdvancedOperation).
+///
+/// When calling this macro with just a string argument, it will internally create a new Context
+/// using [Context::default()]. You can also specify your own context as the second argument. With the argument following the semicolon you can specify the number 
+/// type that should be used. By default [f64] is used, other number types must implement [Number].
+///
+/// # Examples
+///
+/// ```ignore
+/// # use math_utils_lib::{basetypes::Function, errors::{EvalError, MathLibError, ParserError, QuickEvalError}, parse, quick_eval_async, value, Context, Value, Variable};
+/// let res = quick_eval_async!("3*3")?.await.to_vec();
+///
+/// assert_eq!(res[0], value!(9.));
+/// # Ok::<(), MathLibError>(())
+/// ```
+///
+/// ```ignore
+/// # use math_utils_lib::{basetypes::Function, errors::{EvalError, MathLibError, ParserError, QuickEvalError}, parse, quick_eval_async, value, Context, Value, Variable};
+/// let x = Variable::new("x", vec![value!(3.)]);
+/// let res = quick_eval_async!("3x", &mut Context::from_vars(vec![x])).await?.to_vec();
+///
+/// assert_eq!(res[0], value!(9.));
+/// # Ok::<(), MathLibError>(())
+/// ```
+///
+/// ```ignore
+/// # use math_utils_lib::{basetypes::Function, errors::{EvalError, MathLibError, ParserError, QuickEvalError}, parse, quick_eval_async, value, Context, Value, Variable, Complex};
+/// let res = quick_eval_async!("e^(i*pi)"; Complex<f64>).await?.to_vec();
+///
+/// assert_eq!(res[0], value!(-1));
+/// # Ok::<(), MathLibError>(())
+/// ```
+#[cfg(feature = "async")]
+#[cfg_attr(docsrs, doc(cfg(feature = "async")))]
+#[macro_export]
+macro_rules! quick_eval_async {
+    ( $e:expr ) => {
+        {
+            async fn quick_eval<S: Into<String>, N: $crate::Number>(expr: S, context: &mut $crate::Context<N>) -> Result<$crate::Values<N>, $crate::errors::QuickEvalError> {
+                let expr = expr.into();
+                let b_tree = $crate::parse_async(expr).await?; 
+                Ok($crate::eval_async(&b_tree, context).await?)
+            }
+
+            async {
+                let mut c = $crate::Context::default();
+                quick_eval::<_, f64>($e, &mut c).await
+            }
+        }
+    };
+    ( $e:expr, $c:expr ) => {
+        {
+            async fn quick_eval<S: Into<String>, N: $crate::Number>(expr: S, context: &mut $crate::Context<N>) -> Result<$crate::Values<N>, $crate::errors::QuickEvalError> {
+                let expr = expr.into();
+                let b_tree = $crate::parse_async(expr).await?; 
+                Ok($crate::eval_async(&b_tree, context).await?)
+            }
+
+            quick_eval::<_, f64>($e, $c)
+        }
+    };
+    ( $e:expr; $t:ty ) => {
+        { 
+            async fn quick_eval<S: Into<String>, N: $crate::Number>(expr: S, context: &mut $crate::Context<N>) -> Result<$crate::Values<N>, $crate::errors::QuickEvalError> {
+                let expr = expr.into();
+                let b_tree = $crate::parse_async(expr).await?; 
+                Ok($crate::eval_async(&b_tree, context).await?)
+            }
+
+            async {
+                let mut c = $crate::Context::default();
+                quick_eval::<_, $t>($e, &mut c).await
+            }
+        }
+    };
+    ( $e:expr, $c:expr; $t:ty ) => {
+        { 
+            async fn quick_eval<S: Into<String>, N: $crate::Number>(expr: S, context: &mut $crate::Context<N>) -> Result<$crate::Values<N>, $crate::errors::QuickEvalError> {
+                let expr = expr.into();
+                let b_tree = $crate::parse_async(expr).await?; 
+                Ok($crate::eval_async(&b_tree, context).await?)
             }
 
             quick_eval::<_, $t>($e, $c)

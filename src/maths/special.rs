@@ -1,6 +1,12 @@
+#[cfg(feature = "async")]
+use async_macro::function_async;
+
+use async_macro::async_call;
+
 use crate::{Value, maths::num_traits::Number};
 
 #[doc(hidden)]
+#[cfg_attr(feature = "async", function_async)]
 pub fn det_m<N: Number>(a: &Vec<Vec<N>>) -> Result<Value<N>, String> {
     if a.iter().filter(|r| r.len() != a[0].len()).count() != 0 || a.len() != a[0].len() {
         return Err("can't calculate determinant of a non-square matrix".to_string());
@@ -19,8 +25,9 @@ pub fn det_m<N: Number>(a: &Vec<Vec<N>>) -> Result<Value<N>, String> {
 }
 
 #[doc(hidden)]
+#[cfg_attr(feature = "async", function_async)]
 pub fn inv_m<N: Number>(a: &Vec<Vec<N>>) -> Result<Value<N>, String> {
-    match det_m(a) {
+    match async_call!(det_m(a)) {
         Err(_) => return Err("can't calculate inverse of a non-square matrix".to_string()),
         Ok(Value::Scalar(s)) if s == N::zero() => return Err("can't calculate inverse of a matrix with determinant 0".to_string()),
         _ => {}

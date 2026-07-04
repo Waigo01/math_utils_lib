@@ -7,10 +7,6 @@ use crate::{Variable, basetypes::InternalFunction, maths};
 /// The [FromStr] trait is used during parsing. The parser will first check if a given string can be parsed to a type
 /// implementing this trait. It is therefore very important that the from_str method returns an error if
 /// a string cannot be parsed.
-///
-/// Send and Sync only have to be implemented when using parallelism.
-#[cfg(feature = "parallelism")]
-#[cfg_attr(docsrs, doc(cfg(feature = "parallelism")))]
 pub trait Number:
 Add<Self, Output = Self> +
 Sub<Self, Output = Self> +
@@ -26,91 +22,8 @@ From<f64> +
 FromStr<Err: Debug> +
 Display +
 Debug +
-LowerExp +
 Send +
 Sync +
-'static
-{
-    /// returns the neutral element of addition of this number type.
-    fn zero() -> Self;
-    /// returns the neutral element of multiplication of this number type.
-    fn one() -> Self;
-    /// returns a small number indicating the precision of this number type.
-    ///
-    /// Don't choose epsilon too small, think what precision you want the calculations to be and choose accordingly.
-    fn epsilon() -> Self;
-    /// returns a small number indicating the display precision of this number type.
-    fn display_epsilon() -> Self;
-    /// returns the base/radix of this number type.
-    fn base() -> Self;
-    /// returns the nan value of this number type.
-    fn nan() -> Self;
-    /// returns the inf value of this number type.
-    fn infinity() -> Self;
-    /// returns the -inf value of this number type.
-    fn neg_infinity() -> Self;
-    /// returns the default constants that should be added to [Context::default()](crate::Context::default()).
-    fn default_vars() -> Vec<Variable<Self>>;
-    /// returns the default functions that should be added to
-    /// [Context::default()](crate::Context::default()).
-    fn default_functions() -> Vec<InternalFunction<Self>>;
-    /// provides the newton's method with starting guesses. Should return an iterator with the size
-    /// of n_values, which corresponds to the number of initial guesses.
-    fn newton_search_pattern(n_values: usize) -> Vec<Self>;
-    /// returns the arithmatic mean between two numbers of this type.
-    fn mean(self, other: Self) -> Self;
-    /// checks if the value is nan.
-    fn is_nan(self) -> bool;
-    /// checks if the value is infinite.
-    fn is_infinite(self) -> bool;
-    /// checks if the value is finitie.
-    fn is_finite(self) -> bool;
-    /// returns 1/value.
-    fn recip(self) -> Self;
-    /// returns the floor of the value.
-    fn floor(self) -> Self;
-    /// returns the ceil of the value.
-    fn ceil(self) -> Self;
-    /// rounds the value.
-    fn round(self) -> Self;
-    /// rounds the value and returns it as an integer. This method may return an Error if the value
-    /// cannot be returned as an integer. This method is only used to index into a vector and
-    /// raise a matrix to an integer power.
-    fn as_rounded_int(self) -> Result<i32, ()>;
-    /// returns the abs of the value.
-    fn abs(self) -> Self;
-    /// returns the value raised to an integer power.
-    fn powi(self, n: i32) -> Self;
-    /// returns the value raised to an arbitrary power.
-    fn powf(self, n: Self) -> Self;
-    /// returns the square root of the value.
-    fn sqrt(self) -> Self;
-}
-
-/// This trait the number as it is required by the parser and evaluator. 
-///
-/// The [FromStr] trait is used during parsing. The parser will first check if a given string can be parsed to a type
-/// implementing this trait. It is therefore very important that the from_str method returns an error if
-/// a string cannot be parsed.
-///
-/// Send and Sync only have to be implemented when using parallelism.
-#[cfg(not(feature = "parallelism"))]
-#[cfg_attr(docsrs, doc(cfg(not(feature = "parallelism"))))]
-pub trait Number:
-Add<Self, Output = Self> +
-Sub<Self, Output = Self> +
-Div<Self, Output = Self> +
-Mul<Self, Output = Self> +
-Neg<Output = Self> +
-Clone +
-Copy +
-PartialEq +
-PartialOrd +
-From<i32> +
-From<f64> +
-FromStr<Err: Debug> +
-Display +
-Debug +
 LowerExp +
 {
     /// returns the neutral element of addition of this number type.

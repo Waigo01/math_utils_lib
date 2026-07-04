@@ -1,3 +1,8 @@
+#[cfg(feature = "async")]
+use async_macro::function_async;
+
+use async_macro::async_call;
+
 use std::ops::Deref;
 
 use crate::errors::TokenizerError;
@@ -29,7 +34,7 @@ pub struct Group {
 pub enum Token {
     Group(Group),
     Ident(String),
-    Punct(String),
+    Punct(char),
     Literal(String)
 }
 
@@ -109,24 +114,23 @@ pub struct Tokenizer {
     ident_buffer: String,
     groups_buffer: Vec<Group>,
     literal_buffer: String,
-    current_double_punct: Option<(char, char)>
 }
 
-const STANDARD_OPERATION_PUNCTS: [char; 8] = ['@','-','*','/', '#', ',', '&', '|'];
-const DOUBLE_PUNCTS: [(char, char); 6] =[('+', '-'), ('=', '='), ('!', '='), ('<', '='), ('>', '='), ('^', '^')];
+const PUNCTS: [char; 14] = ['@', '-', '*', '/', '#', ',', '&', '|', '+', '=', '!', '<', '>', '^'];
 
 impl Tokenizer {
     pub fn new() -> Self {
-        Tokenizer { state: 0, stream: TokenStream::new(), ident_buffer: String::new(), groups_buffer: vec![], literal_buffer: String::new(), current_double_punct: None }
+        Tokenizer { state: 0, stream: TokenStream::new(), ident_buffer: String::new(), groups_buffer: vec![], literal_buffer: String::new() }
     }
 
+    #[cfg_attr(feature = "async", function_async)]
     pub fn tokenize<S: Into<String>>(&mut self, expr: S) -> Result<TokenStream, TokenizerError> {
         let whitespaced_string: String = expr.into().trim().split(" ").filter(|s| !s.is_empty()).collect();
         let whitespaced_string = whitespaced_string.replace("\n", "");
         let expr_chars = whitespaced_string.chars();
 
         for ch in expr_chars {
-            self.read_char(ch)?;
+            async_call!(self.read_char(ch))?;
         }
 
         if !self.ident_buffer.is_empty() {
@@ -142,6 +146,7 @@ impl Tokenizer {
         return Ok(self.stream.clone());
     }
 
+    #[cfg_attr(feature = "async", function_async)]
     fn push_token(&mut self, token: Token) {
         if self.groups_buffer.len() != 0 {
             self.groups_buffer.last_mut().unwrap().stream.push(token);
@@ -150,22 +155,23 @@ impl Tokenizer {
         }
     }
 
+    #[cfg_attr(feature = "async", function_async)]
     fn read_char(&mut self, ch: char) -> Result<(), TokenizerError> {
         match self.state {
             0 if ch.is_alphabetic() || ch == '\\' => {self.ident_buffer.push(ch); self.state = 1},
             1 if !ch.is_alphabetic() && ch != '_' => {
                 if self.ident_buffer.is_empty() || self.ident_buffer == "\\" {return Err(TokenizerError::InvalidIdentName)}
-                self.push_token(Token::Ident(self.ident_buffer.clone()));
+                async_call!(self.push_token(Token::Ident(self.ident_buffer.clone())));
                 self.ident_buffer = String::new();
                 self.state = 0;
-                self.read_char(ch)?;
+                async_call!(self.read_char(ch))?;
             },
             1 if ch == '_' => {self.ident_buffer.push(ch); self.state = 2;},
             1 if ch.is_alphabetic() => self.ident_buffer.push(ch),
             2 if ch != '{' => {
                 if !ch.is_alphanumeric() {return Err(TokenizerError::InvalidIdentName)}
                 self.ident_buffer.push(ch);
-                self.push_token(Token::Ident(self.ident_buffer.clone()));
+                async_call!(self.push_token(Token::Ident(self.ident_buffer.clone())));
                 self.ident_buffer = String::new();
                 self.state = 0;
             },
@@ -173,31 +179,19 @@ impl Tokenizer {
             3 if ch != '}' => self.ident_buffer.push(ch),
             3 if ch == '}' => {
                 self.ident_buffer.push(ch);
-                self.push_token(Token::Ident(self.ident_buffer.clone()));
+                async_call!(self.push_token(Token::Ident(self.ident_buffer.clone())));
                 self.ident_buffer = String::new();
                 self.state = 0;
             },
-
-            0 if STANDARD_OPERATION_PUNCTS.contains(&ch) => self.push_token(Token::Punct(ch.to_string())),
-            0 if let Some(double_punct) = DOUBLE_PUNCTS.iter().filter(|p| p.0 == ch).nth(0) => {
-                self.state = 4;
-                self.current_double_punct = Some(*double_punct);
-            },
-            4 if let Some(double_punct) = self.current_double_punct && double_punct.1 == ch => {self.push_token(Token::Punct(double_punct.0.to_string() + &double_punct.1.to_string())); self.state = 0;},
-            4 if let Some(double_punct) = self.current_double_punct => {
-                self.push_token(Token::Punct(double_punct.0.to_string()));
-                self.state = 0;
-                self.read_char(ch)?;
-            },
-
+            0 if PUNCTS.contains(&ch) => self.push_token(Token::Punct(ch)),
             0 if ch.is_numeric() => {self.literal_buffer.push(ch); self.state = 7},
             7 if ch.is_numeric() || ch == '.' => self.literal_buffer.push(ch),
             7 => {
                 if self.literal_buffer.len() == 0 || self.literal_buffer.ends_with(".") {return Err(TokenizerError::InvalidLiteral(self.literal_buffer.clone()))}
-                self.push_token(Token::Literal(self.literal_buffer.clone()));
+                async_call!(self.push_token(Token::Literal(self.literal_buffer.clone())));
                 self.literal_buffer = String::new();
                 self.state = 0;
-                self.read_char(ch)?;
+                async_call!(self.read_char(ch))?;
             },
 
             0 if ch == '{' => self.groups_buffer.push(Group { delimiter: Delimiter::Brace, stream: TokenStream::new() }),
@@ -206,17 +200,17 @@ impl Tokenizer {
             0 if ch == '}' => {
                 if self.groups_buffer.len() == 0 || self.groups_buffer.last().unwrap().delimiter != Delimiter::Brace {return Err(TokenizerError::UnmatchedDelimiter)}
                 let group = self.groups_buffer.remove(self.groups_buffer.len()-1);
-                self.push_token(Token::Group(group));
+                async_call!(self.push_token(Token::Group(group)));
             },
             0 if ch == ')' => { 
                 if self.groups_buffer.len() == 0 || self.groups_buffer.last().unwrap().delimiter != Delimiter::Parenthesis {return Err(TokenizerError::UnmatchedDelimiter)}
                 let group = self.groups_buffer.remove(self.groups_buffer.len()-1);
-                self.push_token(Token::Group(group));
+                async_call!(self.push_token(Token::Group(group)));
             },
             0 if ch == ']' => { 
                 if self.groups_buffer.len() == 0 || self.groups_buffer.last().unwrap().delimiter != Delimiter::Bracket {return Err(TokenizerError::UnmatchedDelimiter)}
                 let group = self.groups_buffer.remove(self.groups_buffer.len()-1);
-                self.push_token(Token::Group(group));
+                async_call!(self.push_token(Token::Group(group)));
             },
 
             0 if !ch.is_alphanumeric() => return Err(TokenizerError::InvalidPunct(ch)),

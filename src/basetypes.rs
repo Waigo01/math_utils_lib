@@ -131,7 +131,7 @@ pub struct Context<N: Number> {
     pub vars: Vec<Variable<N>>,
     pub funs: Vec<Function<N>>,
     #[cfg_attr(feature = "serde", serde(skip, default = "N::default_functions"))]
-    pub internal_funs: Vec<InternalFunction<N>>
+    pub internal_funs: Vec<InternalFunction<N>>,
 }
 
 impl<N: Number> Default for Context<N> {
@@ -152,7 +152,7 @@ impl<N: Number> Default for Context<N> {
 impl<N: Number> Context<N> {
     /// Creates a context containing only the given variables and functions.
     pub fn new<V: AsRef<[Variable<N>]>, F: AsRef<[Function<N>]>>(vars: V, funs: F) -> Context<N> {
-        Context {vars: vars.as_ref().to_vec(), funs: funs.as_ref().to_vec(), internal_funs: N::default_functions()}
+        Context {vars: vars.as_ref().to_vec(), funs: funs.as_ref().to_vec(), internal_funs: N::default_functions() }
     }
     /// Creates a context containing the given variables and functions in addition to the default
     /// variables and functions.

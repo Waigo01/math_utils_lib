@@ -1,0 +1,16 @@
+[package]
+name = "async_macro"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+syn = { version = "2.0.118", features = ["full"], optional = true }
+proc-macro2 = { version = "1.0.106", optional = true }
+quote = { version = "1.0.46", optional = true }
+
+[features]
+default = []
+async_attr = ["dep:syn", "dep:proc-macro2", "dep:quote"]

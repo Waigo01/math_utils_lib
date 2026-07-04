@@ -1,5 +1,13 @@
+#[cfg(feature = "async")]
+use async_macro::function_async;
+#[cfg(feature = "async")]
+use crate::{maths::calculus::calculate_derivative_newton_async, evaluator::eval_async};
+
+use async_macro::async_call;
+
 use crate::{Context, basetypes::{AST, Value, Variable}, errors::EvalError, evaluator::eval, maths::{calculus::calculate_derivative_newton, num_traits::Number}};
 
+#[cfg_attr(feature = "async", function_async)]
 fn clean_results<N: Number>(res: &[Value<N>]) -> Vec<Value<N>> {
     if res.len() == 0 {
         return vec![];
@@ -37,6 +45,7 @@ fn clean_results<N: Number>(res: &[Value<N>]) -> Vec<Value<N>> {
     return new_res;
 }
 
+#[cfg_attr(feature = "async", function_async)]
 fn gauss_algorithm<N: Number>(v: &mut Vec<Vec<N>>) -> Result<Value<N>, EvalError> {
     if v.len()+1 != v[0].len() {
         return Err(EvalError::UnderdeterminedSystem);
@@ -96,6 +105,7 @@ fn gauss_algorithm<N: Number>(v: &mut Vec<Vec<N>>) -> Result<Value<N>, EvalError
     return Ok(Value::Vector(result_vec));
 }
 
+#[cfg_attr(feature = "async", function_async)]
 fn jacobi_and_gauss<N: Number>(search_expres: &[AST<N>], x: &[Variable<N>], context: &mut Context<N>, fx: &Vec<N>) -> Result<Vec<Variable<N>>, EvalError> {
     let mut jacobi: Vec<Vec<N>> = vec![];
 
@@ -111,7 +121,7 @@ fn jacobi_and_gauss<N: Number>(search_expres: &[AST<N>], x: &[Variable<N>], cont
                     added_vars += 1;
                 }
             }
-            let derivative = calculate_derivative_newton(&search_expres[i], &x[j].name, x[j].values.get(0).unwrap(), Some(Value::Scalar(fx[i])), &mut Context::new(&vars.iter().map(|v| v.to_owned().to_owned()).collect::<Vec<Variable<N>>>(), &context.funs))?.get_scalar().unwrap();
+            let derivative = async_call!(calculate_derivative_newton(&search_expres[i], &x[j].name, x[j].values.get(0).unwrap(), Some(Value::Scalar(fx[i])), &mut Context::new(&vars.iter().map(|v| v.to_owned().to_owned()).collect::<Vec<Variable<N>>>(), &context.funs)))?.get_scalar().unwrap();
             row.push(derivative);
             for _ in 0..added_vars {
                 vars.remove(vars.len()-1);
@@ -124,7 +134,7 @@ fn jacobi_and_gauss<N: Number>(search_expres: &[AST<N>], x: &[Variable<N>], cont
         jacobi[i].push(-N::one() * fx[i]);
     }
 
-    let x_new_minus_x = gauss_algorithm(&mut jacobi)?;
+    let x_new_minus_x = async_call!(gauss_algorithm(&mut jacobi))?;
 
     let mut x_new = vec![];
 
@@ -140,13 +150,14 @@ enum NewtonReturn<N: Number> {
     FinishedX(Vec<Variable<N>>) 
 }
 
+#[cfg_attr(feature = "async", function_async)]
 fn newton<N: Number>(search_expres: &Vec<AST<N>>, check_expres: &Vec<AST<N>> , x: &Vec<Variable<N>>, context: &mut Context<N>) -> Result<NewtonReturn<N>, EvalError> {
     let mut fx = vec![];
     for i in x {
         context.add_var(i);
     }
     for i in search_expres {
-        fx.push(eval(i, context)?.get(0).unwrap().get_scalar().unwrap());
+        fx.push(async_call!(eval(i, context))?.get(0).unwrap().get_scalar().unwrap());
     }
     for i in x {
         context.remove_var(&i.name);
@@ -182,7 +193,7 @@ fn newton<N: Number>(search_expres: &Vec<AST<N>>, check_expres: &Vec<AST<N>> , x
         } 
     }
 
-    let new_x = jacobi_and_gauss(search_expres, x, context, &fx)?;
+    let new_x = async_call!(jacobi_and_gauss(search_expres, x, context, &fx))?;
 
     for i in &new_x {
         if i.values.get(0).unwrap().is_inf_or_nan() {
@@ -193,6 +204,7 @@ fn newton<N: Number>(search_expres: &Vec<AST<N>>, check_expres: &Vec<AST<N>> , x
     return Ok(NewtonReturn::NextX(new_x));
 }
 
+#[cfg_attr(feature = "async", function_async)]
 fn generate_combinations(arr: Vec<usize>, len: usize, prev_arr: Vec<usize>) -> Vec<Vec<usize>> {
     if prev_arr.len() == len {
         return vec![prev_arr];
@@ -201,7 +213,7 @@ fn generate_combinations(arr: Vec<usize>, len: usize, prev_arr: Vec<usize>) -> V
     for (i, val) in arr.iter().enumerate() {
         let mut prev_arr_extended = prev_arr.clone();
         prev_arr_extended.push(*val);
-        combs.append(&mut generate_combinations(arr[i+1..].to_vec(), len, prev_arr_extended));
+        combs.append(&mut async_call!(generate_combinations(arr[i+1..].to_vec(), len, prev_arr_extended)));
     }
     return combs;
 }
@@ -281,6 +293,7 @@ impl<N: Number> RootFinder<N> {
     /// In the case of a system of equations results will be represented as a vector with the
     /// result order being that in which the search_vars_names have been passed to the
     /// [RootFinder::new] function.
+    #[cfg_attr(feature = "async", function_async)]
     pub fn find_roots(&self) -> Result<Vec<Value<N>>, EvalError> {
         for i in &self.combinations {
             let mut search_expres = vec![];
@@ -293,7 +306,7 @@ impl<N: Number> RootFinder<N> {
             let mut results = vec![];
             let search_pattern = N::newton_search_pattern(2000);
 
-            #[cfg(feature = "parallelism")]
+            #[cfg(feature = "multithreading")]
             {
                 let thread_count = std::thread::available_parallelism().unwrap().get();
                 let var_count = 2000/thread_count;
@@ -359,7 +372,7 @@ impl<N: Number> RootFinder<N> {
                 }
             }
 
-            #[cfg(not(feature = "parallelism"))]
+            #[cfg(not(feature = "multithreading"))]
             {
             let mut local_context = self.context.clone();
                 'solve_loop_0: for j in search_pattern {

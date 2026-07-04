@@ -1,3 +1,8 @@
+#[cfg(feature = "async")]
+use async_macro::function_async;
+
+use async_macro::async_call;
+
 use crate::{Complex, RealNumber, StandardFunctions, basetypes::{AST, AdvancedOperation, Operation}, maths::num_traits::Number, tokenizer::{Token, TokenStream}};
 
 #[doc(hidden)]
@@ -86,7 +91,7 @@ pub fn get_args(stream: &[Box<Token>]) -> Vec<TokenStream> {
     let mut args = vec![];
     let mut arg = vec![];
     for token in stream {
-        if let Token::Punct(ref s) = **token && s == "," {
+        if let Token::Punct(ref s) = **token && *s == ',' {
             args.push(TokenStream::from_tokens(arg.clone()));
             arg.clear();
             continue;
@@ -145,6 +150,7 @@ pub fn lanczos_approx<N: Number + RealNumber + StandardFunctions>(mut z: Complex
 }
 
 #[doc(hidden)]
+#[cfg_attr(feature = "async", function_async)]
 pub fn replace_in_ast<N: Number>(ast: AST<N>, search: &AST<N>, replace: &AST<N>) -> AST<N> {
     if ast == *search {
         return replace.clone();
@@ -153,42 +159,59 @@ pub fn replace_in_ast<N: Number>(ast: AST<N>, search: &AST<N>, replace: &AST<N>)
             AST::Operation(op) => {
                 match *op {
                     Operation::SimpleOperation { op_type, left, right } => {
-                        AST::Operation(Box::new(Operation::SimpleOperation { op_type, left: replace_in_ast(left, search, replace), right: replace_in_ast(right, search, replace) }))
+                        AST::Operation(Box::new(Operation::SimpleOperation { op_type, left: async_call!(replace_in_ast(left, search, replace)), right: async_call!(replace_in_ast(right, search, replace)) }))
                     },
                     Operation::AdvancedOperation(aop) => {
                         AST::Operation(Box::new(Operation::AdvancedOperation(
                             match aop {
                                 AdvancedOperation::Sum { expr, lower_bound, upper_bound, in_terms_of } => {
-                                    AdvancedOperation::Sum { expr: replace_in_ast(expr, search, replace), in_terms_of: in_terms_of, lower_bound: replace_in_ast(lower_bound, search, replace), upper_bound: replace_in_ast(upper_bound, search, replace) }
+                                    AdvancedOperation::Sum { expr: async_call!(replace_in_ast(expr, search, replace)), in_terms_of: in_terms_of, lower_bound: async_call!(replace_in_ast(lower_bound, search, replace)), upper_bound: async_call!(replace_in_ast(upper_bound, search, replace)) }
                                 },
                                 AdvancedOperation::Integral { expr, in_terms_of, lower_bound, upper_bound } => {
-                                    AdvancedOperation::Integral { expr: replace_in_ast(expr, search, replace), in_terms_of: in_terms_of, lower_bound: replace_in_ast(lower_bound, search, replace), upper_bound: replace_in_ast(upper_bound, search, replace) }
+                                    AdvancedOperation::Integral { expr: async_call!(replace_in_ast(expr, search, replace)), in_terms_of: in_terms_of, lower_bound: async_call!(replace_in_ast(lower_bound, search, replace)), upper_bound: async_call!(replace_in_ast(upper_bound, search, replace)) }
                                 },
-                                AdvancedOperation::Equation { equations, search_vars } => {
-                                    AdvancedOperation::Equation { equations: equations.into_iter().map(|(left, right)| (replace_in_ast(left, search, replace), replace_in_ast(right, search, replace))).collect(), search_vars }
+                                AdvancedOperation::Equation { mut equations, search_vars } => {
+                                    for equation in equations.iter_mut() {
+                                        *equation = (async_call!(replace_in_ast(equation.0.clone(), search, replace)), async_call!(replace_in_ast(equation.1.clone(), search, replace)));
+                                    }
+                                    AdvancedOperation::Equation { equations, search_vars }
                                 },
                                 AdvancedOperation::Derivative { expr, in_terms_of, at } => {
-                                    AdvancedOperation::Derivative { expr: replace_in_ast(expr, search, replace), in_terms_of, at: replace_in_ast(at, search, replace) }
+                                    AdvancedOperation::Derivative { expr: async_call!(replace_in_ast(expr, search, replace)), in_terms_of, at: async_call!(replace_in_ast(at, search, replace)) }
                                 },
                                 AdvancedOperation::Conditional { condition, then, r#else } => {
-                                    AdvancedOperation::Conditional { condition: replace_in_ast(condition, search, replace), then: replace_in_ast(then, search, replace), r#else: if let Some(else_ast) = r#else {Some(replace_in_ast(else_ast, search, replace))} else {None} }
+                                    AdvancedOperation::Conditional { condition: async_call!(replace_in_ast(condition, search, replace)), then: async_call!(replace_in_ast(then, search, replace)), r#else: if let Some(else_ast) = r#else {Some(async_call!(replace_in_ast(else_ast, search, replace)))} else {None} }
                                 }
                             }
                         )))
                     }
                 }
             },
-            AST::List(asts) => {
-                AST::List(asts.into_iter().map(|ast| replace_in_ast(ast, search, replace)).collect())
+            AST::List(mut asts) => {
+                for ast in asts.iter_mut() {
+                    *ast = async_call!(replace_in_ast(ast.clone(), search, replace));
+                }
+                AST::List(asts)
             },
-            AST::Function { name, inputs } => {
-                AST::Function { name: name.to_string(), inputs: inputs.into_iter().map(|ast| replace_in_ast(ast, search, replace)).collect() }
+            AST::Function { name, mut inputs } => {
+                for input in inputs.iter_mut() {
+                    *input = async_call!(replace_in_ast(input.clone(), search, replace));
+                }
+                AST::Function { name, inputs }
             },
-            AST::Vector(elements) => {
-                AST::Vector(elements.into_iter().map(|ast| replace_in_ast(ast, search, replace)).collect())
+            AST::Vector(mut elements) => {
+                for element in elements.iter_mut() {
+                    *element = async_call!(replace_in_ast(element.clone(), search, replace));
+                }
+                AST::Vector(elements)
             },
-            AST::Matrix(rows) => {
-                AST::Matrix(rows.into_iter().map(|row| row.into_iter().map(|el| replace_in_ast(el, search, replace)).collect()).collect())
+            AST::Matrix(mut rows) => {
+                for row in rows.iter_mut() {
+                    for element in row.iter_mut() {
+                        *element = async_call!(replace_in_ast(element.clone(), search, replace));
+                    }
+                }
+                AST::Matrix(rows)
             },
             AST::Scalar(s) => {
                 AST::Scalar(s.clone())
