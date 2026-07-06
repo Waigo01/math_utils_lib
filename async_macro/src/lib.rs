@@ -71,8 +71,26 @@ pub fn function_async(_attr: TokenStream, item: TokenStream) -> TokenStream {
         func.sig.ident = Ident::new(&format!("{}_async", func.sig.ident), Span::call_site());
     }
 
-    let stmt = parse::<syn::Stmt>("tokio::task::yield_now().await;".parse().unwrap()).unwrap();
-    func.block.stmts.insert(0, stmt);    
+    let yielded = r"let mut yielded = false;";
+
+    let poll_fn = r"
+        std::future::poll_fn(|cx| {
+            if yielded {
+                return std::task::Poll::Ready(());
+            }
+
+            yielded = true;
+
+            cx.waker().wake_by_ref();
+
+            std::task::Poll::Pending
+        }).await;
+    ";
+
+    let stmt = parse::<syn::Stmt>(poll_fn.parse().unwrap()).unwrap();
+    func.block.stmts.insert(0, stmt);
+    let stmt = parse::<syn::Stmt>(yielded.parse().unwrap()).unwrap();
+    func.block.stmts.insert(0, stmt);
 
     return_item.extend(TokenStream::from(func.to_token_stream()));
 
