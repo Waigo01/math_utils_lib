@@ -2018,11 +2018,13 @@ version = "0.5.0"
 dependencies = [
  "async_macro",
  "embed-doc-image",
+ "js-sys",
  "mathjax_svg",
  "resvg",
  "serde",
  "tectonic",
  "tokio",
+ "wasm-bindgen",
 ]
 
 [[package]]

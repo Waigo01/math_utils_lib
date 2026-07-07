@@ -33,6 +33,7 @@ This repo/crate provides a number of math utilities:
 - output: enables dependencies in order to provide rendered PDFs, PNGs and SVGs.
 - serde: enables Serialize and Deserialize implementations on most structs and enums.
 - async: exposes async versions of quick_eval, eval and parse.
+- wasm: add support for non-blocking async wasm execution.
 
 ## Usage
 

@@ -15,7 +15,7 @@ features = ["doc-images", "output", "async"]
 rustdoc-args = ["--cfg", "docsrs"]
 
 [dev-dependencies]
-tokio = { version = "1", features = ["time", "rt", "macros"] }
+tokio = { version = "1", features = ["time", "rt", "macros", "rt-multi-thread"] }
 
 [dependencies]
 embed-doc-image = { version = "0.1.4", optional = true }
@@ -24,6 +24,8 @@ tectonic = { version = "0.16.9", features = ["external-harfbuzz"], optional = tr
 resvg = { version = "0.43.0", optional = true }
 serde = { version = "1.0.217", features = ["derive"], optional = true }
 async_macro = { path = "./async_macro" }
+js-sys = { version = "0.3", optional = true }
+wasm-bindgen = { version = "0.2", optional = true }
 
 [features]
 default = []
@@ -32,3 +34,4 @@ row-major = []
 output = ["dep:mathjax_svg", "dep:tectonic", "dep:resvg"]
 serde = ["dep:serde"]
 async = ["async_macro/async_attr"]
+wasm = ["async_macro/wasm", "async", "dep:js-sys", "dep:wasm-bindgen"]

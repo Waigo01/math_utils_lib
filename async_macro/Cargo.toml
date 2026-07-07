@@ -14,3 +14,4 @@ quote = { version = "1.0.46", optional = true }
 [features]
 default = []
 async_attr = ["dep:syn", "dep:proc-macro2", "dep:quote"]
+wasm = []

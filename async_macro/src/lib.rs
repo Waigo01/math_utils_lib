@@ -6,7 +6,7 @@ use quote::ToTokens;
 #[cfg(feature = "async_attr")]
 use proc_macro2::Span;
 #[cfg(feature = "async_attr")]
-use syn::{Expr, ExprCall, ExprMethodCall, Ident, ItemFn, parse, parse_macro_input, token::Async};
+use syn::{Block, Expr, ExprCall, ExprMethodCall, Ident, ItemFn, parse, parse_macro_input, token::Async};
 
 #[proc_macro]
 pub fn async_call(item: TokenStream) -> TokenStream {
@@ -71,26 +71,56 @@ pub fn function_async(_attr: TokenStream, item: TokenStream) -> TokenStream {
         func.sig.ident = Ident::new(&format!("{}_async", func.sig.ident), Span::call_site());
     }
 
-    let yielded = r"let mut yielded = false;";
+    let async_yield = r"{
+        async fn yield_async() {
+            let mut yielded = false;
+            std::future::poll_fn(|cx| {
+                if yielded {
+                    return std::task::Poll::Ready(());
+                }
 
-    let poll_fn = r"
-        std::future::poll_fn(|cx| {
-            if yielded {
-                return std::task::Poll::Ready(());
+                yielded = true;
+
+                cx.waker().wake_by_ref();
+
+                std::task::Poll::Pending
+            }).await;
+        }
+
+        yield_async().await;
+    }";
+
+    let new_block = parse::<Block>(async_yield.parse().unwrap()).unwrap();
+
+    for stmt in new_block.stmts.iter().rev() {
+        func.block.stmts.insert(0, stmt.clone());
+    }
+
+    #[cfg(feature = "wasm")]
+    {
+        let async_yield_wasm = r#"{
+            async fn yield_async_wasm() {
+                use wasm_bindgen::prelude::*;
+                #[wasm_bindgen]
+                extern "C" {
+                    #[wasm_bindgen(js_name = queueMicrotask)]
+                    fn queue_microtask(callback: &js_sys::Function);
+                }
+                let promise = js_sys::Promise::new(&mut |resolve, _reject| {
+                    setTimeout(&resolve, 0.);
+                });
+                let _ = promise.await;
             }
 
-            yielded = true;
+            yield_async_wasm().await;
+        }"#;
 
-            cx.waker().wake_by_ref();
+        let new_block = parse::<Block>(async_yield_wasm.parse().unwrap()).unwrap();
 
-            std::task::Poll::Pending
-        }).await;
-    ";
-
-    let stmt = parse::<syn::Stmt>(poll_fn.parse().unwrap()).unwrap();
-    func.block.stmts.insert(0, stmt);
-    let stmt = parse::<syn::Stmt>(yielded.parse().unwrap()).unwrap();
-    func.block.stmts.insert(0, stmt);
+        for stmt in new_block.stmts.iter().rev() {
+            func.block.stmts.insert(0, stmt.clone());
+        }
+    }
 
     return_item.extend(TokenStream::from(func.to_token_stream()));
 
