@@ -103,8 +103,7 @@ pub fn function_async(_attr: TokenStream, item: TokenStream) -> TokenStream {
                 use wasm_bindgen::prelude::*;
                 #[wasm_bindgen]
                 extern "C" {
-                    #[wasm_bindgen(js_name = queueMicrotask)]
-                    fn queue_microtask(callback: &js_sys::Function);
+                    pub fn setTimeout(func: &js_sys::Function, time: f64);
                 }
                 let promise = js_sys::Promise::new(&mut |resolve, _reject| {
                     setTimeout(&resolve, 0.);

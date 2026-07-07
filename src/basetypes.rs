@@ -26,7 +26,7 @@ const VAR_SYMBOLS: [(&str, &str); 48] = [("\\alpha", "𝛼"), ("\\Alpha", "𝛢"
 /// ```
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Variable<N: Number> {
+pub struct Variable<N> {
     pub name: String,
     pub values: Values<N>
 }
@@ -70,7 +70,7 @@ impl<N: Number> Display for Variable<N> {
 /// ```
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Function<N: Number> {
+pub struct Function<N> {
     pub name: String,
     pub ast: AST<N>,
     pub inputs: Vec<String>
@@ -102,7 +102,7 @@ impl<N: Number> Display for Function<N> {
 
 /// Provides a way to call an internal rust function from the evaluation context.
 #[derive(Debug, Clone)]
-pub struct InternalFunction<N: Number> {
+pub struct InternalFunction<N> {
     pub name: String,
     pub n_arguments: usize,
     pub function: fn(Vec<Value<N>>) -> Result<Value<N>, String>
@@ -127,7 +127,7 @@ impl<N: Number> InternalFunction<N> {
 /// ```
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Context<N: Number> {
+pub struct Context<N> {
     pub vars: Vec<Variable<N>>,
     pub funs: Vec<Function<N>>,
     #[cfg_attr(feature = "serde", serde(skip, default = "N::default_functions"))]
@@ -299,7 +299,7 @@ macro_rules! value {
 /// ```
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum Value<N> where N: Number {
+pub enum Value<N> {
     Matrix(Vec<Vec<N>>),
     Vector(Vec<N>),
     Scalar(N)
@@ -694,7 +694,7 @@ impl<N: Number> Into<Values<N>> for Vec<Value<N>> {
 /// ```
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Values<N: Number>(Vec<Value<N>>);
+pub struct Values<N>(Vec<Value<N>>);
 
 impl<N: Number> Values<N> {
     /// Creates the values from a Vec of [Value].
@@ -757,7 +757,7 @@ impl<N: Number> Display for Values<N> {
 /// - Operation
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum AST<N: Number> {
+pub enum AST<N> {
     Scalar(N),
     Vector(Vec<AST<N>>),
     Matrix(Vec<Vec<AST<N>>>),
@@ -1149,7 +1149,7 @@ pub enum SimpleOpType {
 /// construct an AST from a mathematical expression.
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum Operation<N: Number> {
+pub enum Operation<N> {
     SimpleOperation {
         op_type: SimpleOpType,
         left: AST<N>,
@@ -1161,7 +1161,7 @@ pub enum Operation<N: Number> {
 /// Used to specify an advanced operation for more complex mathematical operations.
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum AdvancedOperation<N: Number>{
+pub enum AdvancedOperation<N>{
     Integral {
         expr: AST<N>,
         in_terms_of: String,

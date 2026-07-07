@@ -15,7 +15,7 @@ features = ["doc-images", "output", "async"]
 rustdoc-args = ["--cfg", "docsrs"]
 
 [dev-dependencies]
-tokio = { version = "1", features = ["time", "rt", "macros", "rt-multi-thread"] }
+tokio = { version = "1", features = ["time", "rt", "macros"] }
 
 [dependencies]
 embed-doc-image = { version = "0.1.4", optional = true }
