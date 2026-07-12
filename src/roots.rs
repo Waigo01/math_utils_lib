@@ -174,7 +174,7 @@ fn newton<N: Number>(search_expres: &Vec<AST<N>>, check_expres: &Vec<AST<N>> , x
             context.add_var(i);
         }
         for i in check_expres {
-            check_results.push(eval(i, context)?.get(0).unwrap().get_scalar().unwrap());
+            check_results.push(async_call!(eval(i, context))?.get(0).unwrap().get_scalar().unwrap());
         }
         for i in x {
             context.remove_var(&i.name);

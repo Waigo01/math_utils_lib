@@ -29,7 +29,7 @@ This repo/crate provides a number of math utilities:
 
 ## Crate features
 
-- row-major: parses matrices in a row major format.
+- col-major: parse matrices in a column major format.
 - output: enables dependencies in order to provide rendered PDFs, PNGs and SVGs.
 - serde: enables Serialize and Deserialize implementations on most structs and enums.
 - async: exposes async versions of quick_eval, eval and parse.
@@ -75,10 +75,8 @@ assert_eq!(res[0], value!(9));
 
 ```rust
 // The library also has full matrix and vector support.
-let res = quick_eval!("[[3, 4, 5], [1, 2, 3], [5, 6, 7]]")?.to_vec();
+let res = quick_eval!("[[3, 1, 5], [4, 2, 6], [5, 3, 7]]")?.to_vec();
 
-// Notice that the matrix is by default parsed in a column major format,
-// whereas internally the library uses a row-major format.
 assert_eq!(res[0], value!(3, 1, 5; 4, 2, 6; 5, 3, 7));
 ```
 

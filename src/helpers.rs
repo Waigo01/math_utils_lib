@@ -42,22 +42,32 @@ pub fn round_and_format<N>(x: N, latex: bool) -> String where N: Number {
         return r"-\infty".to_string();
     } else if x.is_infinite() && latex {
         return r"\infty".to_string();
-    } else if (x/N::display_epsilon()).round()*N::display_epsilon() == N::zero() && !latex && x != N::zero() {
+    } else if x.abs() < N::scientific_epsilon() && x != N::zero() {
         let mut scientific = format!("{:+e}", x);
         if scientific.chars().nth(0).unwrap() == '+' {
             scientific = scientific[1..].to_string();
         }
-        return scientific;
-    } else if (x/N::display_epsilon()).round()*N::display_epsilon() == N::zero() && x != N::zero() {
+        if latex {
+            let left = scientific.split("e").nth(0).unwrap();
+            let right = scientific.split("e").nth(1).unwrap();
+            return format!("{}\\cdot 10^{{{}}}", left, right);
+        } else {
+            return scientific;
+        }
+    } else if x.abs() > N::display_epsilon().recip(){
         let mut scientific = format!("{:+e}", x);
         if scientific.chars().nth(0).unwrap() == '+' {
             scientific = scientific[1..].to_string();
         }
-        let left = scientific.split("e").nth(0).unwrap();
-        let right = scientific.split("e").nth(1).unwrap();
-        return format!("{}\\cdot 10^{{{}}}", left, right);
+        if latex {
+            let left = scientific.split("e").nth(0).unwrap();
+            let right = scientific.split("e").nth(1).unwrap();
+            return format!("{}\\cdot 10^{{{}}}", left, right);
+        } else {
+            return scientific;
+        }
     } else {
-        let rounded = (x/N::display_epsilon()).round()*N::display_epsilon();
+        let rounded = (x*N::display_epsilon().recip()).round()/N::display_epsilon().recip();
         let rounded_string;
         if rounded == N::zero() && rounded.to_string().len() > 1 {
             rounded_string = rounded.to_string()[1..].to_string();

@@ -19,7 +19,7 @@ const MAX_RECURSION: i32 = 100;
 #[cfg(not(debug_assertions))]
 const MAX_RECURSION: i32 = 800;
 
-#[cfg_attr(feature = "async", function_async)]
+#[cfg_attr(feature = "async", function_async(yielding))]
 fn eval_rec<N: Number>(b: &AST<N>, context: &mut Context<N>, last_fn: &str, depth: i32) -> Result<Vec<Value<N>>, EvalError> {
     match b {
         AST::Scalar(s) => return Ok(vec![Value::Scalar(N::from(*s))]),

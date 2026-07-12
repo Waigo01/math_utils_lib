@@ -72,19 +72,20 @@ fn parse_matrix_vector<N: Number>(s: &Token) -> Result<AST<N>, ParserError> {
                     return Err(ParserError::NotRectMatrix);
                 }
             }
-            #[cfg(not(feature = "row-major"))]
-            let mut col_matrix = vec![];
-            #[cfg(not(feature = "row-major"))]
-            for i in 0..output_m[0].len() {
-                let mut row = vec![];
-                for j in 0..output_m.len() {
-                    row.push(output_m[j][i].clone());
+
+            #[cfg(feature = "col-major")]
+            {
+                let mut col_matrix = vec![];
+                for i in 0..output_m[0].len() {
+                    let mut row = vec![];
+                    for j in 0..output_m.len() {
+                        row.push(output_m[j][i].clone());
+                    }
+                    col_matrix.push(row);
                 }
-                col_matrix.push(row);
+                return Ok(AST::Matrix(col_matrix));
             }
-            #[cfg(not(feature = "row-major"))]
-            return Ok(AST::Matrix(col_matrix));
-            #[cfg(feature = "row-major")]
+            
             return Ok(AST::Matrix(output_m));
         } else {
             return Err(ParserError::ParseValue(s.to_string()));

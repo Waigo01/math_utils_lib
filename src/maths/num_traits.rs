@@ -32,10 +32,14 @@ LowerExp +
     fn one() -> Self;
     /// returns a small number indicating the precision of this number type. 
     ///
-    /// Don't choose epsilon too small, think what precision you want the calculations to be and choose accordingly.
+    /// don't choose epsilon too small, think what precision you want the calculations to be and choose accordingly.
     fn epsilon() -> Self;
     /// returns a small number indicating the display precision of this number type.
     fn display_epsilon() -> Self;
+    /// returns a small number which indicates when to print values in scientific notation.
+    ///
+    /// if a value abs(x) < scientific_epsilon then print x in scientific notation. If a value abs(x) > 1/display_epsilon then print x in scientific notation.
+    fn scientific_epsilon() -> Self;
     /// returns the base/radix of this number type.
     fn base() -> Self;
     /// returns the nan value of this number type.

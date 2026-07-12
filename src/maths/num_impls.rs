@@ -82,6 +82,9 @@ impl Number for f64 {
     fn display_epsilon() -> Self {
         1e-6
     }
+    fn scientific_epsilon() -> Self {
+        1e-3
+    }
     fn base() -> Self {
         10.
     }
@@ -297,6 +300,9 @@ impl<N: Number + StandardFunctions + RealNumber> Number for Complex<N> {
     }
     fn display_epsilon() -> Self {
         Complex { re: N::display_epsilon(), im: N::zero() }
+    }
+    fn scientific_epsilon() -> Self {
+        Complex { re: N::scientific_epsilon(), im: N::zero() }
     }
     fn base() -> Self {
         Complex { re: N::base(), im: N::zero() }

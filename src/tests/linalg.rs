@@ -46,7 +46,7 @@ fn large_matrix_mult() -> Result<(), MathLibError> {
 
 #[test]
 fn matrix_vector_mult2() -> Result<(), MathLibError> {
-    let res = quick_eval!("[[1, 0], [0, 6], [0, 0]]*[3, 4, 5]")?.to_vec();
+    let res = quick_eval!("[[1, 0, 0], [0, 6, 0]]*[3, 4, 5]")?.to_vec();
 
     assert_eq!(res[0], value!(3, 24));
 

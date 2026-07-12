@@ -17,6 +17,15 @@ fn variable_as_latex() -> Result<(), MathLibError> {
     Ok(())
 }
 
+#[test]
+fn proper_rounding() -> Result<(), MathLibError> {
+    let res = quick_eval!("9.81")?.to_vec();
+
+    assert_eq!(res[0].to_latex(), "9.81");
+
+    Ok(())
+}
+
 // #[cfg(feature = "output")]
 // #[test]
 // fn output1() -> Result<(), MathLibError> {

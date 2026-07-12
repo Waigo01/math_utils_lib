@@ -10,13 +10,19 @@ const VAR_SYMBOLS: [(&str, &str); 48] = [("\\alpha", "𝛼"), ("\\Alpha", "𝛢"
 ("\\Pi", "𝛱"), ("\\rho", "𝜌"), ("\\Rho", "𝛲"), ("\\sigma", "𝜎"), ("\\Sigma", "𝛴"), ("\\tau", "𝜏"), ("\\Tau", "𝛵"), ("\\upsilon", "𝜐"),
 ("\\Upsilon", "𝛶"), ("\\phi", "𝜑"), ("\\Phi", "𝛷"), ("\\xi", "𝜒"), ("\\Xi", "𝛸"), ("\\psi", "𝜓"), ("\\Psi", "𝛹"), ("\\omega", "𝜔"), ("\\Omega", "𝛺")];
 
+const VAR_REPLACEMENTS: [&str; 24] = ["alpha", "beta", "gamma", "delta", "epsilon", "zeta", "eta", "theta", "iota", "kappa", "lambda", "mu", "nu", "xi", "omicron", "pi", "rho", "sigma", "tau", "upsilon", "phi", "xi", "psi", "omega"];
+
 /// Describes a Variable that can be used in the context of an evaluation. 
 /// 
 /// Variables in this implementation can contain multiple values, in order to make the storage of
 /// results from equations easier.
 /// 
 /// Variable names are not allowed to contain numbers outside of LaTeX style subscript. Additionally
-/// they must start with an alphabetical letter or a "\\".
+/// they must start with an alphabetical letter or a "\".
+///
+/// Variable names that have the name of a greek letter before any possible subscript are
+/// automatically replaced by the greek letter when latex printing (You don't have to type "\pi",
+/// just "pi" will do).
 /// 
 /// # Example
 /// 
@@ -127,7 +133,7 @@ impl<N: Number> InternalFunction<N> {
 /// ```
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Context<N> {
+pub struct Context<N: Number> {
     pub vars: Vec<Variable<N>>,
     pub funs: Vec<Function<N>>,
     #[cfg_attr(feature = "serde", serde(skip, default = "N::default_functions"))]
@@ -381,11 +387,11 @@ impl<N> Value<N> where N: Number {
     /// Rounds the value to the precision of the number type.
     pub fn round_to_precision(&self) -> Value<N> {
         match self {
-            Value::Scalar(a) => return Value::Scalar((*a/N::epsilon()).round()*N::epsilon()),
+            Value::Scalar(a) => return Value::Scalar((*a*N::epsilon().recip()).round()/N::epsilon().recip()),
             Value::Vector(v) => {
                 let mut new_vec = vec![];
                 for i in v {
-                    new_vec.push((*i/N::epsilon()).round()*N::epsilon());
+                    new_vec.push((*i*N::epsilon().recip()).round()/N::epsilon().recip());
                 }
                 return Value::Vector(new_vec);
             },
@@ -394,7 +400,7 @@ impl<N> Value<N> where N: Number {
                 for i in m {
                     let mut row = vec![];
                     for j in i {
-                        row.push((*j/N::epsilon()).round()*N::epsilon());
+                        row.push((*j*N::epsilon().recip()).round()/N::epsilon().recip());
                     }
                     new_matrix.push(row);
                 }
@@ -405,11 +411,11 @@ impl<N> Value<N> where N: Number {
     /// Rounds the value to the display precision of the number type.
     pub fn round_to_display_precision(&self) -> Value<N> {
         match self {
-            Value::Scalar(a) => return Value::Scalar((*a/N::display_epsilon()).round()*N::display_epsilon()),
+            Value::Scalar(a) => return Value::Scalar((*a*N::display_epsilon().recip()).round()/N::display_epsilon().recip()),
             Value::Vector(v) => {
                 let mut new_vec = vec![];
                 for i in v {
-                    new_vec.push((*i/N::display_epsilon()).round()*N::display_epsilon());
+                    new_vec.push((*i*N::display_epsilon().recip()).round()/N::display_epsilon().recip());
                 }
                 return Value::Vector(new_vec);
             },
@@ -418,7 +424,7 @@ impl<N> Value<N> where N: Number {
                 for i in m {
                     let mut row = vec![];
                     for j in i {
-                        row.push((*j/N::display_epsilon()).round()*N::display_epsilon());
+                        row.push((*j*N::display_epsilon().recip()).round()/N::display_epsilon().recip());
                     }
                     new_matrix.push(row);
                 }
@@ -641,7 +647,7 @@ impl<N: Number> Display for Value<N> {
                 for k in 0..s.len() {
                     replace_string += "[";
                     for l in 0..s[k].len() {
-                        replace_string += &s[k][l].to_string();
+                        replace_string += &round_and_format(s[k][l], false);
                         if l != s[k].len() - 1 {
                             replace_string += ", "
                         }
@@ -656,7 +662,7 @@ impl<N: Number> Display for Value<N> {
             Value::Vector(s) => {
                 replace_string += "[";
                 for k in 0..s.len() {
-                    replace_string += &s[k].to_string();
+                    replace_string += &round_and_format(s[k], false);
                     if k != s.len() - 1 {
                         replace_string += ", ";
                     }    
@@ -664,7 +670,7 @@ impl<N: Number> Display for Value<N> {
                 replace_string += "]";
             },
             Value::Scalar(s) => {
-                replace_string = s.to_string();
+                replace_string = round_and_format(*s, false);
             }
         }
 
@@ -860,8 +866,10 @@ impl<N: Number> AST<N> {
             },
             AST::List(l) => return format!("\\left\\{{{}\\right\\}}", l.iter().map(|a| a.latex_print(false)).collect::<Vec<String>>().join(", ")),
             AST::Variable(v) => {
-                if v == "pi" {
-                    return "\\pi".to_string();
+                for var in VAR_REPLACEMENTS {
+                    if Some(var) == v.split("_").nth(0) {
+                        return format!("\\{v}");
+                    }
                 }
                 return v.to_string()
             },

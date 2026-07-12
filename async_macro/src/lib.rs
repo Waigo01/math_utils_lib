@@ -59,7 +59,7 @@ fn replace_async_calls(stream: TokenStream) -> TokenStream {
 
 #[cfg(feature = "async_attr")]
 #[proc_macro_attribute]
-pub fn function_async(_attr: TokenStream, item: TokenStream) -> TokenStream {
+pub fn function_async(attr: TokenStream, item: TokenStream) -> TokenStream {
     let mut return_item = item.clone();
 
     let item = replace_async_calls(item);
@@ -71,53 +71,51 @@ pub fn function_async(_attr: TokenStream, item: TokenStream) -> TokenStream {
         func.sig.ident = Ident::new(&format!("{}_async", func.sig.ident), Span::call_site());
     }
 
-    let async_yield = r"{
-        async fn yield_async() {
-            let mut yielded = false;
-            std::future::poll_fn(|cx| {
-                if yielded {
-                    return std::task::Poll::Ready(());
-                }
+    if let tokens = attr.into_iter().collect::<Vec<TokenTree>>() && tokens.len() == 1 && let Some(TokenTree::Ident(ident)) = tokens.get(0) && ident.to_string() == "yielding" {
+        let async_yield = r"{
+            async fn yield_async() {
+                let mut yielded = false;
+                std::future::poll_fn(|cx| {
+                    if yielded {
+                        return std::task::Poll::Ready(());
+                    }
 
-                yielded = true;
+                    yielded = true;
 
-                cx.waker().wake_by_ref();
+                    cx.waker().wake_by_ref();
 
-                std::task::Poll::Pending
-            }).await;
-        }
-
-        yield_async().await;
-    }";
-
-    let new_block = parse::<Block>(async_yield.parse().unwrap()).unwrap();
-
-    for stmt in new_block.stmts.iter().rev() {
-        func.block.stmts.insert(0, stmt.clone());
-    }
-
-    #[cfg(feature = "wasm")]
-    {
-        let async_yield_wasm = r#"{
-            async fn yield_async_wasm() {
-                use wasm_bindgen::prelude::*;
-                #[wasm_bindgen]
-                extern "C" {
-                    pub fn setTimeout(func: &js_sys::Function, time: f64);
-                }
-                let promise = js_sys::Promise::new(&mut |resolve, _reject| {
-                    setTimeout(&resolve, 0.);
-                });
-                let _ = promise.await;
+                    std::task::Poll::Pending
+                }).await;
             }
 
-            yield_async_wasm().await;
-        }"#;
+            yield_async().await;
+        }";
 
-        let new_block = parse::<Block>(async_yield_wasm.parse().unwrap()).unwrap();
+        let new_block = parse::<Block>(async_yield.parse().unwrap()).unwrap();
 
         for stmt in new_block.stmts.iter().rev() {
             func.block.stmts.insert(0, stmt.clone());
+        }
+
+        #[cfg(feature = "wasm")]
+        {
+            let async_yield_wasm = r#"{
+                async fn yield_async_wasm() {
+                    let promise = js_sys::Promise::new(&mut |resolve, _reject| {
+                        crate::set_timeout(&resolve, 0);
+                    });
+
+                    let _ = promise.await;
+                }
+
+                yield_async_wasm().await;
+            }"#;
+
+            let new_block = parse::<Block>(async_yield_wasm.parse().unwrap()).unwrap();
+
+            for stmt in new_block.stmts.iter().rev() {
+                func.block.stmts.insert(0, stmt.clone());
+            }
         }
     }
 

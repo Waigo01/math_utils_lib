@@ -20,7 +20,7 @@ fn power_order() -> Result<(), MathLibError> {
 
 #[test]
 fn simple_matrix() -> Result<(), MathLibError> {
-    let res = quick_eval!("[[3, 4, 5], [1, 2, 3], [5, 6, 7]]")?.to_vec();
+    let res = quick_eval!("[[3, 1, 5], [4, 2, 6], [5, 3, 7]]")?.to_vec();
 
     assert_eq!(res[0], value!(3, 1, 5; 4, 2, 6; 5, 3, 7));
 
