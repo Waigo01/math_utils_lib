@@ -1,3 +1,5 @@
+#![cfg_attr(docsrs, feature(doc_cfg))]
+
 //! This repo/crate provides a number of math utilities:
 //!
 #![cfg_attr(feature = "doc-images",
@@ -17,22 +19,28 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //! ## Major features
 //!
 //! - Parsing and evaluating calculations with matrices, vectors and scalars.
+//! - Generic number implementation for scalars. Allowing for different number types with custom
+//! parsers and calculation rules.
 //! - A recursive parsing implementation allowing for calculations withing matrices and vectors.
 //! - An inbuilt equation solver for solving linear and non-linear systems of equations, accessible through a custom "function".
-//! - An evaluator based on combinatorics for combining multiple results from equations or sqrt with other operations.
+//! - An evaluator based on combinatorics for combining multiple results from equations or sqrts with other operations.
+//! - Assigning values to variables and defining custom functions.
+//! - Custom functions with side effects.
+//! - Boolean operations (==, <, >, etc.).
+//! - Conditional evaluation.
 //! - Inbuilt quality of life functions for exporting results to latex.
 //!
 //! ## Crate features
 //!
-//! - high-prec: uses a precision of 13 instead of 8 (will slow down execution).
-//! - row-major: parses matrices in a row major format.
-//! - output: enables dependencies in order to provide rendered PDFs, PNGs and SVGs. (currently
-//! broken)
-//! - serde: enables serde::Serialize and serde::Deserialize on most structs and enums.
+//! - col-major: parse matrices in a column major format.
+//! - output: enables dependencies in order to provide rendered PDFs, PNGs and SVGs.
+//! - serde: enables Serialize and Deserialize implementations on most structs and enums.
+//! - async: exposes async versions of quick_eval, eval and parse.
+//! - wasm: add support for non-blocking async wasm execution.
 //!
 //! ## Usage
 //!
-//! **For usage information concerning the mathematical properties of the evaluator and more examples, please take a look at [the wiki](https://github.com/Waigo01/math_utils_lib/wiki).**
+//! **For usage information concerning the mathematical syntax used by the parser and more examples, please take a look at [the wiki](https://github.com/Waigo01/math_utils_lib/wiki).**
 //!
 //! ## Error types
 //!
@@ -40,56 +48,207 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //!
 //! ## Examples
 //! ```rust
-//! let res = quick_eval("3*3", &Context::empty())?.to_vec();
-//!     
+//! # use math_utils_lib::{MathLibError, quick_eval, value, Context, Value};
+//! // The library can do the most basic calculations.
+//! let res = quick_eval!("3*3")?.to_vec();
+//! 
+//! // The return of the quick eval method will have multiple values to support things like sqrt(9) = {-3, 3}.
+//! // In this case however this vector of values will only have one value (9).
 //! assert_eq!(res[0], value!(9));
+//! # Ok::<(), MathLibError>(())
 //! ```
 //!
 //! ```rust
-//! let x = Variable::new("x", value!(3)]);
-//! let res = quick_eval("3x", &Context::from_vars(vec![x]))?.to_vec();
+//! # use math_utils_lib::{MathLibError, quick_eval, value, Context, Variable, Value};
+//! // Using the Context we can add variables with their respective values.
+//! let x = Variable::new("x", vec![value!(3)]);
+//! let res = quick_eval!("3x", &mut Context::from_vars(vec![x]))?.to_vec();
 //!
 //! assert_eq!(res[0], value!(9));
+//! # Ok::<(), MathLibError>(())
 //! ```
 //!
 //! ```rust
-//! let res = quick_eval("[[3, 4, 5], [1, 2, 3], [5, 6, 7]]", &Context::empty())?.to_vec();
+//! # use math_utils_lib::{MathLibError, quick_eval, value, Context, Value};
+//! // We can also define a mutable context to be used later.
+//! let mut context = Context::default();
+//!
+//! // We can now assign 3 to the variable x in the expression itself.
+//! quick_eval!("x=3", &mut context)?;
+//! // And use the variable later on.
+//! let res = quick_eval!("3x", &mut context)?.to_vec();
+//!
+//! assert_eq!(res[0], value!(9));
+//! # Ok::<(), MathLibError>(())
+//! ```
+//!
+//! ```rust
+//! # use math_utils_lib::{MathLibError, quick_eval, value, Context, Value};
+//! // The library also has full matrix and vector support.
+//! let res = quick_eval!("[[3, 1, 5], [4, 2, 6], [5, 3, 7]]")?.to_vec();
 //!
 //! assert_eq!(res[0], value!(3, 1, 5; 4, 2, 6; 5, 3, 7));
+//! # Ok::<(), MathLibError>(())
 //! ```
 //!
 //! ```rust
+//! # use math_utils_lib::{basetypes::Function, MathLibError, parse, quick_eval, value, Context, Value};
+//! // We can also define custom functions based on a parsed expression.
 //! let function = parse("5x^2+2x+x")?;
+//! // We simply need to define the function name and the input variables, in this case "x".
 //! let function_var = Function::new("f", function, vec!["x"]);
 //!
-//! let res = quick_eval("f(5)", &Context::from_funs(vec![function_var]))?.to_vec();
+//! // Then we can use that function later on.
+//! let res = quick_eval!("f(5)", &mut Context::from_funs(vec![function_var]))?.to_vec();
 //!
 //! assert_eq!(res[0], value!(140));
+//! # Ok::<(), MathLibError>(())
 //! ```
 //!
 //! ```rust
-//! let res = quick_eval("eq(x^2=9, x)", &Context::empty())?.round(3).to_vec();
+//! # use math_utils_lib::{MathLibError, quick_eval, value, Context, Value};
+//! // Like before this assignment can also be done in an expression.
+//! let mut context = Context::default();
+//!
+//! quick_eval!("f(x)=5x^2+2x+x", &mut context)?;
+//! let res = quick_eval!("f(5)", &mut context)?.to_vec();
+//!
+//! assert_eq!(res[0], value!(140));
+//! # Ok::<(), MathLibError>(())
+//! ```
+//!
+//! ```rust
+//! # use math_utils_lib::{MathLibError, quick_eval, value, Context, Value};
+//! let mut c = Context::default();
+//! 
+//! // Defined functions can even have side effects,
+//! // like setting a variable in the context, when called.
+//! quick_eval!("f(x) = y=x", &mut c)?;
+//!
+//! quick_eval!("f(5)", &mut c)?;
+//!
+//! assert_eq!(c.get_var("y".to_string()).unwrap().values.to_vec()[0], value!(5));
+//!
+//! # Ok::<(), MathLibError>(())
+//! ```
+//!
+//!
+//! ```rust
+//! # use math_utils_lib::{MathLibError, quick_eval, value, Context, Value};
+//! // The library also has an inbuilt equation solver, based on newtons method. It can be accessed
+//! // using the eq "function"
+//! let res = quick_eval!("eq(x^2=9, x)")?.round(3).to_vec();
 //!     
 //! assert_eq!(res, vec![value!(-3), value!(3)]);
+//! # Ok::<(), MathLibError>(())
 //! ```
 //!
 //! ```rust
+//! # use math_utils_lib::{MathLibError, quick_eval, value, Context, Value};
+//! // The same solver can also solve both linear and non-linear systems of equations.
 //! let equation = "eq(2x+5y+2z=-38, 3x-2y+4z=17, -6x+y-7z=-12, x, y, z)";
 //!
-//! let res = quick_eval(equation, &Context::empty())?.round(3).to_vec();
+//! let res = quick_eval!(equation)?.round(3).to_vec();
 //!
 //! assert_eq!(res, vec![value!(3, -8, -2)]);
+//! # Ok::<(), MathLibError>(())
 //! ```
 //!
-//! <div class="warning">Due to dependency issues output is currently broken.</div>
+//! ```rust
+//! # use math_utils_lib::{MathLibError, quick_eval, value, Context, Value};
+//! let mut c = Context::default();
+//!
+//! quick_eval!("a = 6", &mut c)?;
+//! quick_eval!("b = 10", &mut c)?;
+//! 
+//! // The evaluator also supports boolean expressions where 0 = false and !0 = true.
+//! // The and (&) and or (|) operation will always return 1 for true and 0 for false.
+//! let res = quick_eval!("!(a != 10 | b != 10) | b != 5", &mut c)?.to_vec();
+//!
+//! assert_eq!(res[0], value!(1));
+//!
+//! # Ok::<(), MathLibError>(())
+//! ```
 //!
 //! ```rust
-//! let parsed_expr = parse("3*3+6^5")?;
-//! let res = eval(&parsed_expr, &Context::empty())?;
+//! # use math_utils_lib::{MathLibError, quick_eval, value, Context, Value};
+//! // The evaluator can also make case destinctions using an if statement and a boolean expression.
+//! let res = quick_eval!("if(eq(x^2 = 9, x) == -3, 5, 2)")?.to_vec();
 //!
-//! let step = Step::Calc { term: parsed_expr, result: res, variable_save: Some("x".to_string()) };
+//! // Since there are two solutions to x^2 = 9
+//! // and the first one is indeed -3 but the second one is not, the resulting Values are 5, 2.
+//! assert_eq!(res, vec![value!(5), value!(2)]);
 //!
+//! # Ok::<(), MathLibError>(())
+//! ```
+//!
+//! ```rust
+//! # use math_utils_lib::{MathLibError, quick_eval, value, Context, Value};
+//! let mut c = Context::default();
+//! quick_eval!("state = 0", &mut c)?;
+//!
+//! // Using the power of lists, side effects in functions and if statements,
+//! // we can even build simple state machines.
+//!
+//! // This one recognizes the word 'math' with m = 0, a = 1, t = 2 and h = 3.
+//!
+//! quick_eval!("f(x) =
+//! if(x == 0 & state == 0,
+//!    state = 1,
+//! if(x == 1 & state == 1,
+//!    state = 2,
+//! if(x == 2 & state == 2,
+//!    state = 3,
+//! if(x == 3 & state == 3,
+//!    state = 4,
+//! state = 0))))", &mut c)?;
+//!
+//! // This is the word 'math'.
+//!
+//! quick_eval!("f({0, 1, 2, 3})", &mut c)?;
+//!
+//! let res = quick_eval!("state", &mut c)?.to_vec();
+//!
+//! assert_eq!(res[0], value!(4));
+//! 
+//! quick_eval!("state = 0", &mut c)?;
+//!
+//! // This is NOT the word 'math'.
+//!
+//! quick_eval!("f({0, 1, 4, 2})", &mut c)?.to_vec();
+//! 
+//! let res = quick_eval!("state", &mut c)?.to_vec();
+//!
+//! assert_ne!(res[0], value!(4));
+//!
+//! # Ok::<(), MathLibError>(())
+//! ```
+//!
+//! ```rust
+//! # use math_utils_lib::{MathLibError, quick_eval, value, Complex};
+//!
+//! // You can also use other types that implement the Number trait, such as complex numbers.
+//! let res = quick_eval!("e^(i*pi)"; Complex<f64>)?.to_vec();
+//!
+//! assert_eq!(res[0], value!(-1));
+//!
+//! # Ok::<(), MathLibError>(())
+//! ```
+//!
+//! ```ignore
+//! # use math_utils_lib::{parse, eval, Step, png_from_latex, export_history, Context, MathLibError, Value, ExportType, AST};
+//! let parsed_expr: AST<f64> = parse("x = 3*3+6^5")?;
+//! let res = eval(&parsed_expr, &mut Context::empty())?;
+//!
+//! // We can also create a "Step" based on a parsed expression and a corresponding result.
+//! let step = Step::new(parsed_expr, res);
+//!
+//! // Which we can the export to a png or svg via latex.
 //! let png = png_from_latex(step.as_latex_inline(), 200, "#FFFFFF")?;
+//!
+//! // Alternatively we can also export a history of steps to a full pdf document.
+//! let pdf = export_history(vec![step], ExportType::Pdf)?;
+//! # Ok::<(), MathLibError>(())
 //! ```
 //!
 //! Output (Please turn on dark mode to view the image, as the background is transparent):
@@ -101,7 +260,14 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //! - [x] Support for vectors and matrices
 //! - [x] Calculations in vectors and matrices
 //! - [x] Equations as operators -> eval can handle multiple values
-//! - [ ] Complex numbers
+//! - [x] Variable/Function assignment as operator -> mutable context for evaluator
+//! - [x] Function side effects
+//! - [x] Boolean operations
+//! - [x] Conditional evaluation
+//! - [x] Generic numbers
+//! - [x] Complex numbers
+//! - [x] Async support (sort of)
+//! - [ ] Symbolic evaluation
 //! - [ ] Possible tensor support
 //! - [ ] Stable API that makes everyone happy (very hard)
 //!
@@ -115,59 +281,218 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //!
 //! When it comes to contributions, feel free to fork the github repo and open pull requests.
 
-use errors::QuickEvalError;
-
 #[doc(hidden)]
 pub mod maths;
 #[doc(hidden)]
 pub mod helpers;
 pub mod basetypes;
-pub mod latex;
+pub mod output;
 pub mod parser;
 pub mod errors;
 pub mod roots;
 pub mod solver;
+pub mod evaluator;
+pub mod tokenizer;
 
 #[cfg(test)]
 mod tests;
 
-pub use basetypes::{Value, Values, Variable, Context};
-pub use latex::Step;
+pub use basetypes::{Value, Values, Variable, Context, Function, AST, InternalFunction};
+pub use output::{export_history, ExportType, Step};
 #[cfg(feature = "output")]
-pub use latex::{export_history, ExportType, svg_from_latex, png_from_latex};
-pub use parser::{parse, eval};
+pub use output::{png_from_latex, svg_from_latex};
+pub use parser::parse;
+pub use evaluator::eval;
 pub use errors::MathLibError;
+pub use maths::num_traits::{Number, StandardFunctions, RealNumber};
+pub use maths::num_impls::Complex;
 
-#[cfg(feature = "high-prec")]
-/// defines the precision used by the equation solver. The printing precision is PREC - 2.
-pub const PREC: usize = 13;
+#[cfg(feature = "async")]
+pub use evaluator::eval_async;
+#[cfg(feature = "async")]
+pub use parser::parse_async;
 
-#[cfg(not(feature = "high-prec"))]
-/// defines the precision used by the equation solver. The printing precision is PREC - 2.
-pub const PREC: usize = 8;
+#[cfg(feature = "wasm")]
+use wasm_bindgen::prelude::*;
+#[cfg(feature = "wasm")]
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_name = "setTimeout")]
+    pub fn set_timeout(func: &js_sys::Function, time: i32);
+}
 
-/// evaluates a given expression in the given context. If you just want the AST, have a look at [parse()].
+/// Evaluates a given expression in the given context. If you just want the AST, have a look at [parse()].
 ///
 /// For more information about the context, take a look at [Context] and for more information about
 /// the possible operations, take a look at [SimpleOpType](basetypes::SimpleOpType) and
-/// [AdvancedOpType](basetypes::AdvancedOpType).
+/// [AdvancedOperation](basetypes::AdvancedOperation).
+///
+/// When calling this macro with just a string argument, it will internally create a new Context
+/// using [Context::default()]. You can also specify your own context as the second argument. With the argument following the semicolon you can specify the number 
+/// type that should be used. By default [f64] is used, other number types must implement [Number].
 ///
 /// # Examples
 ///
 /// ```
-/// let res = quick_eval("3*3", Context::default())?.to_vec();
+/// # use math_utils_lib::{basetypes::Function, errors::{EvalError, MathLibError, ParserError, QuickEvalError}, parse, quick_eval, value, Context, Value, Variable};
+/// let res = quick_eval!("3*3")?.to_vec();
 ///
 /// assert_eq!(res[0], value!(9.));
+/// # Ok::<(), MathLibError>(())
 /// ```
 ///
 /// ```
-/// let x = Variable::new("x".to_string(), value!(3.));
-/// let res = quick_eval("3x".to_string(), &Context::from_vars(vec![x]))?.to_vec();
+/// # use math_utils_lib::{basetypes::Function, errors::{EvalError, MathLibError, ParserError, QuickEvalError}, parse, quick_eval, value, Context, Value, Variable};
+/// let x = Variable::new("x", vec![value!(3.)]);
+/// let res = quick_eval!("3x", &mut Context::from_vars(vec![x]))?.to_vec();
 ///
 /// assert_eq!(res[0], value!(9.));
+/// # Ok::<(), MathLibError>(())
 /// ```
-pub fn quick_eval<S: Into<String>>(expr: S, context: &Context) -> Result<Values, QuickEvalError> {
-    let expr = expr.into();
-    let b_tree = parse(expr)?; 
-    Ok(eval(&b_tree, &context)?)
+///
+/// ```
+/// # use math_utils_lib::{basetypes::Function, errors::{EvalError, MathLibError, ParserError, QuickEvalError}, parse, quick_eval, value, Context, Value, Variable, Complex};
+/// let res = quick_eval!("e^(i*pi)"; Complex<f64>)?.to_vec();
+///
+/// assert_eq!(res[0], value!(-1));
+/// # Ok::<(), MathLibError>(())
+/// ```
+#[macro_export]
+macro_rules! quick_eval {
+    ( $e:expr ) => {
+        {
+            fn quick_eval<S: Into<String>, N: $crate::Number>(expr: S, context: &mut $crate::Context<N>) -> Result<$crate::Values<N>, $crate::errors::QuickEvalError> {
+                let expr = expr.into();
+                let b_tree = $crate::parse(expr)?; 
+                Ok($crate::eval(&b_tree, context)?)
+            }
+
+            quick_eval::<_, f64>($e, &mut $crate::Context::default())
+        }
+    };
+    ( $e:expr, $c:expr ) => {
+        {
+            fn quick_eval<S: Into<String>, N: $crate::Number>(expr: S, context: &mut $crate::Context<N>) -> Result<$crate::Values<N>, $crate::errors::QuickEvalError> {
+                let expr = expr.into();
+                let b_tree = $crate::parse(expr)?; 
+                Ok($crate::eval(&b_tree, context)?)
+            }
+
+            quick_eval::<_, f64>($e, $c)
+        }
+    };
+    ( $e:expr; $t:ty ) => {
+        { 
+            fn quick_eval<S: Into<String>, N: $crate::Number>(expr: S, context: &mut $crate::Context<N>) -> Result<$crate::Values<N>, $crate::errors::QuickEvalError> {
+                let expr = expr.into();
+                let b_tree = $crate::parse(expr)?; 
+                Ok($crate::eval(&b_tree, context)?)
+            }
+
+            quick_eval::<_, $t>($e, &mut $crate::Context::default())
+        }
+    };
+    ( $e:expr, $c:expr; $t:ty ) => {
+        { 
+            fn quick_eval<S: Into<String>, N: $crate::Number>(expr: S, context: &mut $crate::Context<N>) -> Result<$crate::Values<N>, $crate::errors::QuickEvalError> {
+                let expr = expr.into();
+                let b_tree = $crate::parse(expr)?; 
+                Ok($crate::eval(&b_tree, context)?)
+            }
+
+            quick_eval::<_, $t>($e, $c)
+        }
+    }
+}
+
+/// Evaluates a given expression in the given context. If you just want the AST, have a look at [parse_async()].
+///
+/// For more information about the context, take a look at [Context] and for more information about
+/// the possible operations, take a look at [SimpleOpType](basetypes::SimpleOpType) and
+/// [AdvancedOperation](basetypes::AdvancedOperation).
+///
+/// When calling this macro with just a string argument, it will internally create a new Context
+/// using [Context::default()]. You can also specify your own context as the second argument. With the argument following the semicolon you can specify the number 
+/// type that should be used. By default [f64] is used, other number types must implement [Number].
+///
+/// # Examples
+///
+/// ```ignore
+/// # use math_utils_lib::{basetypes::Function, errors::{EvalError, MathLibError, ParserError, QuickEvalError}, parse, quick_eval_async, value, Context, Value, Variable};
+/// let res = quick_eval_async!("3*3")?.await.to_vec();
+///
+/// assert_eq!(res[0], value!(9.));
+/// # Ok::<(), MathLibError>(())
+/// ```
+///
+/// ```ignore
+/// # use math_utils_lib::{basetypes::Function, errors::{EvalError, MathLibError, ParserError, QuickEvalError}, parse, quick_eval_async, value, Context, Value, Variable};
+/// let x = Variable::new("x", vec![value!(3.)]);
+/// let res = quick_eval_async!("3x", &mut Context::from_vars(vec![x])).await?.to_vec();
+///
+/// assert_eq!(res[0], value!(9.));
+/// # Ok::<(), MathLibError>(())
+/// ```
+///
+/// ```ignore
+/// # use math_utils_lib::{basetypes::Function, errors::{EvalError, MathLibError, ParserError, QuickEvalError}, parse, quick_eval_async, value, Context, Value, Variable, Complex};
+/// let res = quick_eval_async!("e^(i*pi)"; Complex<f64>).await?.to_vec();
+///
+/// assert_eq!(res[0], value!(-1));
+/// # Ok::<(), MathLibError>(())
+/// ```
+#[cfg(feature = "async")]
+#[cfg_attr(docsrs, doc(cfg(feature = "async")))]
+#[macro_export]
+macro_rules! quick_eval_async {
+    ( $e:expr ) => {
+        {
+            async fn quick_eval<S: Into<String>, N: $crate::Number>(expr: S, context: &mut $crate::Context<N>) -> Result<$crate::Values<N>, $crate::errors::QuickEvalError> {
+                let expr = expr.into();
+                let b_tree = $crate::parse_async(expr).await?; 
+                Ok($crate::eval_async(&b_tree, context).await?)
+            }
+
+            async {
+                let mut c = $crate::Context::default();
+                quick_eval::<_, f64>($e, &mut c).await
+            }
+        }
+    };
+    ( $e:expr, $c:expr ) => {
+        {
+            async fn quick_eval<S: Into<String>, N: $crate::Number>(expr: S, context: &mut $crate::Context<N>) -> Result<$crate::Values<N>, $crate::errors::QuickEvalError> {
+                let expr = expr.into();
+                let b_tree = $crate::parse_async(expr).await?; 
+                Ok($crate::eval_async(&b_tree, context).await?)
+            }
+
+            quick_eval::<_, f64>($e, $c)
+        }
+    };
+    ( $e:expr; $t:ty ) => {
+        { 
+            async fn quick_eval<S: Into<String>, N: $crate::Number>(expr: S, context: &mut $crate::Context<N>) -> Result<$crate::Values<N>, $crate::errors::QuickEvalError> {
+                let expr = expr.into();
+                let b_tree = $crate::parse_async(expr).await?; 
+                Ok($crate::eval_async(&b_tree, context).await?)
+            }
+
+            async {
+                let mut c = $crate::Context::default();
+                quick_eval::<_, $t>($e, &mut c).await
+            }
+        }
+    };
+    ( $e:expr, $c:expr; $t:ty ) => {
+        { 
+            async fn quick_eval<S: Into<String>, N: $crate::Number>(expr: S, context: &mut $crate::Context<N>) -> Result<$crate::Values<N>, $crate::errors::QuickEvalError> {
+                let expr = expr.into();
+                let b_tree = $crate::parse_async(expr).await?; 
+                Ok($crate::eval_async(&b_tree, context).await?)
+            }
+
+            quick_eval::<_, $t>($e, $c)
+        }
+    }
 }
