@@ -225,6 +225,8 @@ Output:
 - [x] Variable/Function assignment as operator -> mutable context for evaluator
 - [x] Generic numbers
 - [x] Complex numbers
+- [x] Async support (sort of)
+- [ ] Symbolic evaluation
 - [ ] Possible tensor support
 - [ ] Stable API that makes everyone happy (very hard)
 

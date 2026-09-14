@@ -266,6 +266,8 @@ doc = "**Doc images not enabled**. Compile with feature `doc-images` and Rust ve
 //! - [x] Conditional evaluation
 //! - [x] Generic numbers
 //! - [x] Complex numbers
+//! - [x] Async support (sort of)
+//! - [ ] Symbolic evaluation
 //! - [ ] Possible tensor support
 //! - [ ] Stable API that makes everyone happy (very hard)
 //!
