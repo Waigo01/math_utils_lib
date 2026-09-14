@@ -145,15 +145,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "async_macro"
-version = "0.1.0"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.118",
-]
-
-[[package]]
 name = "atomic-take"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2016,10 +2007,10 @@ dependencies = [
 name = "math_utils_lib"
 version = "0.5.0"
 dependencies = [
- "async_macro",
  "embed-doc-image",
  "js-sys",
  "mathjax_svg",
+ "mul_async_macro",
  "resvg",
  "serde",
  "tectonic",
@@ -2117,6 +2108,15 @@ dependencies = [
  "log",
  "wasi",
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "mul_async_macro"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.118",
 ]
 
 [[package]]

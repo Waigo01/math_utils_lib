@@ -1,7 +1,15 @@
 [package]
-name = "async_macro"
+name = "mul_async_macro"
+description = "A proc macro library providing proc macros for math_utils_libs async implementations"
 version = "0.1.0"
 edition = "2024"
+license-file = "LICENSE.txt"
+readme = "README.md"
+documentation = "https://docs.rs/mul_async_macro/latest/mul_async_macro/"
+repository="https://github.com/Waigo01/math_utils_lib"
+
+[package.metadata.docs.rs]
+features = ["async_attr", "wasm"]
 
 [lib]
 proc-macro = true

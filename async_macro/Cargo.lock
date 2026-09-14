@@ -3,7 +3,7 @@
 version = 4
 
 [[package]]
-name = "async_macro"
+name = "mul_async_macro"
 version = "0.1.0"
 dependencies = [
  "proc-macro2",
