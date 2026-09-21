@@ -727,9 +727,9 @@ impl<N: Number> Values<N> {
     /// Converts the values to latex using "{}" and "," to print multiple Values.
     pub fn to_latex(&self) -> String {
         if self.len() == 1 {
-            return format!("{}", self.0[0].to_latex());
+            return self.0[0].to_latex();
         } else if self.len() <= 0 {
-            return "No solutions".to_string();
+            return "{}".to_string();
         } else {
             return format!("\\left\\{{{}\\right\\}}", self.clone().to_vec().iter().map(|v| v.to_latex()).collect::<Vec<String>>().join(", "));
         }

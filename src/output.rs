@@ -77,7 +77,7 @@ impl<N: Number> Step<N> {
 
         let res = self.result.to_latex();
 
-        let latex = if self.result.len() != 0 && result_expression != res {
+        let latex = if result_expression != res {
             format!("{} {}= {} {}", expression, aligner, res, tag_with_label)
         } else {
             format!("{} {}", expression, tag_with_label)
