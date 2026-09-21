@@ -115,7 +115,7 @@ impl<N: Number> Display for Step<N> {
 
         let res = self.result.to_string();
 
-        let output = if self.result.len() != 0 && result_expression != res {
+        let output = if result_expression != res {
             format!("{} = {}", expression, res)
         } else {
             format!("{}", expression)
