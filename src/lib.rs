@@ -374,7 +374,7 @@ macro_rules! quick_eval {
         {
             fn quick_eval<S: Into<String>, N: $crate::Number>(expr: S, context: &mut $crate::Context<N>) -> Result<$crate::Values<N>, $crate::errors::QuickEvalError> {
                 let expr = expr.into();
-                let b_tree = $crate::parse(expr)?; 
+                let b_tree = $crate::parse(expr)?;
                 Ok($crate::eval(&b_tree, context)?)
             }
 

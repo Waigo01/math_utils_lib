@@ -167,6 +167,30 @@ fn if_statement3() -> Result<(), MathLibError> {
 
     Ok(())
 }
+
+#[test]
+fn bool_impl() -> Result<(), MathLibError> {
+    let mut c = Context::default();
+    quick_eval!("impl(a, b) = !a|b", &mut c)?;
+
+    let res = quick_eval!("impl({0, 1}, {0, 1})", &mut c)?.to_vec();
+
+    assert_eq!(res, vec![value!(1), value!(1), value!(0), value!(1)]);
+
+    Ok(())
+}
+
+#[test]
+fn bool_logic() -> Result<(), MathLibError> {
+    let mut c = Context::default();
+    quick_eval!("test(a, b, c) = (a & !b) | (b & !c)", &mut c)?;
+
+    let res = quick_eval!("test({0, 1}, {0, 1}, {0, 1})", &mut c)?.to_vec();
+
+    assert_eq!(res, vec![value!(0), value!(0), value!(1), value!(0), value!(1), value!(1), value!(1), value!(0)]);
+
+    Ok(())
+}
 //
 // #[cfg(feature = "output")]
 // #[test]

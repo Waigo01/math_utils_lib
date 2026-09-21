@@ -6,28 +6,28 @@ use async_macro::async_call;
 use crate::{basetypes::{AST, AdvancedOperation, Operation, SimpleOpType}, errors::ParserError, helpers::get_args, maths::num_traits::Number, tokenizer::{Delimiter, Token, TokenStream, Tokenizer}, value};
 
 #[cfg_attr(feature = "async", function_async)]
-fn get_op_symbol(punct: (char, Option<char>)) -> Option<SimpleOpType> {
+fn get_op_symbol(punct: (char, Option<char>)) -> (Option<SimpleOpType>, u8) {
     match punct {
-        ('=', None) => Some(SimpleOpType::Assign),
-        ('&', None) => Some(SimpleOpType::BoolAnd),
-        ('|', None) => Some(SimpleOpType::BoolOr),
-        ('=', Some('=')) => Some(SimpleOpType::BoolEq),
-        ('!', Some('=')) => Some(SimpleOpType::BoolNEq),
-        ('<', None) => Some(SimpleOpType::BoolLt),
-        ('>', None) => Some(SimpleOpType::BoolGt),
-        ('<', Some('=')) => Some(SimpleOpType::BoolLtEq),
-        ('>', Some('=')) => Some(SimpleOpType::BoolGtEq),
-        ('!', None) => Some(SimpleOpType::BoolNot),
-        ('+', None) => Some(SimpleOpType::Add),
-        ('-', None) => Some(SimpleOpType::Sub),
-        ('+', Some('-')) => Some(SimpleOpType::AddSub),
-        ('*', None) => Some(SimpleOpType::Mult),
-        ('/', None) => Some(SimpleOpType::Div),
-        ('#', None) => Some(SimpleOpType::Cross),
-        ('^', None) => Some(SimpleOpType::Pow),
-        ('^', Some('^')) => Some(SimpleOpType::Tetration),
-        ('@', None) => Some(SimpleOpType::Get),
-        _ => None
+        ('=', Some('=')) => (Some(SimpleOpType::BoolEq), 2),
+        ('=', _) => (Some(SimpleOpType::Assign), 1),
+        ('&', _) => (Some(SimpleOpType::BoolAnd), 1),
+        ('|', _) => (Some(SimpleOpType::BoolOr), 1),
+        ('!', Some('=')) => (Some(SimpleOpType::BoolNEq), 2),
+        ('!', _) => (Some(SimpleOpType::BoolNot), 1),
+        ('<', Some('=')) => (Some(SimpleOpType::BoolLtEq), 2),
+        ('<', _) => (Some(SimpleOpType::BoolLt), 1),
+        ('>', Some('=')) => (Some(SimpleOpType::BoolGtEq), 2),
+        ('>', _) => (Some(SimpleOpType::BoolGt), 1),
+        ('+', Some('-')) => (Some(SimpleOpType::AddSub), 2),
+        ('+', _) => (Some(SimpleOpType::Add), 1),
+        ('-', _) => (Some(SimpleOpType::Sub), 1),
+        ('*', _) => (Some(SimpleOpType::Mult), 1),
+        ('/', _) => (Some(SimpleOpType::Div), 1),
+        ('#', _) => (Some(SimpleOpType::Cross), 1),
+        ('^', Some('^')) => (Some(SimpleOpType::Tetration), 2),
+        ('^', _) => (Some(SimpleOpType::Pow), 1),
+        ('@', _) => (Some(SimpleOpType::Get), 1),
+        _ => (None, 0)
     }
 }
 
@@ -152,12 +152,12 @@ fn parse_inner<N: Number>(tokens: &[Box<Token>]) -> Result<AST<N>, ParserError> 
                 None
             };
             let symbol = get_op_symbol((*punct, next_punct));
-            let Some(operation) = symbol else {return Err(ParserError::UnrecognizedPunct)};
+            let (Some(operation), taken_puncts) = symbol else {return Err(ParserError::UnrecognizedPunct)};
             if i == 0 && operation == SimpleOpType::Sub {
                 ops_in_expr.push((SimpleOpType::Neg, i, 1));
                 if (SimpleOpType::Neg as usize) < highest_op {highest_op = SimpleOpType::Neg as usize}
             } else {
-                ops_in_expr.push((operation.clone(), i, if next_punct.is_some() {2} else {1}));
+                ops_in_expr.push((operation.clone(), i, taken_puncts as usize));
                 if (operation.clone() as usize) < highest_op {highest_op = operation as usize}
             }
             if next_punct.is_some() {i+=1}

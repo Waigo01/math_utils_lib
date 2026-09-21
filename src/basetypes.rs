@@ -1103,13 +1103,13 @@ impl<N: Number> Display for AST<N> {
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum SimpleOpType {
-    /// Compute the boolean and of two expressions (1==2 & 2==2)
-    BoolAnd = 0,
-    /// Compute the boolean or of two expressions (1==2 | 2==2)
-    BoolOr = 1,
     /// Assign the result of an expression to a variable or assign an expression to a function (x =
     /// 10, f(x) = x^2)
-    Assign = 2,
+    Assign = 0,
+    /// Compute the boolean and of two expressions (1==2 & 2==2)
+    BoolAnd = 1,
+    /// Compute the boolean or of two expressions (1==2 | 2==2)
+    BoolOr = 2,
     /// Test for equality, returning 1 if true and 0 if false (3==4)
     BoolEq = 3,
     /// Test for inequality, returning 1 if true and 0 if false (3!=4)
